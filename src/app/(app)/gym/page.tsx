@@ -8,7 +8,7 @@ import { Icon, IconName } from "@/components/ui/Icon";
 import { listClasses, listUserBookings } from "@/lib/data/queries";
 import { getUser } from "@/lib/auth";
 
-export default async function GymScreen() {
+export default async function GymScreen({ searchParams }: { searchParams: { date?: string } }) {
   const [all, user] = await Promise.all([listClasses(), getUser()]);
   const memberName = ((user?.user_metadata?.display_name as string | undefined)
     ?? user?.email?.split("@")[0]
@@ -24,18 +24,36 @@ export default async function GymScreen() {
     .sort((a, b) => new Date(a.class.starts_at).getTime() - new Date(b.class.starts_at).getTime());
   const bookedClassIds = new Set(upcomingBookings.map(b => b.class.id));
 
+  // Day strip + selection. Pages this server-render: ?date=YYYY-MM-DD picks
+  // which day's classes to show. Defaults to today.
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const dayKey = (d: Date) => d.toISOString().slice(0, 10);
   const week = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date();
+    const d = new Date(today);
     d.setDate(d.getDate() + i);
     return d;
   });
+  const selectedDate = searchParams?.date && /^\d{4}-\d{2}-\d{2}$/.test(searchParams.date)
+    ? new Date(searchParams.date + "T00:00:00")
+    : new Date(today);
+  selectedDate.setHours(0, 0, 0, 0);
+  const selectedDayEnd = new Date(selectedDate.getTime() + 86_400_000);
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const todayClasses = all.filter(c => {
-    const d = new Date(c.starts_at);
-    return d >= today && d < new Date(today.getTime() + 86400000 * 2);
-  }).slice(0, 6);
+  // Per-day counts for the strip + the actual list for the selected day.
+  const countsByDay = new Map<string, number>();
+  for (const c of all) {
+    const t = new Date(c.starts_at);
+    const k = dayKey(new Date(t.getFullYear(), t.getMonth(), t.getDate()));
+    countsByDay.set(k, (countsByDay.get(k) ?? 0) + 1);
+  }
+
+  const dayClasses = all
+    .filter(c => {
+      const t = new Date(c.starts_at);
+      return t >= selectedDate && t < selectedDayEnd;
+    })
+    .sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime());
 
   const actions: { l: string; i: IconName }[] = [
     { l: "CHECK IN", i: "qr" },
@@ -147,31 +165,48 @@ export default async function GymScreen() {
           </>
         )}
 
-        {/* Day strip */}
+        {/* Day strip — selectable. Each tile rerenders the page with ?date=. */}
         <div style={{ padding: "20px 22px 8px", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
           <div className="e-display" style={{ fontSize: 22 }}>{upcomingBookings.length > 0 ? "MORE THIS WEEK" : "CLASSES"}</div>
-          <Link href="/gym/classes" className="e-mono" style={{ color: "var(--electric-deep)" }}>SEE ALL →</Link>
+          <div className="e-mono" style={{ color: "rgba(10,14,20,0.55)", fontSize: 9, letterSpacing: "0.2em" }}>
+            {selectedDate.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "2-digit" }).toUpperCase()}
+          </div>
         </div>
         <div className="no-scrollbar" style={{ display: "flex", gap: 8, padding: "0 22px", overflowX: "auto" }}>
           {week.map((d, i) => {
-            const active = i === 0;
+            const k = dayKey(d);
+            const active = k === dayKey(selectedDate);
+            const isToday = i === 0;
+            const count = countsByDay.get(k) ?? 0;
             return (
-              <div key={i} style={{
-                flexShrink: 0, padding: "10px 12px", borderRadius: 12, minWidth: 50, textAlign: "center",
+              <Link key={i} href={`/gym?date=${k}`} replace scroll={false} style={{
+                flexShrink: 0, padding: "10px 12px", borderRadius: 12, minWidth: 56, textAlign: "center",
                 background: active ? "var(--ink)" : "transparent",
                 color: active ? "var(--bone)" : "var(--ink)",
                 border: active ? "none" : "1px solid rgba(10,14,20,0.1)",
+                textDecoration: "none",
               }}>
-                <div className="e-mono" style={{ fontSize: 9, color: active ? "var(--sky)" : "rgba(10,14,20,0.5)" }}>{d.toLocaleDateString("en-US", { weekday: "short" }).toUpperCase()}</div>
+                <div className="e-mono" style={{ fontSize: 9, color: active ? "var(--sky)" : "rgba(10,14,20,0.5)" }}>
+                  {isToday ? "TODAY" : d.toLocaleDateString("en-US", { weekday: "short" }).toUpperCase()}
+                </div>
                 <div style={{ fontFamily: "var(--font-display)", fontSize: 22, marginTop: 2, letterSpacing: "0.02em" }}>{d.getDate()}</div>
-              </div>
+                <div className="e-mono" style={{ fontSize: 8, marginTop: 4, color: active ? "rgba(242,238,232,0.55)" : "rgba(10,14,20,0.4)", letterSpacing: "0.18em" }}>
+                  {count === 0 ? "REST" : `${count} CLASS${count === 1 ? "" : "ES"}`}
+                </div>
+              </Link>
             );
           })}
         </div>
 
-        {/* Class list */}
+        {/* Class list for the selected day */}
         <div style={{ padding: "16px 22px 6px", display: "flex", flexDirection: "column", gap: 10 }}>
-          {todayClasses.map((c) => {
+          {dayClasses.length === 0 ? (
+            <div style={{ padding: "32px 16px", textAlign: "center", borderRadius: 16, background: "var(--paper)", border: "1px solid rgba(10,14,20,0.06)" }}>
+              <div className="e-mono" style={{ color: "rgba(10,14,20,0.5)", letterSpacing: "0.22em", fontSize: 10 }}>— REST DAY —</div>
+              <div style={{ fontSize: 13, color: "rgba(10,14,20,0.55)", marginTop: 8 }}>Nothing on the floor for this day. Pick another date or run a flow.</div>
+              <Link href="/train" className="btn btn-ink" style={{ marginTop: 14, padding: "10px 16px", fontSize: 10 }}>OPEN STUDIO</Link>
+            </div>
+          ) : dayClasses.map((c) => {
             const dt = new Date(c.starts_at);
             const time = dt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }).replace(" ", "").toUpperCase();
             const full = c.booked >= c.capacity;
@@ -198,6 +233,14 @@ export default async function GymScreen() {
                     )}
                     <span className="e-mono" style={{ fontSize: 9, color: full ? "#A14040" : "var(--electric-deep)" }}>
                       {full ? "· FULL · WAITLIST" : `· ${c.capacity - c.booked} SPOTS`}
+                    </span>
+                    <span className="e-mono" style={{
+                      fontSize: 9, padding: "2px 7px", borderRadius: 999, marginLeft: "auto",
+                      background: c.price_cents > 0 ? "rgba(46,127,176,0.12)" : "rgba(10,14,20,0.06)",
+                      color: c.price_cents > 0 ? "var(--electric-deep)" : "rgba(10,14,20,0.55)",
+                      letterSpacing: "0.18em",
+                    }}>
+                      {c.price_cents > 0 ? `$${(c.price_cents / 100).toFixed(0)}` : "FREE"}
                     </span>
                   </div>
                 </div>
