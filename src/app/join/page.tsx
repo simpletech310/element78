@@ -76,7 +76,7 @@ export default function JoinPage({ searchParams }: { searchParams: { error?: str
             name="display_name"
             placeholder="YOUR NAME"
             required
-            style={{ padding: "14px 16px", borderRadius: 12, background: "rgba(10,14,20,0.55)", backdropFilter: "blur(14px)", border: "1px solid rgba(143,184,214,0.25)", fontSize: 15, color: "var(--bone)", outline: "none", fontFamily: "var(--font-mono)", letterSpacing: "0.06em" }}
+            className="field-input"
           />
           <input
             name="email"
@@ -84,7 +84,7 @@ export default function JoinPage({ searchParams }: { searchParams: { error?: str
             placeholder="EMAIL"
             required
             autoComplete="email"
-            style={{ padding: "14px 16px", borderRadius: 12, background: "rgba(10,14,20,0.55)", backdropFilter: "blur(14px)", border: "1px solid rgba(143,184,214,0.25)", fontSize: 15, color: "var(--bone)", outline: "none", fontFamily: "var(--font-mono)", letterSpacing: "0.06em" }}
+            className="field-input"
           />
           <input
             name="password"
@@ -93,7 +93,7 @@ export default function JoinPage({ searchParams }: { searchParams: { error?: str
             required
             minLength={6}
             autoComplete="new-password"
-            style={{ padding: "14px 16px", borderRadius: 12, background: "rgba(10,14,20,0.55)", backdropFilter: "blur(14px)", border: "1px solid rgba(143,184,214,0.25)", fontSize: 15, color: "var(--bone)", outline: "none", fontFamily: "var(--font-mono)", letterSpacing: "0.06em" }}
+            className="field-input"
           />
           <button type="submit" className="btn btn-sky" style={{ padding: "18px 22px", fontSize: 12 }}>
             JOIN ELEMENT — START FREE

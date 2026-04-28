@@ -30,8 +30,8 @@ export default async function ShopScreen() {
 
         {hero && (
           <div style={{ padding: "4px 22px 16px" }}>
-            <Link href={`/shop/${hero.slug}`} style={{ position: "relative", borderRadius: 22, overflow: "hidden", height: 460, background: "#0A0E14", display: "block", color: "var(--bone)" }}>
-              <Photo src={hero.hero_image ?? ""} alt={hero.name} style={{ position: "absolute", inset: 0 }} />
+            <Link href={`/shop/${hero.slug}`} className="lift" style={{ position: "relative", borderRadius: 22, overflow: "hidden", height: 460, background: "#0A0E14", display: "block", color: "var(--bone)", textDecoration: "none" }}>
+              <Photo src={hero.hero_image ?? ""} alt={hero.name} className="zoom-on-hover" style={{ position: "absolute", inset: 0 }} />
               <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0) 50%, rgba(10,14,20,0.95) 100%)" }} />
               {hero.tag && (
                 <div style={{ position: "absolute", top: 16, left: 16 }}>
@@ -72,9 +72,9 @@ export default async function ShopScreen() {
 
         <div style={{ padding: "0 22px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           {grid.map(p => (
-            <Link key={p.id} href={`/shop/${p.slug}`} style={{ color: "var(--ink)" }}>
+            <Link key={p.id} href={`/shop/${p.slug}`} className="lift" style={{ color: "var(--ink)", textDecoration: "none" }}>
               <div style={{ position: "relative", borderRadius: 14, overflow: "hidden", aspectRatio: "0.82", background: "var(--bone-2)" }}>
-                <Photo src={p.hero_image ?? ""} alt={p.name} style={{ position: "absolute", inset: 0 }} />
+                <Photo src={p.hero_image ?? ""} alt={p.name} className="zoom-on-hover" style={{ position: "absolute", inset: 0 }} />
                 {p.tag && (
                   <div style={{ position: "absolute", top: 8, left: 8 }}>
                     <span className="e-tag" style={{ background: "var(--bone)", color: "var(--ink)", padding: "3px 7px", borderRadius: 3, fontSize: 8 }}>{p.tag}</span>

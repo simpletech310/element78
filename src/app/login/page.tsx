@@ -37,7 +37,7 @@ export default function LoginPage({ searchParams }: { searchParams: { next?: str
           )}
 
           <div style={{ marginTop: 32 }}>
-            <div className="e-mono" style={{ fontSize: 9, color: "rgba(242,238,232,0.55)", marginBottom: 8 }}>EMAIL</div>
+            <div className="e-mono" style={{ fontSize: 9, color: "rgba(242,238,232,0.55)", marginBottom: 10, letterSpacing: "0.2em" }}>EMAIL</div>
             <input
               name="email"
               type="email"
@@ -45,14 +45,14 @@ export default function LoginPage({ searchParams }: { searchParams: { next?: str
               autoComplete="email"
               defaultValue=""
               placeholder="kai@element78life.com"
-              style={{ width: "100%", padding: "14px 16px", borderRadius: 12, background: "rgba(10,14,20,0.55)", backdropFilter: "blur(14px)", border: "1px solid rgba(143,184,214,0.25)", fontSize: 15, color: "var(--bone)", outline: "none" }}
+              className="field-input"
             />
           </div>
 
           <div style={{ marginTop: 14 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-              <span className="e-mono" style={{ fontSize: 9, color: "rgba(242,238,232,0.55)" }}>PASSWORD</span>
-              <span className="e-mono" style={{ fontSize: 9, color: "var(--sky)" }}>FORGOT?</span>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
+              <span className="e-mono" style={{ fontSize: 9, color: "rgba(242,238,232,0.55)", letterSpacing: "0.2em" }}>PASSWORD</span>
+              <span className="e-mono" style={{ fontSize: 9, color: "var(--sky)", letterSpacing: "0.2em", cursor: "pointer" }}>FORGOT?</span>
             </div>
             <input
               name="password"
@@ -61,7 +61,7 @@ export default function LoginPage({ searchParams }: { searchParams: { next?: str
               minLength={6}
               autoComplete="current-password"
               placeholder="••••••••"
-              style={{ width: "100%", padding: "14px 16px", borderRadius: 12, background: "rgba(10,14,20,0.55)", backdropFilter: "blur(14px)", border: "1px solid rgba(143,184,214,0.25)", fontSize: 15, color: "var(--bone)", outline: "none" }}
+              className="field-input"
             />
           </div>
 

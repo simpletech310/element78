@@ -48,8 +48,8 @@ export default async function HomeScreen() {
 
         {/* Hero — today's ritual */}
         <div style={{ padding: "0 22px" }}>
-          <Link href="/train/player" style={{ position: "relative", borderRadius: 22, overflow: "hidden", height: 380, background: "#000", display: "block", color: "var(--bone)" }}>
-            <Photo src="/assets/blue-hair-gym.jpg" alt="ritual" style={{ position: "absolute", inset: 0, opacity: 0.85 }} />
+          <Link href="/train/player" className="lift" style={{ position: "relative", borderRadius: 22, overflow: "hidden", height: 380, background: "#000", display: "block", color: "var(--bone)", textDecoration: "none" }}>
+            <Photo src="/assets/blue-hair-gym.jpg" alt="ritual" className="zoom-on-hover" style={{ position: "absolute", inset: 0, opacity: 0.85 }} />
             <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(10,14,20,0.1) 30%, rgba(10,14,20,0.95) 100%)" }} />
             <div style={{ position: "absolute", top: 16, left: 16, right: 16, display: "flex", justifyContent: "space-between" }}>
               <div className="e-tag" style={{ background: "rgba(10,14,20,0.7)", backdropFilter: "blur(12px)", padding: "6px 10px", borderRadius: 999, color: "var(--sky)" }}>◉ TODAY&apos;S RITUAL</div>
@@ -86,7 +86,7 @@ export default async function HomeScreen() {
         </div>
         <div className="no-scrollbar" style={{ display: "flex", gap: 12, padding: "0 22px", overflowX: "auto" }}>
           {studio.map((c, i) => (
-            <Link href="/train/player" key={i} style={{ minWidth: 200, borderRadius: 16, overflow: "hidden", background: "var(--haze)", flexShrink: 0, color: "var(--bone)" }}>
+            <Link href="/train/player" key={i} className="lift" style={{ minWidth: 200, borderRadius: 16, overflow: "hidden", background: "var(--haze)", flexShrink: 0, color: "var(--bone)", textDecoration: "none" }}>
               <div style={{ position: "relative", height: 220 }}>
                 <Photo src={c.img} alt={c.t} style={{ position: "absolute", inset: 0 }} />
                 <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0) 50%, rgba(0,0,0,0.85) 100%)" }} />

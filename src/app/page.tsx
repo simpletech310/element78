@@ -51,44 +51,51 @@ export default async function HomePage() {
       <Navbar />
 
       {/* HERO */}
-      <section style={{ position: "relative", minHeight: "min(820px, 100dvh)" }}>
-        <Photo src="/assets/element78-hero.jpg" alt="" style={{ position: "absolute", inset: 0, opacity: 0.7 }} />
+      <section style={{ position: "relative", minHeight: "min(880px, 100dvh)" }}>
+        <Photo src="/assets/element78-hero.jpg" alt="" className="zoom-on-hover" style={{ position: "absolute", inset: 0, opacity: 0.72 }} />
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(10,14,20,0.55) 0%, rgba(10,14,20,0.05) 25%, rgba(10,14,20,0.85) 80%, var(--ink) 100%)" }} />
 
-        <div style={{ position: "relative", padding: "60px 22px 48px", display: "flex", flexDirection: "column", minHeight: "min(820px, 100dvh)", maxWidth: 1180, margin: "0 auto" }}>
-          <div className="e-mono" style={{ color: "var(--sky)", marginBottom: 18 }}>◉ ATLANTA · OPEN 24/7</div>
+        <div style={{ position: "relative", padding: "60px 22px 48px", display: "flex", flexDirection: "column", minHeight: "min(880px, 100dvh)", maxWidth: 1180, margin: "0 auto" }}>
+          <div className="e-mono reveal" style={{ color: "var(--sky)", marginBottom: 18 }}>◉ ATLANTA · OPEN 24/7</div>
 
-          <h1 className="e-display glow" style={{ fontSize: "clamp(72px, 18vw, 156px)", lineHeight: 0.85, margin: 0 }}>
+          <h1 className="e-display glow glow-pulse reveal reveal-d1" style={{ fontSize: "clamp(72px, 18vw, 168px)", lineHeight: 0.82, margin: 0 }}>
             ELEMENT
           </h1>
-          <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 4 }}>
-            <span className="glow" style={{ fontFamily: "var(--font-display)", fontSize: "clamp(72px, 18vw, 156px)", lineHeight: 0.85 }}>78</span>
+          <div className="reveal reveal-d2" style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 4 }}>
+            <span className="glow glow-pulse" style={{ fontFamily: "var(--font-display)", fontSize: "clamp(72px, 18vw, 168px)", lineHeight: 0.82 }}>78</span>
             <div style={{ height: 1, background: "var(--sky)", flex: 1, opacity: 0.4 }} />
           </div>
 
-          <p style={{ marginTop: 32, fontSize: "clamp(22px, 4vw, 30px)", fontFamily: "var(--font-serif)", fontStyle: "italic", lineHeight: 1.15, color: "var(--bone)", maxWidth: 460, marginBottom: 0 }}>
+          <p className="reveal reveal-d3" style={{ marginTop: 36, fontSize: "clamp(22px, 4vw, 32px)", fontFamily: "var(--font-serif)", fontStyle: "italic", lineHeight: 1.15, color: "var(--bone)", maxWidth: 480, marginBottom: 0 }}>
             Pilates with the windows down.
           </p>
 
-          <p style={{ marginTop: 14, fontSize: 15, color: "rgba(242,238,232,0.7)", maxWidth: 440, lineHeight: 1.6, fontWeight: 300 }}>
+          <p className="reveal reveal-d3" style={{ marginTop: 14, fontSize: 15, color: "rgba(242,238,232,0.7)", maxWidth: 440, lineHeight: 1.6, fontWeight: 300 }}>
             A gym, a wardrobe, and an AI studio — built for the women the wellness industry forgot. We brought the culture with us.
           </p>
 
-          <div style={{ marginTop: "auto", paddingTop: 36, display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <div className="reveal reveal-d4" style={{ marginTop: "auto", paddingTop: 36, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
             <Link href="/join" className="btn btn-sky" style={{ minWidth: 180 }}>JOIN ELEMENT</Link>
             <button className="btn btn-ghost" style={{ color: "var(--bone)", borderColor: "rgba(242,238,232,0.4)" }}>
               <Icon name="play" size={12} />WATCH FILM
             </button>
+            <Link href="/login" className="e-mono" style={{ color: "rgba(242,238,232,0.65)", marginLeft: 8 }}>SIGN IN →</Link>
           </div>
 
           {/* Proof bar */}
-          <div style={{ marginTop: 36, paddingTop: 24, borderTop: "1px solid rgba(242,238,232,0.12)", display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
+          <div className="reveal reveal-d4" style={{ marginTop: 40, paddingTop: 28, borderTop: "1px solid rgba(242,238,232,0.12)", display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
             {stats.map(s => (
               <div key={s.l}>
-                <div style={{ fontFamily: "var(--font-display)", fontSize: "clamp(22px, 5vw, 30px)", color: "var(--sky)", lineHeight: 1 }}>{s.v}</div>
+                <div style={{ fontFamily: "var(--font-display)", fontSize: "clamp(22px, 5vw, 32px)", color: "var(--sky)", lineHeight: 1 }}>{s.v}</div>
                 <div className="e-mono" style={{ color: "rgba(242,238,232,0.5)", fontSize: 9, marginTop: 6 }}>{s.l.toUpperCase()}</div>
               </div>
             ))}
+          </div>
+
+          {/* Scroll cue */}
+          <div className="float-y" aria-hidden="true" style={{ position: "absolute", bottom: 16, left: "50%", transform: "translateX(-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+            <span className="e-mono" style={{ color: "rgba(242,238,232,0.5)", fontSize: 9, letterSpacing: "0.3em" }}>SCROLL</span>
+            <div style={{ width: 1, height: 24, background: "rgba(242,238,232,0.4)" }} />
           </div>
         </div>
       </section>
@@ -122,11 +129,12 @@ export default async function HomePage() {
         {pillars.map((p, i) => {
           const reversed = i % 2 === 1;
           return (
-            <Link key={p.num} href={p.href} style={{
+            <Link key={p.num} href={p.href} className="lift" style={{
               position: "relative", borderRadius: 24, overflow: "hidden",
-              minHeight: 460, display: "block", color: "var(--bone)", textDecoration: "none",
+              minHeight: 480, display: "block", color: "var(--bone)", textDecoration: "none",
+              border: "1px solid rgba(143,184,214,0.08)",
             }}>
-              <Photo src={p.img} alt={p.t} style={{ position: "absolute", inset: 0 }} />
+              <Photo src={p.img} alt={p.t} className="zoom-on-hover" style={{ position: "absolute", inset: 0 }} />
               <div style={{
                 position: "absolute", inset: 0,
                 background: reversed
@@ -134,19 +142,19 @@ export default async function HomePage() {
                   : "linear-gradient(90deg, rgba(10,14,20,0.95) 10%, rgba(10,14,20,0.2) 60%, transparent 100%)",
               }} />
               <div style={{
-                position: "absolute", inset: 0, padding: "32px 28px",
+                position: "absolute", inset: 0, padding: "36px 32px",
                 display: "flex", flexDirection: "column", justifyContent: "space-between",
                 alignItems: reversed ? "flex-end" : "flex-start",
                 textAlign: reversed ? "right" : "left",
               }}>
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "inherit", gap: 8 }}>
-                  <span className="e-display glow" style={{ fontSize: 56, lineHeight: 1 }}>{p.num}</span>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "inherit", gap: 10 }}>
+                  <span className="e-display glow" style={{ fontSize: 64, lineHeight: 1, letterSpacing: "0.02em" }}>{p.num}</span>
                   <span className="e-mono" style={{ color: "var(--sky)" }}>{p.sub}</span>
                 </div>
-                <div style={{ maxWidth: 360 }}>
-                  <h3 className="e-display" style={{ fontSize: "clamp(40px, 7vw, 56px)", lineHeight: 0.95, margin: 0 }}>{p.t}</h3>
-                  <p style={{ fontSize: 14, color: "rgba(242,238,232,0.78)", marginTop: 14, lineHeight: 1.55, fontWeight: 300 }}>{p.desc}</p>
-                  <div style={{ marginTop: 18, display: "inline-flex", alignItems: "center", gap: 8, color: "var(--sky)" }}>
+                <div style={{ maxWidth: 380 }}>
+                  <h3 className="e-display" style={{ fontSize: "clamp(40px, 7vw, 60px)", lineHeight: 0.95, margin: 0 }}>{p.t}</h3>
+                  <p style={{ fontSize: 14, color: "rgba(242,238,232,0.78)", marginTop: 16, lineHeight: 1.6, fontWeight: 300 }}>{p.desc}</p>
+                  <div style={{ marginTop: 20, display: "inline-flex", alignItems: "center", gap: 8, color: "var(--sky)", paddingBottom: 4, borderBottom: "1px solid rgba(143,184,214,0.4)" }}>
                     <span className="e-mono">{p.cta}</span>
                     <Icon name="arrowUpRight" size={14} />
                   </div>
@@ -233,20 +241,29 @@ export default async function HomePage() {
             </Link>
           </div>
 
-          <div style={{ marginTop: 36, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 18 }}>
-            {trainers.slice(0, 6).map(t => (
-              <Link key={t.id} href={`/trainers/${t.slug}`} style={{ display: "block", borderRadius: 18, overflow: "hidden", color: "var(--bone)", textDecoration: "none", background: "var(--haze)" }}>
-                <div style={{ position: "relative", aspectRatio: "0.78" }}>
-                  <Photo src={t.hero_image ?? t.avatar_url ?? ""} alt={t.name} style={{ position: "absolute", inset: 0 }} />
-                  <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, transparent 40%, rgba(10,14,20,0.92) 100%)" }} />
-                  <div style={{ position: "absolute", left: 18, right: 18, bottom: 18 }}>
+          <div style={{ marginTop: 40, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 18 }}>
+            {trainers.slice(0, 6).map((t, i) => (
+              <Link key={t.id} href={`/trainers/${t.slug}`} className="lift" style={{
+                display: "block", borderRadius: 18, overflow: "hidden",
+                color: "var(--bone)", textDecoration: "none",
+                background: "var(--haze)",
+                border: "1px solid rgba(143,184,214,0.1)",
+              }}>
+                <div style={{ position: "relative", aspectRatio: "0.78", overflow: "hidden" }}>
+                  <Photo src={t.hero_image ?? t.avatar_url ?? ""} alt={t.name} className="zoom-on-hover" style={{ position: "absolute", inset: 0 }} />
+                  <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, transparent 35%, rgba(10,14,20,0.95) 100%)" }} />
+                  <div style={{ position: "absolute", top: 16, left: 16, display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 10px", borderRadius: 999, background: "rgba(10,14,20,0.55)", backdropFilter: "blur(10px)" }}>
+                    <span style={{ width: 5, height: 5, borderRadius: "50%", background: "var(--sky)" }} />
+                    <span className="e-mono" style={{ fontSize: 9, color: "var(--sky)" }}>0{i + 1}</span>
+                  </div>
+                  <div style={{ position: "absolute", left: 20, right: 20, bottom: 20 }}>
                     <div className="e-mono" style={{ color: "var(--sky)", fontSize: 10 }}>★ {t.rating} · TRAINER</div>
-                    <div className="e-display" style={{ fontSize: 28, lineHeight: 0.95, marginTop: 6 }}>{t.name.toUpperCase()}</div>
-                    <div className="e-mono" style={{ color: "rgba(242,238,232,0.6)", fontSize: 9, marginTop: 6 }}>
+                    <div className="e-display" style={{ fontSize: 30, lineHeight: 0.95, marginTop: 6 }}>{t.name.toUpperCase()}</div>
+                    <div className="e-mono" style={{ color: "rgba(242,238,232,0.6)", fontSize: 9, marginTop: 8 }}>
                       {t.specialties.slice(0, 2).join(" · ").toUpperCase()}
                     </div>
                   </div>
-                  <div style={{ position: "absolute", top: 14, right: 14, width: 36, height: 36, borderRadius: "50%", background: "rgba(10,14,20,0.55)", backdropFilter: "blur(10px)", color: "var(--bone)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <div style={{ position: "absolute", top: 14, right: 14, width: 38, height: 38, borderRadius: "50%", background: "rgba(10,14,20,0.55)", backdropFilter: "blur(10px)", color: "var(--bone)", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid rgba(143,184,214,0.25)" }}>
                     <Icon name="arrowUpRight" size={14} />
                   </div>
                 </div>
@@ -259,8 +276,8 @@ export default async function HomePage() {
       {/* SIGNATURE PRODUCT */}
       <section style={{ padding: "60px 22px 96px", background: "var(--ink)" }}>
         <div style={{ maxWidth: 1180, margin: "0 auto" }}>
-          <Link href="/shop/tripod-bottle" style={{ position: "relative", borderRadius: 24, overflow: "hidden", minHeight: 540, display: "block", color: "var(--bone)", textDecoration: "none" }}>
-            <Photo src="/assets/bottle-tripod.jpg" alt="" style={{ position: "absolute", inset: 0 }} />
+          <Link href="/shop/tripod-bottle" className="lift" style={{ position: "relative", borderRadius: 24, overflow: "hidden", minHeight: 540, display: "block", color: "var(--bone)", textDecoration: "none", border: "1px solid rgba(143,184,214,0.08)" }}>
+            <Photo src="/assets/bottle-tripod.jpg" alt="" className="zoom-on-hover" style={{ position: "absolute", inset: 0 }} />
             <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, transparent 40%, rgba(0,0,0,0.92))" }} />
             <div style={{ position: "absolute", top: 22, left: 22 }}>
               <span className="e-tag" style={{ background: "var(--bone)", color: "var(--ink)", padding: "6px 10px", borderRadius: 3 }}>SIGNATURE</span>
