@@ -23,22 +23,87 @@ export const fallbackTrainers: Trainer[] = [
   { id: "tr-leila", slug: "leila", name: "Leila", headline: "AI avatar · Yoga, breathwork, recovery.", bio: "Breath-led restorative flows. Soft tempo, deeper holds. Built for the days your watch says you slept badly — Leila tunes the session to your sleep score and HRV.", specialties: ["Yoga","Breathwork","Recovery"], avatar_url: "/assets/pilates-pink.jpg", hero_image: "/assets/editorial-2.png", home_location_id: "loc-atl", rating: 4.94, is_ai: true, years_experience: null, cert: "Element 78 AI · v3.2" },
 ];
 
-const today = new Date();
-const at = (dayOffset: number, hour: number, min = 0) => {
-  const d = new Date(today);
-  d.setDate(d.getDate() + dayOffset);
-  d.setHours(hour, min, 0, 0);
-  return d.toISOString();
+// Daily schedule template — every weekday gets these classes, weekends pull
+// from a slimmer set. Lets us generate two weeks of variety from one definition.
+type ScheduleSlot = {
+  slug: string;
+  name: string;
+  kind: string;
+  trainer_id: string;
+  hour: number;
+  minute: number;
+  duration_min: number;
+  capacity: number;
+  booked: number;
+  intensity: string;
+  room: string;
+  hero_image: string;
+  price_cents: number;
+  summary: string;
+  what_to_bring: string;
+  weekendOnly?: boolean;
+  weekdaysOnly?: boolean;
 };
 
-export const fallbackClasses: ClassRow[] = [
-  { id: "cls-1", slug: "west-coast-flow-1", location_id: "loc-atl", trainer_id: "tr-kai", name: "WEST COAST FLOW", kind: "reformer", starts_at: at(2, 18, 30), duration_min: 50, capacity: 14, booked: 9, intensity: "MD", room: "STUDIO B", hero_image: "/assets/blue-set-rooftop.jpg", price_cents: 2500, requires_payment: true, summary: "Slow tempo, hard work. Reformer-based Pilates that builds long lines and core control.", what_to_bring: "Grip socks · water" },
-  { id: "cls-2", slug: "core-78-1", location_id: "loc-atl", trainer_id: "tr-tasha", name: "CORE 78", kind: "pilates", starts_at: at(0, 7, 0), duration_min: 45, capacity: 12, booked: 8, intensity: "HI", room: "STUDIO A", hero_image: "/assets/floor-mockup.png", price_cents: 1500, requires_payment: true, summary: "High-intensity core block on the mat. Short bursts, longer holds.", what_to_bring: "Mat provided · grip socks" },
-  { id: "cls-3", slug: "morning-mobility", location_id: "loc-atl", trainer_id: "tr-tasha", name: "MORNING MOBILITY", kind: "yoga", starts_at: at(0, 6, 0), duration_min: 30, capacity: 16, booked: 4, intensity: "LO", room: "STUDIO C", hero_image: "/assets/IMG_3467.jpg", price_cents: 0, requires_payment: false, summary: "Pre-coffee mobility flow. Soft openings, slow breath.", what_to_bring: "Mat provided · loose layers" },
-  { id: "cls-4", slug: "street-hiit", location_id: "loc-atl", trainer_id: "tr-amara", name: "STREET HIIT", kind: "hiit", starts_at: at(0, 12, 0), duration_min: 30, capacity: 20, booked: 20, intensity: "HI", room: "FLOOR", hero_image: "/assets/dumbbell-street.jpg", price_cents: 0, requires_payment: false, summary: "Outdoor-style HIIT on the floor. Bodyweight + dumbbells.", what_to_bring: "Athletic shoes · sweat towel" },
-  { id: "cls-5", slug: "private-1on1", location_id: "loc-atl", trainer_id: "tr-kai", name: "PRIVATE · 1:1", kind: "private", starts_at: at(0, 17, 0), duration_min: 60, capacity: 1, booked: 0, intensity: "MD", room: "STUDIO B", hero_image: "/assets/IMG_3465.jpg", price_cents: 0, requires_payment: false, summary: "One trainer, one hour, one body. Built for whatever you're working on right now.", what_to_bring: "Whatever you train in." },
-  { id: "cls-6", slug: "rooftop-sunset", location_id: "loc-atl", trainer_id: "tr-kai", name: "ROOFTOP SUNSET", kind: "reformer", starts_at: at(0, 19, 30), duration_min: 50, capacity: 12, booked: 12, intensity: "MD", room: "ROOF", hero_image: "/assets/editorial-2.png", price_cents: 2500, requires_payment: true, summary: "Reformer flow on the open-air rooftop deck. Sunset cues. Music heavier than the ground floor.", what_to_bring: "Grip socks · water · open mind" },
+const scheduleTemplate: ScheduleSlot[] = [
+  // Morning
+  { slug: "sunrise-pilates",  name: "SUNRISE PILATES",   kind: "pilates",    trainer_id: "tr-tasha", hour: 6,  minute: 25, duration_min: 35, capacity: 14, booked: 6,  intensity: "LO", room: "STUDIO A", hero_image: "/assets/IMG_3467.jpg",        price_cents: 0,    summary: "The 6:25A wave. Slow openings, breath cues, no equipment.",                     what_to_bring: "Mat provided · loose layers", weekdaysOnly: true },
+  { slug: "morning-mobility", name: "MORNING MOBILITY",  kind: "mobility",   trainer_id: "tr-tasha", hour: 7,  minute: 0,  duration_min: 30, capacity: 16, booked: 4,  intensity: "LO", room: "STUDIO C", hero_image: "/assets/IMG_3467.jpg",        price_cents: 0,    summary: "Pre-coffee mobility flow. Soft openings, slow breath.",                          what_to_bring: "Mat provided · loose layers" },
+  { slug: "core-78",          name: "CORE 78",           kind: "pilates",    trainer_id: "tr-tasha", hour: 8,  minute: 30, duration_min: 45, capacity: 12, booked: 8,  intensity: "HI", room: "STUDIO A", hero_image: "/assets/floor-mockup.png",    price_cents: 1500, summary: "High-intensity core block on the mat. Short bursts, longer holds.",              what_to_bring: "Mat provided · grip socks" },
+  // Mid-morning / lunch
+  { slug: "power-pilates",    name: "POWER PILATES",     kind: "reformer",   trainer_id: "tr-kai",   hour: 10, minute: 0,  duration_min: 50, capacity: 12, booked: 5,  intensity: "MD", room: "STUDIO B", hero_image: "/assets/blue-set-rooftop.jpg",price_cents: 2500, summary: "Reformer-based Pilates that builds long lines and core control.",               what_to_bring: "Grip socks · water" },
+  { slug: "street-hiit",      name: "STREET HIIT",       kind: "hiit",       trainer_id: "tr-amara", hour: 12, minute: 0,  duration_min: 30, capacity: 20, booked: 11, intensity: "HI", room: "FLOOR",    hero_image: "/assets/dumbbell-street.jpg", price_cents: 0,    summary: "Outdoor-style HIIT on the floor. Bodyweight + dumbbells.",                       what_to_bring: "Athletic shoes · sweat towel" },
+  { slug: "lunch-strength",   name: "LUNCH STRENGTH",    kind: "strength",   trainer_id: "tr-jay",   hour: 12, minute: 30, duration_min: 45, capacity: 10, booked: 4,  intensity: "MD", room: "WEIGHT FLOOR", hero_image: "/assets/IMG_3469.jpg",    price_cents: 1500, summary: "Heavy basics in 45. Squat, hinge, push, pull, carry — pick three.",              what_to_bring: "Lifters · chalk allowed" },
+  // Afternoon
+  { slug: "engine-builder",   name: "ENGINE BUILDER",    kind: "conditioning",trainer_id:"tr-amara", hour: 16, minute: 0,  duration_min: 28, capacity: 16, booked: 9,  intensity: "HI", room: "FLOOR",    hero_image: "/assets/IMG_3465.jpg",        price_cents: 1500, summary: "Threshold intervals scaled to your HRV. Eight rounds, three minutes each.",      what_to_bring: "Heart-rate monitor optional" },
+  { slug: "deadlift-lab",     name: "DEADLIFT LAB",      kind: "strength",   trainer_id: "tr-jay",   hour: 17, minute: 0,  duration_min: 60, capacity: 8,  booked: 6,  intensity: "HI", room: "WEIGHT FLOOR", hero_image: "/assets/IMG_3461.jpg",   price_cents: 2500, summary: "Pull setup → top set → backoffs. Conventional or trap bar.",                     what_to_bring: "Lifters · belt if you want", weekdaysOnly: true },
+  // Evening
+  { slug: "west-coast-flow",  name: "WEST COAST FLOW",   kind: "reformer",   trainer_id: "tr-kai",   hour: 18, minute: 30, duration_min: 50, capacity: 14, booked: 9,  intensity: "MD", room: "STUDIO B", hero_image: "/assets/blue-set-rooftop.jpg",price_cents: 2500, summary: "Slow tempo, hard work. Reformer flow that builds long lines.",                   what_to_bring: "Grip socks · water" },
+  { slug: "rooftop-sunset",   name: "ROOFTOP SUNSET",    kind: "reformer",   trainer_id: "tr-kai",   hour: 19, minute: 30, duration_min: 50, capacity: 12, booked: 7,  intensity: "MD", room: "ROOF",     hero_image: "/assets/editorial-2.png",     price_cents: 2500, summary: "Reformer flow on the open-air rooftop deck. Sunset cues, heavier music.",        what_to_bring: "Grip socks · water · open mind" },
+  { slug: "evening-yoga",     name: "EVENING YOGA",      kind: "yoga",       trainer_id: "tr-tasha", hour: 20, minute: 0,  duration_min: 45, capacity: 16, booked: 5,  intensity: "LO", room: "STUDIO C", hero_image: "/assets/pilates-pink.jpg",    price_cents: 0,    summary: "Restorative wind-down. Long holds, soft music, breath-led.",                     what_to_bring: "Mat provided · blanket if you have one" },
+  // Weekend specials
+  { slug: "saturday-strong",  name: "SATURDAY STRONG",   kind: "strength",   trainer_id: "tr-jay",   hour: 9,  minute: 0,  duration_min: 60, capacity: 12, booked: 6,  intensity: "HI", room: "WEIGHT FLOOR", hero_image: "/assets/IMG_3469.jpg",    price_cents: 2500, summary: "Heavy basics, full hour. Squat or deadlift focus, alternating weeks.",           what_to_bring: "Lifters · chalk allowed", weekendOnly: true },
+  { slug: "sunday-reset",     name: "SUNDAY RESET",      kind: "yoga",       trainer_id: "tr-tasha", hour: 10, minute: 0,  duration_min: 60, capacity: 18, booked: 8,  intensity: "LO", room: "STUDIO C", hero_image: "/assets/editorial-1.jpg",     price_cents: 0,    summary: "Restorative yoga + breathwork. The week's slowest hour.",                        what_to_bring: "Mat provided · blanket", weekendOnly: true },
 ];
+
+export const fallbackClasses: ClassRow[] = (() => {
+  const out: ClassRow[] = [];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  for (let dayOffset = 0; dayOffset < 14; dayOffset++) {
+    const date = new Date(today);
+    date.setDate(date.getDate() + dayOffset);
+    const dow = date.getDay(); // 0 = Sunday, 6 = Saturday
+    const isWeekend = dow === 0 || dow === 6;
+    for (const slot of scheduleTemplate) {
+      if (slot.weekdaysOnly && isWeekend) continue;
+      if (slot.weekendOnly && !isWeekend) continue;
+      const start = new Date(date);
+      start.setHours(slot.hour, slot.minute, 0, 0);
+      out.push({
+        id: `cls-${slot.slug}-${dayOffset}`,
+        slug: `${slot.slug}-${dayOffset}`,
+        location_id: "loc-atl",
+        trainer_id: slot.trainer_id,
+        name: slot.name,
+        kind: slot.kind,
+        starts_at: start.toISOString(),
+        duration_min: slot.duration_min,
+        capacity: slot.capacity,
+        // Lightly randomize occupancy by day so the schedule doesn't look static.
+        booked: Math.min(slot.capacity, slot.booked + ((dayOffset * 3) % 5)),
+        intensity: slot.intensity,
+        room: slot.room,
+        hero_image: slot.hero_image,
+        price_cents: slot.price_cents,
+        requires_payment: slot.price_cents > 0,
+        summary: slot.summary,
+        what_to_bring: slot.what_to_bring,
+      });
+    }
+  }
+  return out;
+})();
 
 export const fallbackProducts: Product[] = [
   { id: "p1", slug: "tripod-bottle", name: "TRIPOD BOTTLE", subtitle: "32 OZ · DUSK BLUE", category: "gear", price_cents: 5800, compare_at_cents: null, description: "Insulated 32oz with a built-in phone mount in the cap. Set it up on the mat. Get the angle right.", hero_image: "/products/water-tripod-1.png", gallery: ["/products/water-tripod-1.png","/products/water-tripod-2.jpg","/assets/IMG_3470.jpg","/assets/IMG_3462.jpg"], tag: "SIGNATURE", in_stock: true, sort_order: 1 },
