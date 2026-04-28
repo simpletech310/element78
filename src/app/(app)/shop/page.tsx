@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Navbar } from "@/components/site/Navbar";
-import { TabBar } from "@/components/chrome/TabBar";
+import { SiteFooter } from "@/components/site/SiteFooter";
+import { FloatingTabBar } from "@/components/site/FloatingTabBar";
 import { Photo } from "@/components/ui/Photo";
 import { Icon } from "@/components/ui/Icon";
 import { CartButton } from "@/components/shop/CartButton";
@@ -102,23 +103,12 @@ export default async function ShopScreen() {
   const grid = products.filter(p => p.id !== hero?.id);
   const cats = [{ l: "ALL", a: true }, { l: "WEAR" }, { l: "GEAR" }, { l: "FUEL" }, { l: "ACCESSORIES" }];
 
-  // Authed: in-app shell — TabBar anchored to viewport, content scrolls inside.
-  if (isAuthed) {
-    return (
-      <div className="app" style={{ height: "100dvh", background: "var(--bone)" }}>
-        <div className="app-scroll" style={{ paddingBottom: 30 }}>
-          <ShopBody products={products} hero={hero} grid={grid} cats={cats} />
-        </div>
-        <TabBar />
-      </div>
-    );
-  }
-
-  // Public: marketing layout with top Navbar + natural document scroll.
   return (
     <div style={{ background: "var(--bone)", color: "var(--ink)", fontFamily: "var(--font-body)", minHeight: "100dvh" }}>
-      <Navbar authed={false} />
+      <Navbar authed={isAuthed} />
       <ShopBody products={products} hero={hero} grid={grid} cats={cats} />
+      <SiteFooter />
+      {isAuthed && <FloatingTabBar />}
     </div>
   );
 }

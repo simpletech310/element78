@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Navbar } from "@/components/site/Navbar";
-import { TabBar } from "@/components/chrome/TabBar";
+import { SiteFooter } from "@/components/site/SiteFooter";
+import { FloatingTabBar } from "@/components/site/FloatingTabBar";
 import { Photo } from "@/components/ui/Photo";
 import { Icon } from "@/components/ui/Icon";
 import { CartButton } from "@/components/shop/CartButton";
@@ -96,18 +97,12 @@ export default async function ShopGallery() {
         </div>
     </div>
   );
-  if (isAuthed) {
-    return (
-      <div className="app" style={{ height: "100dvh", background: "var(--bone)" }}>
-        <div className="app-scroll">{body}</div>
-        <TabBar />
-      </div>
-    );
-  }
   return (
     <div style={{ background: "var(--bone)", color: "var(--ink)", fontFamily: "var(--font-body)", minHeight: "100dvh" }}>
-      <Navbar authed={false} />
+      <Navbar authed={isAuthed} />
       {body}
+      <SiteFooter />
+      {isAuthed && <FloatingTabBar />}
     </div>
   );
 }

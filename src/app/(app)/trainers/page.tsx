@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Navbar } from "@/components/site/Navbar";
 import { SiteFooter } from "@/components/site/SiteFooter";
-import { TabBar } from "@/components/chrome/TabBar";
+import { FloatingTabBar } from "@/components/site/FloatingTabBar";
 import { Photo } from "@/components/ui/Photo";
 import { Icon } from "@/components/ui/Icon";
 import { listTrainers } from "@/lib/data/queries";
@@ -123,22 +123,12 @@ export default async function TrainersPage() {
     </>
   );
 
-  // Authed → in-app shell with TabBar
-  if (isAuthed) {
-    return (
-      <div className="app app-dark" style={{ height: "100dvh", background: "var(--ink)", color: "var(--bone)" }}>
-        <div className="app-scroll" style={{ paddingBottom: 30 }}>{body}</div>
-        <TabBar />
-      </div>
-    );
-  }
-
-  // Public → marketing layout
   return (
     <div style={{ background: "var(--ink)", color: "var(--bone)", fontFamily: "var(--font-body)", minHeight: "100dvh" }}>
-      <Navbar authed={false} />
+      <Navbar authed={isAuthed} />
       {body}
       <SiteFooter />
+      {isAuthed && <FloatingTabBar />}
     </div>
   );
 }

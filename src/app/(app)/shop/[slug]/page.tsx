@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Navbar } from "@/components/site/Navbar";
-import { TabBar } from "@/components/chrome/TabBar";
+import { SiteFooter } from "@/components/site/SiteFooter";
+import { FloatingTabBar } from "@/components/site/FloatingTabBar";
 import { Photo } from "@/components/ui/Photo";
 import { Icon } from "@/components/ui/Icon";
 import { AddToBagFull } from "@/components/shop/AddToBag";
@@ -97,18 +98,12 @@ export default async function ProductDetail({ params }: { params: { slug: string
     </div>
   );
 
-  if (isAuthed) {
-    return (
-      <div className="app" style={{ height: "100dvh", background: "var(--bone)" }}>
-        <div className="app-scroll">{body}</div>
-        <TabBar />
-      </div>
-    );
-  }
   return (
     <div style={{ background: "var(--bone)", color: "var(--ink)", fontFamily: "var(--font-body)", minHeight: "100dvh" }}>
-      <Navbar authed={false} />
+      <Navbar authed={isAuthed} />
       {body}
+      <SiteFooter />
+      {isAuthed && <FloatingTabBar />}
     </div>
   );
 }

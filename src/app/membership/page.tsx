@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Navbar } from "@/components/site/Navbar";
 import { SiteFooter } from "@/components/site/SiteFooter";
+import { FloatingTabBar } from "@/components/site/FloatingTabBar";
 import { Photo } from "@/components/ui/Photo";
 import { Icon, IconName } from "@/components/ui/Icon";
 import { getUser } from "@/lib/auth";
@@ -187,6 +188,7 @@ export default async function MembershipPage() {
       </section>
 
       <SiteFooter />
+      {user && <FloatingTabBar />}
     </div>
   );
 }

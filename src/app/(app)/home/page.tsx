@@ -3,7 +3,7 @@ import { StatusBar, HomeIndicator } from "@/components/chrome/StatusBar";
 import { TabBar } from "@/components/chrome/TabBar";
 import { Photo } from "@/components/ui/Photo";
 import { Icon } from "@/components/ui/Icon";
-import { listClasses, listUserEnrollments, listUserBookings, listEnrollmentCompletions } from "@/lib/data/queries";
+import { listClasses, listUserEnrollments, listUserBookings, listEnrollmentCompletions, listProducts } from "@/lib/data/queries";
 import { getUser } from "@/lib/auth";
 
 function greeting(d = new Date()) {
@@ -13,8 +13,14 @@ function greeting(d = new Date()) {
   return "GOOD EVENING";
 }
 
+function fmtPrice(cents: number) {
+  if (!cents) return "FREE";
+  return `$${(cents / 100).toFixed(0)}`;
+}
+
 export default async function HomeScreen() {
-  const [classes, user] = await Promise.all([listClasses(), getUser()]);
+  const [classes, products, user] = await Promise.all([listClasses(), listProducts(), getUser()]);
+  const newDrops = products.slice(0, 6);
 
   const displayName =
     (user?.user_metadata?.display_name as string | undefined)
@@ -272,6 +278,50 @@ export default async function HomeScreen() {
             </div>
           ))}
         </div>
+
+        {/* NEW DROPS — shop preview */}
+        {newDrops.length > 0 && (
+          <>
+            <div style={{ padding: "32px 22px 12px", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+              <div className="e-display" style={{ fontSize: 22 }}>NEW DROPS</div>
+              <Link href="/shop" className="e-mono" style={{ color: "var(--sky)" }}>SHOP ALL →</Link>
+            </div>
+            <div className="no-scrollbar" style={{ display: "flex", gap: 12, padding: "0 22px 8px", overflowX: "auto" }}>
+              {newDrops.map(p => (
+                <Link key={p.id} href={`/shop/${p.slug}`} className="lift" style={{
+                  minWidth: 180, flexShrink: 0,
+                  borderRadius: 16, overflow: "hidden",
+                  background: "var(--haze)",
+                  border: "1px solid rgba(255,255,255,0.06)",
+                  color: "var(--bone)", textDecoration: "none",
+                  display: "flex", flexDirection: "column",
+                }}>
+                  <div style={{ position: "relative", aspectRatio: "1 / 1", background: "rgba(255,255,255,0.04)" }}>
+                    {p.hero_image && <Photo src={p.hero_image} alt={p.name} className="zoom-on-hover" style={{ position: "absolute", inset: 0 }} />}
+                    {p.tag && (
+                      <div className="e-mono" style={{ position: "absolute", top: 10, left: 10, padding: "3px 8px", borderRadius: 999, background: "var(--sky)", color: "var(--ink)", fontSize: 8, letterSpacing: "0.2em" }}>
+                        {p.tag.toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 4 }}>
+                    <div className="e-mono" style={{ color: "rgba(242,238,232,0.5)", fontSize: 9, letterSpacing: "0.18em" }}>{p.category?.toUpperCase()}</div>
+                    <div style={{ fontFamily: "var(--font-display)", fontSize: 16, lineHeight: 1, letterSpacing: "0.02em" }}>{p.name.toUpperCase()}</div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 4 }}>
+                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 13, color: "var(--sky)" }}>{fmtPrice(p.price_cents)}</span>
+                      {p.compare_at_cents && p.compare_at_cents > p.price_cents && (
+                        <span className="e-mono" style={{ color: "rgba(242,238,232,0.4)", fontSize: 9, textDecoration: "line-through" }}>{fmtPrice(p.compare_at_cents)}</span>
+                      )}
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+            <div style={{ padding: "10px 22px 0" }}>
+              <Link href="/shop" className="btn btn-sky" style={{ width: "100%" }}>OPEN THE SHOP</Link>
+            </div>
+          </>
+        )}
       </div>
       <TabBar />
       <HomeIndicator dark />

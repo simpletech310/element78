@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Navbar } from "@/components/site/Navbar";
 import { SiteFooter } from "@/components/site/SiteFooter";
+import { FloatingTabBar } from "@/components/site/FloatingTabBar";
 import { Photo } from "@/components/ui/Photo";
 import { Icon, IconName } from "@/components/ui/Icon";
 import { listPrograms, listUserEnrollments } from "@/lib/data/queries";
@@ -173,6 +174,7 @@ export default async function ProgramsPage() {
       </section>
 
       <SiteFooter />
+      {user && <FloatingTabBar />}
 
       <style>{`
         @media (min-width: 720px) {

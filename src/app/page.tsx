@@ -3,6 +3,7 @@ import { Photo } from "@/components/ui/Photo";
 import { Icon } from "@/components/ui/Icon";
 import { Navbar } from "@/components/site/Navbar";
 import { SiteFooter } from "@/components/site/SiteFooter";
+import { FloatingTabBar } from "@/components/site/FloatingTabBar";
 import { FilmTrigger } from "@/components/site/FilmTrigger";
 import { listTrainers } from "@/lib/data/queries";
 import { getUser } from "@/lib/auth";
@@ -324,6 +325,7 @@ export default async function HomePage() {
       </section>
 
       <SiteFooter />
+      {user && <FloatingTabBar />}
     </div>
   );
 }

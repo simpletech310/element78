@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Navbar } from "@/components/site/Navbar";
 import { SiteFooter } from "@/components/site/SiteFooter";
+import { FloatingTabBar } from "@/components/site/FloatingTabBar";
 import { Photo } from "@/components/ui/Photo";
 import { Icon } from "@/components/ui/Icon";
 import { getProgram, getEnrollment, listEnrollmentCompletions } from "@/lib/data/queries";
@@ -221,6 +222,7 @@ export default async function ProgramDetail({ params }: { params: { slug: string
       </section>
 
       <SiteFooter />
+      {user && <FloatingTabBar />}
     </div>
   );
 }

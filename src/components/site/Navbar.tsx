@@ -10,6 +10,7 @@ import { signOutAction } from "@/lib/auth-actions";
 const links = [
   { label: "HOME", href: "/" },
   { label: "SHOP", href: "/shop" },
+  { label: "TRAINERS", href: "/trainers" },
   { label: "LOCATIONS", href: "/locations" },
   { label: "CONTACT", href: "/contact" },
 ];

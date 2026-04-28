@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Navbar } from "@/components/site/Navbar";
 import { SiteFooter } from "@/components/site/SiteFooter";
-import { TabBar } from "@/components/chrome/TabBar";
+import { FloatingTabBar } from "@/components/site/FloatingTabBar";
 import { Photo } from "@/components/ui/Photo";
 import { Icon } from "@/components/ui/Icon";
 import { getClass, listTrainers, getUserBookingForClass } from "@/lib/data/queries";
@@ -50,8 +50,8 @@ export default async function ClassDetail({
               : null;
 
   return (
-    <div style={{ background: "var(--ink)", color: "var(--bone)", fontFamily: "var(--font-body)", minHeight: "100dvh", paddingBottom: user ? 80 : 0 }}>
-      {!user ? <Navbar authed={false} /> : null}
+    <div style={{ background: "var(--ink)", color: "var(--bone)", fontFamily: "var(--font-body)", minHeight: "100dvh" }}>
+      <Navbar authed={!!user} />
 
       {banner && (
         <div style={{
@@ -235,7 +235,8 @@ export default async function ClassDetail({
         </div>
       </section>
 
-      {!user ? <SiteFooter /> : <TabBar />}
+      <SiteFooter />
+      {user && <FloatingTabBar />}
     </div>
   );
 }
