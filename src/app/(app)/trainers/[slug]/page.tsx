@@ -1,29 +1,31 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { StatusBar, HomeIndicator } from "@/components/chrome/StatusBar";
+import { Navbar } from "@/components/site/Navbar";
+import { SiteFooter } from "@/components/site/SiteFooter";
+import { TabBar } from "@/components/chrome/TabBar";
 import { Photo } from "@/components/ui/Photo";
 import { Icon } from "@/components/ui/Icon";
 import { getTrainer } from "@/lib/data/queries";
+import { getUser } from "@/lib/auth";
 
 export default async function TrainerProfile({ params }: { params: { slug: string } }) {
-  const t = await getTrainer(params.slug);
+  const [t, user] = await Promise.all([getTrainer(params.slug), getUser()]);
   if (!t) notFound();
+  const isAuthed = !!user;
 
   const flows = [
     { t: "WEST COAST FLOW", m: 28, img: "/assets/blue-set-rooftop.jpg" },
     { t: "STREET STRENGTH", m: 35, img: "/assets/dumbbell-street.jpg" },
-    { t: "CORE COMPTON", m: 22, img: "/assets/bridge-pose.jpg" },
+    { t: "CORE 78", m: 22, img: "/assets/bridge-pose.jpg" },
   ];
   const slots = [
     { d: "WED 04.29", t: "6:30P · WEST COAST FLOW · STUDIO B", spots: 6 },
-    { d: "FRI 05.01", t: "7:00A · CORE COMPTON · STUDIO A", spots: 2 },
+    { d: "FRI 05.01", t: "7:00A · CORE 78 · STUDIO A", spots: 2 },
     { d: "SAT 05.02", t: "10:00A · OUTDOOR HIIT · ROOF", spots: 11 },
   ];
 
-  return (
-    <div className="app app-dark" style={{ height: "100dvh" }}>
-      <StatusBar dark />
-      <div className="app-scroll" style={{ paddingBottom: 100 }}>
+  const body = (
+    <div style={{ paddingBottom: 60 }}>
         <div style={{ position: "relative", height: 480 }}>
           <Photo src={t.hero_image ?? ""} alt={t.name} style={{ position: "absolute", inset: 0 }} />
           <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(10,14,20,0.6) 0%, rgba(10,14,20,0.05) 30%, rgba(10,14,20,0.05) 60%, rgba(10,14,20,1) 100%)" }} />
@@ -39,7 +41,7 @@ export default async function TrainerProfile({ params }: { params: { slug: strin
           </div>
 
           <div style={{ position: "absolute", left: 22, right: 22, bottom: 16, color: "var(--bone)" }}>
-            <div className="e-mono" style={{ color: "var(--sky)" }}>TRAINER · COMPTON</div>
+            <div className="e-mono" style={{ color: "var(--sky)" }}>TRAINER · ATLANTA</div>
             <div className="e-display" style={{ fontSize: 56, lineHeight: 0.9, marginTop: 4 }}>
               {t.name.split(" ")[0].toUpperCase()}<br/>{t.name.split(" ").slice(1).join(" ").toUpperCase()}
             </div>
@@ -104,12 +106,26 @@ export default async function TrainerProfile({ params }: { params: { slug: strin
           </div>
         </div>
 
-        <div style={{ padding: "20px 22px 0", display: "flex", gap: 8 }}>
-          <button className="btn btn-sky" style={{ flex: 1 }}>BOOK 1-ON-1</button>
-          <button className="btn" style={{ background: "rgba(255,255,255,0.1)", color: "var(--bone)", border: "1px solid rgba(255,255,255,0.2)" }}>MESSAGE</button>
+        <div style={{ padding: "20px 22px 40px", display: "flex", gap: 8 }}>
+          <Link href={isAuthed ? "/gym" : "/join"} className="btn btn-sky" style={{ flex: 1 }}>BOOK 1-ON-1</Link>
+          <Link href="/contact" className="btn" style={{ background: "rgba(255,255,255,0.1)", color: "var(--bone)", border: "1px solid rgba(255,255,255,0.2)" }}>MESSAGE</Link>
         </div>
+    </div>
+  );
+
+  if (isAuthed) {
+    return (
+      <div className="app app-dark" style={{ height: "100dvh", background: "var(--ink)", color: "var(--bone)" }}>
+        <div className="app-scroll" style={{ paddingBottom: 30 }}>{body}</div>
+        <TabBar />
       </div>
-      <HomeIndicator dark />
+    );
+  }
+  return (
+    <div style={{ background: "var(--ink)", color: "var(--bone)", fontFamily: "var(--font-body)", minHeight: "100dvh" }}>
+      <Navbar authed={false} />
+      {body}
+      <SiteFooter />
     </div>
   );
 }

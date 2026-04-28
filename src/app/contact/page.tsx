@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Navbar } from "@/components/site/Navbar";
+import { SiteFooter } from "@/components/site/SiteFooter";
 import { Photo } from "@/components/ui/Photo";
 import { Icon } from "@/components/ui/Icon";
 import { getUser } from "@/lib/auth";
@@ -118,6 +119,8 @@ export default async function ContactPage() {
           <Link href="/locations" className="btn btn-ghost" style={{ color: "var(--bone)", borderColor: "rgba(242,238,232,0.3)" }}>SEE THE FLAGSHIP</Link>
         </div>
       </section>
+
+      <SiteFooter />
     </div>
   );
 }

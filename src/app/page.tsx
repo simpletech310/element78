@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { Photo } from "@/components/ui/Photo";
-import { Wordmark } from "@/components/brand/Wordmark";
 import { Icon } from "@/components/ui/Icon";
 import { Navbar } from "@/components/site/Navbar";
+import { SiteFooter } from "@/components/site/SiteFooter";
 import { FilmTrigger } from "@/components/site/FilmTrigger";
 import { listTrainers } from "@/lib/data/queries";
 import { getUser } from "@/lib/auth";
@@ -41,12 +41,6 @@ export default async function HomePage() {
     { v: "24/7", l: "Doors open" },
   ];
 
-  const footerCols = [
-    { h: "GYM", items: ["Atlanta", "Membership", "Day pass", "Hours"] },
-    { h: "STUDIO", items: ["AI sessions", "Programs", "Trainers", "Live classes"] },
-    { h: "STORE", items: ["Apparel", "Bottles", "Fuel", "Gift cards"] },
-    { h: "CO.", items: ["About", "Press", "Careers", "Wholesale"] },
-  ];
 
   return (
     <div style={{ background: "var(--ink)", color: "var(--bone)", fontFamily: "var(--font-body)", minHeight: "100dvh" }}>
@@ -329,31 +323,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* FOOTER */}
-      <footer style={{ padding: "60px 22px 40px", background: "var(--ink)", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-        <div style={{ maxWidth: 1180, margin: "0 auto" }}>
-          <Wordmark size={32} color="var(--sky-soft)" />
-          <p style={{ marginTop: 10, fontSize: 14, color: "rgba(242,238,232,0.55)", maxWidth: 320, fontWeight: 300 }}>
-            78 ways to be in your element.
-          </p>
-
-          <div style={{ marginTop: 40, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 28, fontSize: 13 }}>
-            {footerCols.map(c => (
-              <div key={c.h}>
-                <div className="e-mono" style={{ color: "var(--sky)", marginBottom: 10 }}>{c.h}</div>
-                {c.items.map(it => (
-                  <div key={it} style={{ color: "rgba(242,238,232,0.7)", marginBottom: 6 }}>{it}</div>
-                ))}
-              </div>
-            ))}
-          </div>
-
-          <div className="e-mono" style={{ marginTop: 48, color: "rgba(242,238,232,0.4)", fontSize: 9, display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
-            <span>© ELEMENT 78 · ATLANTA · MMXXVI</span>
-            <span>IN MY ELEMENT</span>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

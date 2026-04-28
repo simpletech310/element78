@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Navbar } from "@/components/site/Navbar";
+import { SiteFooter } from "@/components/site/SiteFooter";
 import { Photo } from "@/components/ui/Photo";
 import { Icon } from "@/components/ui/Icon";
 import { listLocations } from "@/lib/data/queries";
@@ -157,6 +158,8 @@ export default async function LocationsPage() {
           <Icon name="chevron" size={18} />
         </Link>
       </section>
+
+      <SiteFooter />
     </div>
   );
 }
