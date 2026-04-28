@@ -3,6 +3,7 @@ import { Photo } from "@/components/ui/Photo";
 import { Wordmark } from "@/components/brand/Wordmark";
 import { Icon } from "@/components/ui/Icon";
 import { Navbar } from "@/components/site/Navbar";
+import { FilmTrigger } from "@/components/site/FilmTrigger";
 import { listTrainers } from "@/lib/data/queries";
 
 export default async function HomePage() {
@@ -88,9 +89,7 @@ export default async function HomePage() {
 
           <div className="reveal reveal-d4" style={{ marginTop: "auto", paddingTop: 36, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
             <Link href="/join" className="btn btn-sky" style={{ minWidth: 180 }}>JOIN ELEMENT</Link>
-            <button className="btn btn-ghost" style={{ color: "var(--bone)", borderColor: "rgba(242,238,232,0.4)" }}>
-              <Icon name="play" size={12} />WATCH FILM
-            </button>
+            <FilmTrigger />
             <Link href="/login" className="e-mono" style={{ color: "rgba(242,238,232,0.65)", marginLeft: 8 }}>SIGN IN →</Link>
           </div>
 
