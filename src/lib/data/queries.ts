@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import type { ClassRow, Location, Post, Product, ProductVariant, Trainer, Program, ProgramSession, ProgramEnrollment, ProgramCompletion, Booking } from "./types";
-import { fallbackProducts, fallbackClasses, fallbackTrainers, fallbackLocations, fallbackPosts, fallbackPrograms, fallbackProgramSessions } from "./fallback";
+import type { ClassRow, Flow, Location, Post, Product, ProductVariant, Trainer, Program, ProgramSession, ProgramEnrollment, ProgramCompletion, Booking } from "./types";
+import { fallbackProducts, fallbackClasses, fallbackTrainers, fallbackLocations, fallbackPosts, fallbackPrograms, fallbackProgramSessions, fallbackFlows } from "./fallback";
 
 function isConfigured() {
   return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
@@ -137,6 +137,43 @@ export async function listUserBookings(userId: string): Promise<Array<{ booking:
     booking: { id: row.id, user_id: row.user_id, class_id: row.class_id, status: row.status, paid_status: row.paid_status, price_cents_paid: row.price_cents_paid, surface: row.surface, notes: row.notes, spot_number: row.spot_number, created_at: row.created_at },
     class: row.class,
   }));
+}
+
+/**
+ * Flows by trainer — short solo videos this trainer recorded (or, for AI
+ * avatars, sessions modeled on this avatar). No DB table yet; filtered from
+ * the fallback list by trainer_id.
+ */
+export async function listFlowsByTrainer(trainerId: string): Promise<Flow[]> {
+  return fallbackFlows.filter(f => f.trainer_id === trainerId);
+}
+
+/**
+ * Programs led by a trainer. Real query when Supabase is configured;
+ * gracefully returns [] if the trainer_id column hasn't been added to
+ * production yet (the migration is in supabase/migrations/0002_*).
+ */
+export async function listProgramsByTrainer(trainerId: string): Promise<Program[]> {
+  if (!isConfigured()) return fallbackPrograms.filter(p => p.trainer_id === trainerId);
+  const sb = createClient();
+  const { data, error } = await sb.from("programs").select("*").eq("trainer_id", trainerId).order("sort_order");
+  if (error) return [];
+  return (data as Program[]) ?? [];
+}
+
+/**
+ * Upcoming classes a trainer is teaching, soonest first.
+ */
+export async function listClassesByTrainer(trainerId: string, limit = 6): Promise<ClassRow[]> {
+  if (!isConfigured()) {
+    return fallbackClasses
+      .filter(c => c.trainer_id === trainerId && new Date(c.starts_at).getTime() >= Date.now())
+      .sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime())
+      .slice(0, limit);
+  }
+  const sb = createClient();
+  const { data } = await sb.from("classes").select("*").eq("trainer_id", trainerId).gte("starts_at", new Date().toISOString()).order("starts_at").limit(limit);
+  return (data as ClassRow[]) ?? [];
 }
 
 export async function listPosts(): Promise<Post[]> {

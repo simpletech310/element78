@@ -3,7 +3,7 @@ import { StatusBar, HomeIndicator } from "@/components/chrome/StatusBar";
 import { TabBar } from "@/components/chrome/TabBar";
 import { Photo } from "@/components/ui/Photo";
 import { Icon } from "@/components/ui/Icon";
-import { listClasses, listUserEnrollments, listUserBookings, listEnrollmentCompletions, listProducts } from "@/lib/data/queries";
+import { listClasses, listUserEnrollments, listUserBookings, listEnrollmentCompletions, listProducts, listPrograms, listPosts } from "@/lib/data/queries";
 import { getUser } from "@/lib/auth";
 
 function greeting(d = new Date()) {
@@ -19,7 +19,13 @@ function fmtPrice(cents: number) {
 }
 
 export default async function HomeScreen() {
-  const [classes, products, user] = await Promise.all([listClasses(), listProducts(), getUser()]);
+  const [classes, products, programs, posts, user] = await Promise.all([
+    listClasses(),
+    listProducts(),
+    listPrograms(),
+    listPosts(),
+    getUser(),
+  ]);
   const newDrops = products.slice(0, 6);
 
   const displayName =
@@ -44,6 +50,33 @@ export default async function HomeScreen() {
   const upcomingBookings = bookings
     .filter(b => b.booking.status === "reserved" && new Date(b.class.starts_at).getTime() >= now)
     .sort((a, b) => new Date(a.class.starts_at).getTime() - new Date(b.class.starts_at).getTime());
+  const bookedClassIds = new Set(upcomingBookings.map(b => b.class.id));
+
+  // 7-day strip — group classes per day, soonest first.
+  const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
+  const week: { date: Date; classes: typeof classes }[] = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(startOfDay.getTime() + i * 86_400_000);
+    const next = new Date(d.getTime() + 86_400_000);
+    week.push({
+      date: d,
+      classes: classes
+        .filter(c => {
+          const t = new Date(c.starts_at);
+          return t >= d && t < next;
+        })
+        .sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime()),
+    });
+  }
+  // The "Up Next" classes show after the user's reserved blocks: soonest 4
+  // public classes the user has not booked.
+  const upNextClasses = classes
+    .filter(c => new Date(c.starts_at).getTime() >= now && !bookedClassIds.has(c.id))
+    .slice(0, 4);
+
+  // Programs: split between active enrollments and discoverable.
+  const activeProgramIds = new Set(activePrograms.map(e => e.program.id));
+  const explorePrograms = programs.filter(p => !activeProgramIds.has(p.id)).slice(0, 4);
 
   // Next-up class on the gym strip — prefer the user's first booking, fall back to schedule.
   const next = upcomingBookings[0]?.class ?? classes[0];
@@ -58,10 +91,46 @@ export default async function HomeScreen() {
     { t: "CORE 78", mins: 30, lvl: "MD", img: "/assets/floor-mockup.png", tag: "CORE" },
   ];
 
-  const pulse = [
-    { name: "AALIYAH M.", act: "finished CORE 78", time: "2m", img: "/assets/editorial-1.jpg", tag: false },
-    { name: "KAI · TRAINER", act: "dropped a new flow", time: "14m", img: "/assets/blue-hair-gym.jpg", tag: true },
+  // Wall feed — pull from real posts, fall back to curated demo content
+  // when Supabase is empty so the section never looks dead.
+  type WallPost = {
+    name: string;
+    body: string;
+    time: string;
+    avatar: string;
+    img?: string | null;
+    tag?: string;
+    likes: number;
+    comments: number;
+  };
+  const fallbackWall: WallPost[] = [
+    { name: "KAI · TRAINER", tag: "STAFF", body: "Dropped a new flow. Slow tempo, hard work — Studio B at 6:30P. Pull up.", time: "14m", avatar: "/assets/blue-hair-gym.jpg", img: "/assets/IMG_3465.jpg", likes: 124, comments: 18 },
+    { name: "AALIYAH M.", body: "Day 14 of “In My Element” complete. Glutes are gone. Ego intact.", time: "1h", avatar: "/assets/IMG_3461.jpg", likes: 86, comments: 12 },
+    { name: "TASHA · TRAINER", tag: "STAFF", body: "Sunrise Pilates is officially the move. Mats out at 6:25A sharp.", time: "3h", avatar: "/assets/editorial-1.jpg", img: "/assets/floor-mockup.png", likes: 211, comments: 24 },
+    { name: "SHAY D.", body: "First time hitting the 95lb squat. The whole back row hyped me up.", time: "5h", avatar: "/assets/IMG_3469.jpg", likes: 342, comments: 41, tag: "PR" },
+    { name: "ELEMENT 78", tag: "ANNOUNCE", body: "May 03 · Sunrise Run + Coffee Meet. 7AM at the lot.", time: "8h", avatar: "/assets/IMG_3471.jpg", img: "/assets/IMG_3461.jpg", likes: 88, comments: 9 },
   ];
+  const wallPosts: WallPost[] = posts.length > 0
+    ? posts.slice(0, 5).map(p => {
+        const meta = (p.meta ?? {}) as { author?: string; tag?: string };
+        const ageMs = Date.now() - new Date(p.created_at).getTime();
+        const time = ageMs < 3_600_000
+          ? `${Math.max(1, Math.round(ageMs / 60_000))}m`
+          : ageMs < 86_400_000
+            ? `${Math.round(ageMs / 3_600_000)}h`
+            : `${Math.round(ageMs / 86_400_000)}d`;
+        return {
+          name: meta.author ?? "ELEMENT 78",
+          tag: meta.tag,
+          body: p.body ?? "",
+          time,
+          avatar: p.media_url ?? "/assets/blue-hair-gym.jpg",
+          img: p.media_url,
+          likes: 0,
+          comments: 0,
+        };
+      })
+    : fallbackWall;
 
   return (
     <div className="app app-dark" style={{ height: "100dvh" }}>
@@ -118,6 +187,34 @@ export default async function HomeScreen() {
           ))}
         </div>
 
+        {/* THIS WEEK — schedule strip. Tap a day to jump to that day's classes. */}
+        <div style={{ padding: "28px 22px 10px", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+          <div className="e-display" style={{ fontSize: 22 }}>THIS WEEK</div>
+          <Link href="/classes" className="e-mono" style={{ color: "var(--sky)" }}>FULL CALENDAR →</Link>
+        </div>
+        <div className="no-scrollbar" style={{ display: "flex", gap: 8, padding: "0 22px", overflowX: "auto" }}>
+          {week.map(({ date, classes: dayClasses }, i) => {
+            const isToday = i === 0;
+            const dayLbl = date.toLocaleDateString("en-US", { weekday: "short" }).toUpperCase();
+            return (
+              <Link key={dayLbl + i} href="/classes" className="lift" style={{
+                flexShrink: 0, minWidth: 84,
+                padding: "12px 10px", borderRadius: 14,
+                background: isToday ? "linear-gradient(180deg, rgba(143,184,214,0.22), rgba(46,127,176,0.06))" : "var(--haze)",
+                border: isToday ? "1px solid rgba(143,184,214,0.45)" : "1px solid rgba(255,255,255,0.06)",
+                color: "var(--bone)", textDecoration: "none",
+                textAlign: "center",
+              }}>
+                <div className="e-mono" style={{ color: isToday ? "var(--sky)" : "rgba(242,238,232,0.5)", fontSize: 9, letterSpacing: "0.2em" }}>{dayLbl}</div>
+                <div style={{ fontFamily: "var(--font-display)", fontSize: 24, lineHeight: 1, marginTop: 4, color: isToday ? "var(--sky)" : "var(--bone)" }}>{date.getDate()}</div>
+                <div className="e-mono" style={{ marginTop: 8, fontSize: 9, color: "rgba(242,238,232,0.55)", letterSpacing: "0.18em" }}>
+                  {dayClasses.length === 0 ? "REST" : `${dayClasses.length} CLASS${dayClasses.length === 1 ? "" : "ES"}`}
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+
         {/* YOUR PROGRAMS — only when enrolled */}
         {activePrograms.length > 0 && (
           <>
@@ -161,6 +258,46 @@ export default async function HomeScreen() {
           </>
         )}
 
+        {/* EXPLORE PROGRAMS — programs the user hasn't enrolled in yet */}
+        {explorePrograms.length > 0 && (
+          <>
+            <div style={{ padding: "28px 22px 12px", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+              <div className="e-display" style={{ fontSize: 22 }}>{activePrograms.length > 0 ? "EXPLORE PROGRAMS" : "PROGRAMS"}</div>
+              <Link href="/programs" className="e-mono" style={{ color: "var(--sky)" }}>ALL PROGRAMS →</Link>
+            </div>
+            <div className="no-scrollbar" style={{ display: "flex", gap: 12, padding: "0 22px", overflowX: "auto" }}>
+              {explorePrograms.map(p => (
+                <Link key={p.id} href={`/programs/${p.slug}`} className="lift" style={{
+                  minWidth: 220, flexShrink: 0,
+                  borderRadius: 16, overflow: "hidden",
+                  background: "var(--haze)",
+                  border: "1px solid rgba(255,255,255,0.06)",
+                  color: "var(--bone)", textDecoration: "none",
+                }}>
+                  <div style={{ position: "relative", height: 200 }}>
+                    {p.hero_image && <Photo src={p.hero_image} alt="" className="zoom-on-hover" style={{ position: "absolute", inset: 0 }} />}
+                    <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, transparent 30%, rgba(10,14,20,0.95))" }} />
+                    <div style={{ position: "absolute", top: 10, left: 10, padding: "3px 8px", borderRadius: 999, background: "rgba(10,14,20,0.7)", backdropFilter: "blur(6px)" }}>
+                      <span className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.2em" }}>{p.duration_label}</span>
+                    </div>
+                    {p.requires_payment && (
+                      <div className="e-mono" style={{ position: "absolute", top: 10, right: 10, padding: "3px 8px", borderRadius: 999, background: "var(--sky)", color: "var(--ink)", fontSize: 9, letterSpacing: "0.2em" }}>
+                        {fmtPrice(p.price_cents)}
+                      </div>
+                    )}
+                    <div style={{ position: "absolute", left: 12, right: 12, bottom: 10 }}>
+                      <div style={{ fontFamily: "var(--font-display)", fontSize: 20, lineHeight: 0.95 }}>{p.name}</div>
+                      {p.subtitle && (
+                        <div className="e-mono" style={{ color: "rgba(242,238,232,0.65)", fontSize: 9, marginTop: 4, letterSpacing: "0.18em" }}>{p.subtitle.toUpperCase()}</div>
+                      )}
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </>
+        )}
+
         {/* YOUR UPCOMING CLASSES — only when reserved */}
         {upcomingBookings.length > 0 && (
           <>
@@ -196,6 +333,54 @@ export default async function HomeScreen() {
                       <div className="e-mono" style={{ marginTop: 6, fontSize: 9, color: "var(--sky)", letterSpacing: "0.2em" }}>{priceLabel}</div>
                     </div>
                     <Icon name="chevron" size={18} />
+                  </Link>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        {/* UP NEXT — browse open classes the user has not booked */}
+        {upNextClasses.length > 0 && (
+          <>
+            <div style={{ padding: "28px 22px 12px", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+              <div className="e-display" style={{ fontSize: 22 }}>{upcomingBookings.length > 0 ? "UP NEXT" : "BOOK A CLASS"}</div>
+              <Link href="/classes" className="e-mono" style={{ color: "var(--sky)" }}>SEE ALL →</Link>
+            </div>
+            <div className="no-scrollbar" style={{ display: "flex", gap: 12, padding: "0 22px", overflowX: "auto" }}>
+              {upNextClasses.map(c => {
+                const dt2 = new Date(c.starts_at);
+                const day = dt2.toLocaleDateString("en-US", { weekday: "short" }).toUpperCase();
+                const date = dt2.getDate();
+                const tm = dt2.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+                const open = c.capacity - c.booked;
+                const full = open <= 0;
+                return (
+                  <Link key={c.id} href={`/gym/classes/${c.id}`} className="lift" style={{
+                    minWidth: 240, flexShrink: 0,
+                    padding: 14, borderRadius: 16,
+                    background: "var(--haze)",
+                    border: "1px solid rgba(255,255,255,0.06)",
+                    color: "var(--bone)", textDecoration: "none",
+                    display: "flex", flexDirection: "column", gap: 10,
+                    opacity: full ? 0.7 : 1,
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "8px 12px", borderRadius: 12, background: "rgba(143,184,214,0.12)", border: "1px solid rgba(143,184,214,0.22)" }}>
+                        <span className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.2em" }}>{day}</span>
+                        <span style={{ fontFamily: "var(--font-display)", fontSize: 22, lineHeight: 1, marginTop: 2 }}>{date}</span>
+                      </div>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ fontFamily: "var(--font-display)", fontSize: 17, lineHeight: 1, letterSpacing: "0.02em" }}>{c.name}</div>
+                        <div className="e-mono" style={{ color: "rgba(242,238,232,0.55)", fontSize: 9, marginTop: 4, letterSpacing: "0.18em" }}>{tm} · {c.duration_min} MIN · {c.room ?? ""}</div>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                      <span className="e-mono" style={{ fontSize: 9, color: full ? "var(--rose)" : "rgba(242,238,232,0.6)", letterSpacing: "0.18em" }}>
+                        {full ? "WAITLIST" : `${open} OF ${c.capacity} OPEN`}
+                      </span>
+                      <span className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.18em" }}>{fmtPrice(c.price_cents)} · BOOK →</span>
+                    </div>
                   </Link>
                 );
               })}
@@ -256,27 +441,60 @@ export default async function HomeScreen() {
           </div>
         )}
 
-        {/* Crew pulse */}
-        <div style={{ padding: "20px 22px 12px", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+        {/* THE WALL — feed preview */}
+        <div style={{ padding: "32px 22px 12px", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
           <Link href="/wall" className="e-display" style={{ fontSize: 22, color: "var(--bone)", textDecoration: "none" }}>THE WALL</Link>
-          <Link href="/wall" className="e-mono" style={{ color: "rgba(242,238,232,0.5)" }}>LIVE · 78 →</Link>
+          <Link href="/wall" className="e-mono" style={{ color: "var(--sky)" }}>OPEN FEED →</Link>
         </div>
-        <div style={{ padding: "0 22px", display: "flex", flexDirection: "column", gap: 10 }}>
-          {pulse.map((p, i) => (
-            <div key={i} style={{ display: "flex", gap: 12, alignItems: "center", padding: 12, background: "var(--haze)", borderRadius: 14 }}>
-              <div style={{ width: 44, height: 44, borderRadius: "50%", overflow: "hidden", flexShrink: 0 }}>
-                <Photo src={p.img} alt={p.name} style={{ width: "100%", height: "100%" }} />
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                  <span style={{ fontFamily: "var(--font-display)", fontSize: 14, letterSpacing: "0.02em" }}>{p.name}</span>
-                  {p.tag && <span className="e-mono" style={{ background: "var(--sky)", color: "var(--ink)", padding: "1px 5px", borderRadius: 3, fontSize: 8 }}>STAFF</span>}
+        <div style={{ padding: "0 22px", display: "flex", flexDirection: "column", gap: 12 }}>
+          {wallPosts.map((p, i) => (
+            <Link key={i} href="/wall" className="lift" style={{
+              display: "flex", flexDirection: "column", gap: 10,
+              padding: 14, borderRadius: 16,
+              background: "var(--haze)",
+              border: "1px solid rgba(255,255,255,0.06)",
+              color: "var(--bone)", textDecoration: "none",
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ width: 38, height: 38, borderRadius: "50%", overflow: "hidden", flexShrink: 0 }}>
+                  <Photo src={p.avatar} alt={p.name} style={{ width: "100%", height: "100%" }} />
                 </div>
-                <div style={{ fontSize: 13, color: "rgba(242,238,232,0.7)", marginTop: 2 }}>{p.act}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                    <span style={{ fontFamily: "var(--font-display)", fontSize: 14, letterSpacing: "0.02em" }}>{p.name}</span>
+                    {p.tag && (
+                      <span className="e-mono" style={{
+                        background: p.tag === "STAFF" ? "var(--sky)" : p.tag === "PR" ? "var(--electric)" : "rgba(143,184,214,0.18)",
+                        color: p.tag === "STAFF" || p.tag === "PR" ? "var(--ink)" : "var(--sky)",
+                        padding: "2px 6px", borderRadius: 3, fontSize: 8, letterSpacing: "0.18em",
+                      }}>{p.tag}</span>
+                    )}
+                  </div>
+                  <div className="e-mono" style={{ color: "rgba(242,238,232,0.4)", fontSize: 9, marginTop: 2 }}>{p.time} AGO</div>
+                </div>
               </div>
-              <div className="e-mono" style={{ color: "rgba(242,238,232,0.4)", fontSize: 9 }}>{p.time}</div>
-            </div>
+
+              <div style={{ fontSize: 14, color: "rgba(242,238,232,0.85)", lineHeight: 1.55 }}>{p.body}</div>
+
+              {p.img && (
+                <div style={{ position: "relative", borderRadius: 12, overflow: "hidden", aspectRatio: "1.7", marginTop: 2 }}>
+                  <Photo src={p.img} alt="" style={{ position: "absolute", inset: 0 }} />
+                </div>
+              )}
+
+              <div style={{ display: "flex", gap: 18, alignItems: "center", paddingTop: 4 }}>
+                <span className="e-mono" style={{ display: "inline-flex", alignItems: "center", gap: 5, color: "rgba(242,238,232,0.55)", fontSize: 10 }}>
+                  <Icon name="heart" size={13} /> {p.likes}
+                </span>
+                <span className="e-mono" style={{ color: "rgba(242,238,232,0.55)", fontSize: 10 }}>
+                  💬 {p.comments}
+                </span>
+              </div>
+            </Link>
           ))}
+          <Link href="/wall" className="btn btn-ghost" style={{ marginTop: 4, color: "var(--bone)", borderColor: "rgba(242,238,232,0.2)" }}>
+            SEE THE FULL WALL
+          </Link>
         </div>
 
         {/* NEW DROPS — shop preview */}

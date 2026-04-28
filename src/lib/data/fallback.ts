@@ -1,7 +1,7 @@
 // Static fallback so the app renders before Supabase is wired up.
 // Mirrors supabase/seed.sql + the imagery-refresh migration.
 
-import type { ClassRow, Location, Post, Product, Trainer, Program, ProgramSession } from "./types";
+import type { ClassRow, Flow, Location, Post, Product, Trainer, Program, ProgramSession } from "./types";
 
 export const fallbackLocations: Location[] = [
   { id: "loc-atl", slug: "atlanta-hq", name: "Atlanta HQ", city: "Atlanta", state: "GA", status: "active", hero_image: "/assets/atlgym.jpg", lat: 33.749, lng: -84.388, sort_order: 1 },
@@ -12,10 +12,15 @@ export const fallbackLocations: Location[] = [
 ];
 
 export const fallbackTrainers: Trainer[] = [
-  { id: "tr-kai", slug: "kai-brooks", name: "Kai Brooks", headline: "Pilates + reformer. Certified BASI. 8 yrs.", bio: "Builds slow strength and long lines. Music loud, cues precise. Lead reformer trainer.", specialties: ["Reformer","Mat Pilates","Mobility"], avatar_url: "/assets/blue-hair-gym.jpg", hero_image: "/assets/blue-hair-gym.jpg", home_location_id: "loc-atl", rating: 4.95 },
-  { id: "tr-amara", slug: "amara-jones", name: "Amara Jones", headline: "HIIT + functional strength. NSCA-CPT.", bio: "Heavy basics. Quick rounds. No filler. Builds the engine.", specialties: ["HIIT","Strength","Conditioning"], avatar_url: "/assets/dumbbell-street.jpg", hero_image: "/assets/dumbbell-street.jpg", home_location_id: "loc-atl", rating: 4.91 },
-  { id: "tr-jay", slug: "jay-elias", name: "Jay Elias", headline: "Strength + 1-on-1. 7 yrs.", bio: "Big numbers, sharp form. Builds the engine and the architecture.", specialties: ["Strength","1-on-1"], avatar_url: "/assets/IMG_3461.jpg", hero_image: "/assets/IMG_3461.jpg", home_location_id: "loc-atl", rating: 4.88 },
-  { id: "tr-tasha", slug: "tasha-wright", name: "Tasha Wright", headline: "Pilates · mobility · pre/post natal. 6 yrs.", bio: "Patient hands, sharp eye.", specialties: ["Pilates","Mobility","Pre/Post Natal"], avatar_url: "/assets/editorial-1.jpg", hero_image: "/assets/editorial-1.jpg", home_location_id: "loc-atl", rating: 4.96 },
+  { id: "tr-kai", slug: "kai-brooks", name: "Kai Brooks", headline: "Reformer + mat Pilates. BASI-certified. 8 yrs on the floor.", bio: "Kai trains the way she dances — slow tempo, long lines, no shortcuts. Lead reformer coach. Trains everyone from first-timers to dancers prepping for tour. Ask her about the Power Pilates ladder; she built it from a 12-week study with her clients.", specialties: ["Reformer","Mat Pilates","Mobility"], avatar_url: "/assets/blue-hair-gym.jpg", hero_image: "/assets/blue-hair-gym.jpg", home_location_id: "loc-atl", rating: 4.95, is_ai: false, years_experience: 8, cert: "BASI · Polestar L2" },
+  { id: "tr-amara", slug: "amara-jones", name: "Amara Jones", headline: "HIIT, strength, conditioning. NSCA-CPT. 6 yrs.", bio: "Trained the Atlanta running club for three years before joining the floor. Builds engines. Believes most women lift too light and rest too short — and fixes both. Programs lean toward strength bias with metabolic finishers.", specialties: ["HIIT","Strength","Conditioning"], avatar_url: "/assets/dumbbell-street.jpg", hero_image: "/assets/dumbbell-street.jpg", home_location_id: "loc-atl", rating: 4.91, is_ai: false, years_experience: 6, cert: "NSCA-CPT · USAW-L1" },
+  { id: "tr-jay", slug: "jay-elias", name: "Jay Elias", headline: "Strength + 1-on-1. NASM. 7 yrs.", bio: "Powerlifting background, then trained pre/post-natal for four years — that combo is rarer than it sounds. Big numbers, sharp form. Most popular for 1-on-1s where the goal is squat or deadlift PR.", specialties: ["Strength","1-on-1","Powerlifting"], avatar_url: "/assets/IMG_3461.jpg", hero_image: "/assets/IMG_3461.jpg", home_location_id: "loc-atl", rating: 4.88, is_ai: false, years_experience: 7, cert: "NASM-CPT · CSCS" },
+  { id: "tr-tasha", slug: "tasha-wright", name: "Tasha Wright", headline: "Pilates, mobility, pre/post natal. 6 yrs.", bio: "Patient hands, sharp eye. Built her practice around women returning to fitness after pregnancy — knows how to scale every block to where you actually are today. Leads the Sunrise Pilates wave at 6:25A weekdays.", specialties: ["Pilates","Mobility","Pre/Post Natal"], avatar_url: "/assets/editorial-1.jpg", hero_image: "/assets/editorial-1.jpg", home_location_id: "loc-atl", rating: 4.96, is_ai: false, years_experience: 6, cert: "STOTT · Pre/Post Natal" },
+  // AI avatars — same trainer table, marked is_ai. Lets us slot them into
+  // /trainers, the schedule, and detail pages without a parallel system.
+  { id: "tr-zuri", slug: "zuri", name: "Zuri", headline: "AI avatar · Pilates, reformer, mobility.", bio: "Modeled on Kai's signature flow. Slow tempo, hard work, breath-led cues. Available 24/7 in the app and at the AI booths in Studio B. Reads your form in real time, adjusts intensity to your day.", specialties: ["Pilates","Reformer","Mobility"], avatar_url: "/assets/blue-hair-gym.jpg", hero_image: "/assets/floor-mockup.png", home_location_id: "loc-atl", rating: 4.93, is_ai: true, years_experience: null, cert: "Element 78 AI · v3.2" },
+  { id: "tr-mari", slug: "mari", name: "Mari", headline: "AI avatar · HIIT, functional, conditioning.", bio: "Modeled on Amara. Heavy basics, quick rounds. Real-time tempo cues and rep counts. Pair with a heart-rate monitor and she tunes the work-to-rest ratios live.", specialties: ["HIIT","Functional","Conditioning"], avatar_url: "/assets/dumbbell-street.jpg", hero_image: "/assets/IMG_3469.jpg", home_location_id: "loc-atl", rating: 4.89, is_ai: true, years_experience: null, cert: "Element 78 AI · v3.2" },
+  { id: "tr-leila", slug: "leila", name: "Leila", headline: "AI avatar · Yoga, breathwork, recovery.", bio: "Breath-led restorative flows. Soft tempo, deeper holds. Built for the days your watch says you slept badly — Leila tunes the session to your sleep score and HRV.", specialties: ["Yoga","Breathwork","Recovery"], avatar_url: "/assets/pilates-pink.jpg", hero_image: "/assets/editorial-2.png", home_location_id: "loc-atl", rating: 4.94, is_ai: true, years_experience: null, cert: "Element 78 AI · v3.2" },
 ];
 
 const today = new Date();
@@ -47,9 +52,40 @@ export const fallbackProducts: Product[] = [
 ];
 
 export const fallbackPrograms: Program[] = [
-  { id: "prog-1", slug: "in-my-element", name: "IN MY ELEMENT", subtitle: "Series 03 · the signature reset", description: "Daily Pilates flow + breath work. Slow tempo, hard work. Builds the body — and the streak — back from neutral.", hero_image: "/assets/floor-mockup.png", duration_label: "21 DAYS · DAILY", total_sessions: 21, intensity: "Beginner → Intermediate", kind: "both", surfaces: ["app","gym","class"], sort_order: 1, price_cents: 0, requires_payment: false },
-  { id: "prog-2", slug: "city-of-angels", name: "CITY OF ANGELS", subtitle: "Outdoor + weight floor", description: "Heavy basics, quick rounds, no filler. Mixes street strength with reformer accessory work.", hero_image: "/assets/IMG_3461.jpg", duration_label: "14 DAYS · STRENGTH", total_sessions: 14, intensity: "Intermediate", kind: "both", surfaces: ["app","gym"], sort_order: 2, price_cents: 8900, requires_payment: true },
-  { id: "prog-3", slug: "living-room-luxury", name: "LIVING ROOM LUXURY", subtitle: "No equipment, low impact", description: "For travel, recovery weeks, and the days you don't want to drive. Mat-only Pilates and mobility you can do in 6×6 feet.", hero_image: "/assets/IMG_3467.jpg", duration_label: "8 SESSIONS · LIVING ROOM", total_sessions: 8, intensity: "All levels", kind: "in_app", surfaces: ["app"], sort_order: 3, price_cents: 3900, requires_payment: true },
+  { id: "prog-1", slug: "in-my-element", name: "IN MY ELEMENT", subtitle: "Series 03 · the signature reset", description: "Daily Pilates flow + breath work. Slow tempo, hard work. Builds the body — and the streak — back from neutral.", hero_image: "/assets/floor-mockup.png", duration_label: "21 DAYS · DAILY", total_sessions: 21, intensity: "Beginner → Intermediate", kind: "both", surfaces: ["app","gym","class"], sort_order: 1, price_cents: 0, requires_payment: false, trainer_id: "tr-kai" },
+  { id: "prog-2", slug: "city-of-angels", name: "CITY OF ANGELS", subtitle: "Outdoor + weight floor", description: "Heavy basics, quick rounds, no filler. Mixes street strength with reformer accessory work.", hero_image: "/assets/IMG_3461.jpg", duration_label: "14 DAYS · STRENGTH", total_sessions: 14, intensity: "Intermediate", kind: "both", surfaces: ["app","gym"], sort_order: 2, price_cents: 8900, requires_payment: true, trainer_id: "tr-amara" },
+  { id: "prog-3", slug: "living-room-luxury", name: "LIVING ROOM LUXURY", subtitle: "No equipment, low impact", description: "For travel, recovery weeks, and the days you don't want to drive. Mat-only Pilates and mobility you can do in 6×6 feet.", hero_image: "/assets/IMG_3467.jpg", duration_label: "8 SESSIONS · LIVING ROOM", total_sessions: 8, intensity: "All levels", kind: "in_app", surfaces: ["app"], sort_order: 3, price_cents: 3900, requires_payment: true, trainer_id: "tr-tasha" },
+];
+
+/**
+ * Flows curated per trainer. These are the "AI Studio" short solo videos
+ * (the rail on /home), but tagged so each trainer's profile can show their
+ * own. No DB table yet — this is the source of truth.
+ */
+export const fallbackFlows: Flow[] = [
+  // Kai
+  { id: "fl-kai-1", slug: "west-coast-flow", name: "WEST COAST FLOW", trainer_id: "tr-kai", duration_min: 28, intensity: "MD", kind: "Pilates", hero_image: "/assets/blue-set-rooftop.jpg", summary: "Slow tempo, long lines. Reformer-free, mat only. Built for living rooms in Atlanta." },
+  { id: "fl-kai-2", slug: "long-line-low-impact", name: "LONG LINE · LOW IMPACT", trainer_id: "tr-kai", duration_min: 22, intensity: "LO", kind: "Pilates", hero_image: "/assets/IMG_3467.jpg", summary: "Pre-coffee mobility into a slow Pilates ladder. Soft on the body, sharp on the focus." },
+  { id: "fl-kai-3", slug: "power-pilates-ladder", name: "POWER PILATES LADDER", trainer_id: "tr-kai", duration_min: 35, intensity: "HI", kind: "Pilates", hero_image: "/assets/floor-mockup.png", summary: "The 12-week study, condensed. Three blocks, ascending intensity. Only attempt if you've done it once with form cues on." },
+  // Amara
+  { id: "fl-amara-1", slug: "street-hiit-30", name: "STREET HIIT 30", trainer_id: "tr-amara", duration_min: 30, intensity: "HI", kind: "HIIT", hero_image: "/assets/dumbbell-street.jpg", summary: "Outdoor-style HIIT in your living room. Bodyweight + one dumbbell. Real rounds, real rest." },
+  { id: "fl-amara-2", slug: "engine-builder", name: "ENGINE BUILDER", trainer_id: "tr-amara", duration_min: 24, intensity: "HI", kind: "Conditioning", hero_image: "/assets/IMG_3465.jpg", summary: "Lactate-threshold work for runners and lifters. Eight intervals, three minutes each, finish gassed." },
+  { id: "fl-amara-3", slug: "heavy-basics", name: "HEAVY BASICS", trainer_id: "tr-amara", duration_min: 38, intensity: "HI", kind: "Strength", hero_image: "/assets/IMG_3469.jpg", summary: "Squat, hinge, push, pull, carry. Five movements, three sets. The whole engine in 38 minutes." },
+  // Jay
+  { id: "fl-jay-1", slug: "deadlift-architecture", name: "DEADLIFT ARCHITECTURE", trainer_id: "tr-jay", duration_min: 42, intensity: "HI", kind: "Strength", hero_image: "/assets/IMG_3461.jpg", summary: "Pull setup → top set → backoffs. Built around the conventional deadlift but scales to RDL or trap bar." },
+  { id: "fl-jay-2", slug: "back-and-grip", name: "BACK + GRIP", trainer_id: "tr-jay", duration_min: 28, intensity: "MD", kind: "Strength", hero_image: "/assets/IMG_3458.jpg", summary: "Rows, pull-ups, farmer carries. The unsexy work that fixes everything." },
+  // Tasha
+  { id: "fl-tasha-1", slug: "sunrise-pilates", name: "SUNRISE PILATES", trainer_id: "tr-tasha", duration_min: 25, intensity: "LO", kind: "Pilates", hero_image: "/assets/IMG_3467.jpg", summary: "The 6:25A wave, condensed for solo practice. Slow openings, breath cues, no equipment." },
+  { id: "fl-tasha-2", slug: "post-natal-foundation", name: "POST-NATAL FOUNDATION", trainer_id: "tr-tasha", duration_min: 30, intensity: "LO", kind: "Pilates", hero_image: "/assets/editorial-1.jpg", summary: "Core reconnection + pelvic floor work. Modular — every block has three regression options." },
+  // Zuri (AI)
+  { id: "fl-zuri-1", slug: "zuri-flow-01", name: "ZURI · FLOW 01", trainer_id: "tr-zuri", duration_min: 18, intensity: "LO", kind: "Pilates", hero_image: "/assets/IMG_3467.jpg", summary: "Live AI-coached Pilates flow. Form-corrected in real time. Phone propped, mat down, go." },
+  { id: "fl-zuri-2", slug: "zuri-mobility-am", name: "ZURI · MOBILITY AM", trainer_id: "tr-zuri", duration_min: 12, intensity: "LO", kind: "Mobility", hero_image: "/assets/floor-mockup.png", summary: "Twelve-minute morning mobility. AI tunes to whichever joint your watch says is stiff today." },
+  // Mari (AI)
+  { id: "fl-mari-1", slug: "mari-rounds", name: "MARI · ROUNDS", trainer_id: "tr-mari", duration_min: 24, intensity: "HI", kind: "HIIT", hero_image: "/assets/dumbbell-street.jpg", summary: "AI-paced HIIT. Heart-rate driven; she'll extend rest if you spike, push tempo if you don't." },
+  { id: "fl-mari-2", slug: "mari-finisher", name: "MARI · FINISHER", trainer_id: "tr-mari", duration_min: 8, intensity: "HI", kind: "Conditioning", hero_image: "/assets/IMG_3469.jpg", summary: "Eight-minute metabolic finisher to bolt onto any lift session. Brutal in the best way." },
+  // Leila (AI)
+  { id: "fl-leila-1", slug: "leila-restorative", name: "LEILA · RESTORATIVE", trainer_id: "tr-leila", duration_min: 28, intensity: "LO", kind: "Yoga", hero_image: "/assets/editorial-2.png", summary: "Soft restorative flow. Read your sleep score, adjusts the holds." },
+  { id: "fl-leila-2", slug: "leila-breath", name: "LEILA · BREATH", trainer_id: "tr-leila", duration_min: 10, intensity: "LO", kind: "Breathwork", hero_image: "/assets/pilates-pink.jpg", summary: "Box breathing → physiological sigh → 4-7-8. Short, decompressing." },
 ];
 
 export const fallbackProgramSessions: ProgramSession[] = (() => {

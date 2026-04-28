@@ -22,6 +22,9 @@ export type Trainer = {
   hero_image: string | null;
   home_location_id: string | null;
   rating: number;
+  is_ai?: boolean;
+  years_experience?: number | null;
+  cert?: string | null;
 };
 
 export type ClassRow = {
@@ -97,6 +100,23 @@ export type Program = {
   sort_order: number;
   price_cents: number;
   requires_payment: boolean;
+  trainer_id?: string | null;
+};
+
+/**
+ * Flows — short solo videos (AI Studio sessions). Curated per trainer for now;
+ * not a real DB table yet, lives in fallback data.
+ */
+export type Flow = {
+  id: string;
+  slug: string;
+  name: string;
+  trainer_id: string;
+  duration_min: number;
+  intensity: string;
+  kind: string;
+  hero_image: string;
+  summary: string;
 };
 
 export type ProgramSession = {
