@@ -1,20 +1,23 @@
 import Link from "next/link";
 import { Navbar } from "@/components/site/Navbar";
+import { TabBar } from "@/components/chrome/TabBar";
 import { Photo } from "@/components/ui/Photo";
 import { Icon } from "@/components/ui/Icon";
 import { CartButton } from "@/components/shop/CartButton";
 import { AddToBagInline } from "@/components/shop/AddToBag";
 import { listProducts } from "@/lib/data/queries";
+import { getUser } from "@/lib/auth";
 
 export default async function ShopScreen() {
-  const products = await listProducts();
+  const [products, user] = await Promise.all([listProducts(), getUser()]);
+  const isAuthed = !!user;
   const hero = products.find(p => p.slug === "element-set") ?? products[0];
   const grid = products.filter(p => p.id !== hero?.id);
   const cats = [{ l: "ALL", a: true }, { l: "WEAR" }, { l: "GEAR" }, { l: "FUEL" }, { l: "ACCESSORIES" }];
 
   return (
-    <div style={{ background: "var(--bone)", color: "var(--ink)", fontFamily: "var(--font-body)", minHeight: "100dvh" }}>
-      <Navbar />
+    <div style={{ background: "var(--bone)", color: "var(--ink)", fontFamily: "var(--font-body)", minHeight: "100dvh", paddingBottom: isAuthed ? 80 : 0 }}>
+      {!isAuthed && <Navbar />}
 
       <section style={{ padding: "32px 22px 12px", maxWidth: 1180, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 16 }}>
         <div>
@@ -93,6 +96,7 @@ export default async function ShopScreen() {
           ))}
         </div>
       </section>
+      {isAuthed && <TabBar />}
     </div>
   );
 }

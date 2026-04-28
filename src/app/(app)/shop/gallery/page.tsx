@@ -1,17 +1,20 @@
 import Link from "next/link";
 import { Navbar } from "@/components/site/Navbar";
+import { TabBar } from "@/components/chrome/TabBar";
 import { Photo } from "@/components/ui/Photo";
 import { Icon } from "@/components/ui/Icon";
 import { CartButton } from "@/components/shop/CartButton";
 import { listProducts } from "@/lib/data/queries";
+import { getUser } from "@/lib/auth";
 
 export default async function ShopGallery() {
-  const products = await listProducts();
+  const [products, user] = await Promise.all([listProducts(), getUser()]);
+  const isAuthed = !!user;
   const filters = [{ l: `ALL · ${products.length}`, a: true }, { l: "NEW IN" }, { l: "APPAREL" }, { l: "GEAR" }, { l: "ACCESSORIES" }, { l: "SALE" }];
 
   return (
-    <div style={{ background: "var(--bone)", color: "var(--ink)", fontFamily: "var(--font-body)", minHeight: "100dvh" }}>
-      <Navbar />
+    <div style={{ background: "var(--bone)", color: "var(--ink)", fontFamily: "var(--font-body)", minHeight: "100dvh", paddingBottom: isAuthed ? 80 : 0 }}>
+      {!isAuthed && <Navbar />}
       <div style={{ paddingBottom: 80, maxWidth: 1180, margin: "0 auto" }}>
         <div style={{ padding: "14px 22px 4px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
@@ -94,6 +97,7 @@ export default async function ShopGallery() {
           </div>
         </div>
       </div>
+      {isAuthed && <TabBar />}
     </div>
   );
 }

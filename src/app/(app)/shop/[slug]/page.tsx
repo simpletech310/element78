@@ -1,15 +1,18 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Navbar } from "@/components/site/Navbar";
+import { TabBar } from "@/components/chrome/TabBar";
 import { Photo } from "@/components/ui/Photo";
 import { Icon } from "@/components/ui/Icon";
 import { AddToBagFull } from "@/components/shop/AddToBag";
 import { getProduct } from "@/lib/data/queries";
+import { getUser } from "@/lib/auth";
 
 export default async function ProductDetail({ params }: { params: { slug: string } }) {
-  const data = await getProduct(params.slug);
+  const [data, user] = await Promise.all([getProduct(params.slug), getUser()]);
   if (!data) notFound();
   const { product, variants } = data;
+  const isAuthed = !!user;
   const gallery = product.gallery.length ? product.gallery : product.hero_image ? [product.hero_image] : [];
 
   const specs = [
@@ -20,8 +23,8 @@ export default async function ProductDetail({ params }: { params: { slug: string
   ];
 
   return (
-    <div style={{ background: "var(--bone)", color: "var(--ink)", fontFamily: "var(--font-body)", minHeight: "100dvh" }}>
-      <Navbar />
+    <div style={{ background: "var(--bone)", color: "var(--ink)", fontFamily: "var(--font-body)", minHeight: "100dvh", paddingBottom: isAuthed ? 80 : 0 }}>
+      {!isAuthed && <Navbar />}
       <div style={{ paddingBottom: 120, maxWidth: 1180, margin: "0 auto" }}>
         <div style={{ padding: "16px 22px 6px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <Link href="/shop" className="e-mono" style={{ display: "inline-flex", alignItems: "center", gap: 8, color: "var(--ink)", fontSize: 11, letterSpacing: "0.2em" }}>
@@ -94,6 +97,7 @@ export default async function ProductDetail({ params }: { params: { slug: string
           ))}
         </div>
       </div>
+      {isAuthed && <TabBar />}
     </div>
   );
 }

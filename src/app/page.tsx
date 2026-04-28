@@ -54,10 +54,10 @@ export default async function HomePage() {
       {/* HERO */}
       <section style={{ position: "relative", minHeight: "min(880px, 100dvh)" }}>
         <Photo
-          src="/assets/blue-hair-gym.jpg"
+          src="/assets/atlgym.jpg"
           alt=""
           className="zoom-on-hover"
-          style={{ position: "absolute", inset: 0, opacity: 0.85, backgroundPosition: "center 25%" }}
+          style={{ position: "absolute", inset: 0, opacity: 0.78, backgroundPosition: "center 30%" }}
         />
         <div style={{
           position: "absolute", inset: 0,

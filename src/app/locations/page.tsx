@@ -25,39 +25,60 @@ export default async function LocationsPage() {
         </p>
       </section>
 
-      {/* MAP */}
-      <section style={{ padding: "12px 22px 32px", maxWidth: 1180, margin: "0 auto" }}>
-        <div className="reveal reveal-d3" style={{ height: 240, borderRadius: 22, position: "relative", overflow: "hidden", background: "linear-gradient(135deg, #1a2330 0%, #0A0E14 100%)", border: "1px solid rgba(143,184,214,0.12)" }}>
-          <svg viewBox="0 0 320 200" preserveAspectRatio="none" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0.16 }}>
-            {Array.from({ length: 14 }).map((_, i) => <line key={`h${i}`} x1="0" y1={i*16} x2="320" y2={i*16} stroke="#8FB8D6" strokeWidth="0.4" />)}
-            {Array.from({ length: 22 }).map((_, i) => <line key={`v${i}`} x1={i*16} y1="0" x2={i*16} y2="200" stroke="#8FB8D6" strokeWidth="0.4" />)}
-            <path d="M0 100 Q80 80 160 105 T320 90" stroke="#8FB8D6" strokeWidth="1" fill="none" opacity="0.4" />
-            <path d="M0 140 Q100 125 200 150 T320 135" stroke="#8FB8D6" strokeWidth="1" fill="none" opacity="0.3" />
-          </svg>
+      {/* MAP — full-bleed real ATL map (OSM tiles, dark filter, sky pin) */}
+      <section className="reveal reveal-d3" style={{ position: "relative", margin: "12px 0 40px", height: "min(520px, 60vh)", overflow: "hidden", background: "var(--ink)", borderTop: "1px solid rgba(143,184,214,0.12)", borderBottom: "1px solid rgba(143,184,214,0.12)" }}>
+        <iframe
+          title="Atlanta map"
+          src="https://www.openstreetmap.org/export/embed.html?bbox=-84.55%2C33.65%2C-84.25%2C33.85&amp;layer=mapnik"
+          style={{
+            position: "absolute", inset: 0,
+            width: "100%", height: "100%",
+            border: "0",
+            filter: "invert(0.92) hue-rotate(190deg) saturate(0.55) brightness(1.05) contrast(0.95)",
+          }}
+          loading="lazy"
+        />
 
-          {/* ATL pin (active) */}
-          <div style={{ position: "absolute", left: "70%", top: "44%" }}>
-            <div style={{ position: "absolute", inset: -14, borderRadius: "50%", background: "rgba(143,184,214,0.32)", animation: "pulse-ring 2.4s infinite" }} />
-            <div style={{ width: 20, height: 20, borderRadius: "50%", background: "var(--sky)", border: "3px solid var(--ink)", position: "relative" }} />
-            <div className="e-mono" style={{ marginTop: 8, color: "var(--sky)", fontSize: 9, whiteSpace: "nowrap", letterSpacing: "0.2em" }}>ATLANTA HQ</div>
+        {/* Subtle vignette over the map */}
+        <div aria-hidden="true" style={{
+          position: "absolute", inset: 0, pointerEvents: "none",
+          background: "radial-gradient(ellipse at center, transparent 50%, rgba(10,14,20,0.55) 100%)",
+        }} />
+        {/* Grid overlay for that on-brand atmosphere */}
+        <div aria-hidden="true" style={{
+          position: "absolute", inset: 0, pointerEvents: "none", opacity: 0.06,
+          backgroundImage: "linear-gradient(rgba(143,184,214,1) 1px, transparent 1px), linear-gradient(90deg, rgba(143,184,214,1) 1px, transparent 1px)",
+          backgroundSize: "48px 48px",
+        }} />
+
+        {/* Glowing flagship pin overlay (centered on Atlanta) */}
+        <div style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%, -50%)", display: "flex", flexDirection: "column", alignItems: "center", pointerEvents: "none" }}>
+          <div style={{ position: "relative", width: 28, height: 28 }}>
+            <div style={{ position: "absolute", inset: -18, borderRadius: "50%", background: "rgba(143,184,214,0.22)", animation: "pulse-ring 2.6s infinite" }} />
+            <div style={{ position: "absolute", inset: -8, borderRadius: "50%", background: "rgba(143,184,214,0.18)", animation: "pulse-ring 2.6s infinite", animationDelay: "0.6s" }} />
+            <div style={{
+              width: 28, height: 28, borderRadius: "50%",
+              background: "var(--sky)", border: "4px solid var(--ink)",
+              boxShadow: "0 0 0 2px var(--sky), 0 0 20px rgba(143,184,214,0.6), 0 6px 16px rgba(0,0,0,0.5)",
+              position: "relative",
+            }} />
           </div>
-
-          {/* Waitlist pins */}
-          {[
-            { left: "18%", top: "60%", l: "LA" },
-            { left: "44%", top: "76%", l: "HOU" },
-            { left: "82%", top: "26%", l: "NYC" },
-            { left: "76%", top: "30%", l: "DC" },
-          ].map(p => (
-            <div key={p.l} style={{ position: "absolute", left: p.left, top: p.top }}>
-              <div style={{ width: 10, height: 10, borderRadius: "50%", border: "2px dashed rgba(242,238,232,0.55)" }} />
-              <div className="e-mono" style={{ marginTop: 6, color: "rgba(242,238,232,0.45)", fontSize: 8, letterSpacing: "0.2em" }}>{p.l}</div>
-            </div>
-          ))}
-
-          <div style={{ position: "absolute", top: 14, right: 14, padding: "6px 12px", borderRadius: 999, background: "rgba(10,14,20,0.7)", backdropFilter: "blur(10px)", color: "var(--bone)" }} className="e-mono">
-            {locs.length} CITIES
+          <div style={{ marginTop: 12, padding: "6px 14px", borderRadius: 999, background: "rgba(10,14,20,0.75)", backdropFilter: "blur(10px)", border: "1px solid rgba(143,184,214,0.4)" }}>
+            <span className="e-mono" style={{ color: "var(--sky)", fontSize: 10, letterSpacing: "0.25em" }}>ATLANTA · FLAGSHIP</span>
           </div>
+        </div>
+
+        {/* Top corner labels */}
+        <div style={{ position: "absolute", top: 18, left: 22, padding: "6px 12px", borderRadius: 999, background: "rgba(10,14,20,0.7)", backdropFilter: "blur(10px)", color: "var(--bone)", border: "1px solid rgba(143,184,214,0.2)" }} className="e-mono">
+          ◉ LIVE NETWORK
+        </div>
+        <div style={{ position: "absolute", top: 18, right: 22, padding: "6px 12px", borderRadius: 999, background: "rgba(10,14,20,0.7)", backdropFilter: "blur(10px)", color: "var(--sky)", border: "1px solid rgba(143,184,214,0.2)" }} className="e-mono">
+          {locs.length} CITIES
+        </div>
+
+        {/* Bottom coordinates label */}
+        <div style={{ position: "absolute", bottom: 18, left: "50%", transform: "translateX(-50%)" }} className="e-mono" >
+          <span style={{ color: "rgba(242,238,232,0.5)", fontSize: 9, letterSpacing: "0.3em" }}>33.749° N · 84.388° W</span>
         </div>
       </section>
 
