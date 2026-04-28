@@ -50,40 +50,27 @@ export default async function HomeScreen() {
   const upcomingBookings = bookings
     .filter(b => b.booking.status === "reserved" && new Date(b.class.starts_at).getTime() >= now)
     .sort((a, b) => new Date(a.class.starts_at).getTime() - new Date(b.class.starts_at).getTime());
-  const bookedClassIds = new Set(upcomingBookings.map(b => b.class.id));
 
   // 7-day strip — group classes per day, soonest first.
   const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
   const week: { date: Date; classes: typeof classes }[] = [];
   for (let i = 0; i < 7; i++) {
     const d = new Date(startOfDay.getTime() + i * 86_400_000);
-    const next = new Date(d.getTime() + 86_400_000);
+    const dayEnd = new Date(d.getTime() + 86_400_000);
     week.push({
       date: d,
       classes: classes
         .filter(c => {
           const t = new Date(c.starts_at);
-          return t >= d && t < next;
+          return t >= d && t < dayEnd;
         })
         .sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime()),
     });
   }
-  // The "Up Next" classes show after the user's reserved blocks: soonest 4
-  // public classes the user has not booked.
-  const upNextClasses = classes
-    .filter(c => new Date(c.starts_at).getTime() >= now && !bookedClassIds.has(c.id))
-    .slice(0, 4);
 
   // Programs: split between active enrollments and discoverable.
   const activeProgramIds = new Set(activePrograms.map(e => e.program.id));
   const explorePrograms = programs.filter(p => !activeProgramIds.has(p.id)).slice(0, 4);
-
-  // Next-up class on the gym strip — prefer the user's first booking, fall back to schedule.
-  const next = upcomingBookings[0]?.class ?? classes[0];
-  const dt = next ? new Date(next.starts_at) : null;
-  const dayLabel = dt?.toLocaleDateString("en-US", { weekday: "short" }).toUpperCase();
-  const dayNum = dt?.getDate();
-  const time = dt?.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }).toUpperCase();
 
   const studio = [
     { t: "GLUTE BRIDGE FLOW", mins: 18, lvl: "LO", img: "/assets/IMG_3467.jpg", tag: "PILATES" },
@@ -184,6 +171,32 @@ export default async function HomeScreen() {
               <div style={{ fontFamily: "var(--font-display)", fontSize: 22, color: "var(--sky)", letterSpacing: "0.02em" }}>{s.k}</div>
               <div className="e-mono" style={{ color: "rgba(242,238,232,0.5)", fontSize: 9, marginTop: 4 }}>{s.l}</div>
             </div>
+          ))}
+        </div>
+
+        {/* AI Studio rail */}
+        <div style={{ padding: "28px 22px 12px", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+          <div className="e-display" style={{ fontSize: 22 }}>AI STUDIO</div>
+          <Link href="/train" className="e-mono" style={{ color: "var(--sky)" }}>SEE ALL →</Link>
+        </div>
+        <div className="no-scrollbar" style={{ display: "flex", gap: 12, padding: "0 22px", overflowX: "auto" }}>
+          {studio.map((c, i) => (
+            <Link href="/train/player" key={i} className="lift" style={{ minWidth: 200, borderRadius: 16, overflow: "hidden", background: "var(--haze)", flexShrink: 0, color: "var(--bone)", textDecoration: "none" }}>
+              <div style={{ position: "relative", height: 220 }}>
+                <Photo src={c.img} alt={c.t} style={{ position: "absolute", inset: 0 }} />
+                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0) 50%, rgba(0,0,0,0.85) 100%)" }} />
+                <div style={{ position: "absolute", top: 10, left: 10 }}>
+                  <span className="e-tag" style={{ background: "rgba(10,14,20,0.65)", backdropFilter: "blur(8px)", padding: "4px 8px", borderRadius: 4, color: "var(--sky)" }}>{c.tag}</span>
+                </div>
+                <div style={{ position: "absolute", top: 10, right: 10, width: 28, height: 28, borderRadius: "50%", background: "var(--electric)", color: "var(--ink)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Icon name="play" size={12} />
+                </div>
+                <div style={{ position: "absolute", left: 12, right: 12, bottom: 10 }}>
+                  <div style={{ fontFamily: "var(--font-display)", fontSize: 18, lineHeight: 0.95 }}>{c.t}</div>
+                  <div className="e-mono" style={{ color: "rgba(242,238,232,0.6)", marginTop: 4, fontSize: 9 }}>{c.mins} MIN · {c.lvl} INTENSITY</div>
+                </div>
+              </div>
+            </Link>
           ))}
         </div>
 
@@ -340,105 +353,48 @@ export default async function HomeScreen() {
           </>
         )}
 
-        {/* UP NEXT — browse open classes the user has not booked */}
-        {upNextClasses.length > 0 && (
+        {/* NEW DROPS — shop preview */}
+        {newDrops.length > 0 && (
           <>
-            <div style={{ padding: "28px 22px 12px", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-              <div className="e-display" style={{ fontSize: 22 }}>{upcomingBookings.length > 0 ? "UP NEXT" : "BOOK A CLASS"}</div>
-              <Link href="/classes" className="e-mono" style={{ color: "var(--sky)" }}>SEE ALL →</Link>
+            <div style={{ padding: "32px 22px 12px", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+              <div className="e-display" style={{ fontSize: 22 }}>NEW DROPS</div>
+              <Link href="/shop" className="e-mono" style={{ color: "var(--sky)" }}>SHOP ALL →</Link>
             </div>
-            <div className="no-scrollbar" style={{ display: "flex", gap: 12, padding: "0 22px", overflowX: "auto" }}>
-              {upNextClasses.map(c => {
-                const dt2 = new Date(c.starts_at);
-                const day = dt2.toLocaleDateString("en-US", { weekday: "short" }).toUpperCase();
-                const date = dt2.getDate();
-                const tm = dt2.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-                const open = c.capacity - c.booked;
-                const full = open <= 0;
-                return (
-                  <Link key={c.id} href={`/gym/classes/${c.id}`} className="lift" style={{
-                    minWidth: 240, flexShrink: 0,
-                    padding: 14, borderRadius: 16,
-                    background: "var(--haze)",
-                    border: "1px solid rgba(255,255,255,0.06)",
-                    color: "var(--bone)", textDecoration: "none",
-                    display: "flex", flexDirection: "column", gap: 10,
-                    opacity: full ? 0.7 : 1,
-                  }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "8px 12px", borderRadius: 12, background: "rgba(143,184,214,0.12)", border: "1px solid rgba(143,184,214,0.22)" }}>
-                        <span className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.2em" }}>{day}</span>
-                        <span style={{ fontFamily: "var(--font-display)", fontSize: 22, lineHeight: 1, marginTop: 2 }}>{date}</span>
+            <div className="no-scrollbar" style={{ display: "flex", gap: 12, padding: "0 22px 8px", overflowX: "auto" }}>
+              {newDrops.map(p => (
+                <Link key={p.id} href={`/shop/${p.slug}`} className="lift" style={{
+                  minWidth: 180, flexShrink: 0,
+                  borderRadius: 16, overflow: "hidden",
+                  background: "var(--haze)",
+                  border: "1px solid rgba(255,255,255,0.06)",
+                  color: "var(--bone)", textDecoration: "none",
+                  display: "flex", flexDirection: "column",
+                }}>
+                  <div style={{ position: "relative", aspectRatio: "1 / 1", background: "rgba(255,255,255,0.04)" }}>
+                    {p.hero_image && <Photo src={p.hero_image} alt={p.name} className="zoom-on-hover" style={{ position: "absolute", inset: 0 }} />}
+                    {p.tag && (
+                      <div className="e-mono" style={{ position: "absolute", top: 10, left: 10, padding: "3px 8px", borderRadius: 999, background: "var(--sky)", color: "var(--ink)", fontSize: 8, letterSpacing: "0.2em" }}>
+                        {p.tag.toUpperCase()}
                       </div>
-                      <div style={{ minWidth: 0, flex: 1 }}>
-                        <div style={{ fontFamily: "var(--font-display)", fontSize: 17, lineHeight: 1, letterSpacing: "0.02em" }}>{c.name}</div>
-                        <div className="e-mono" style={{ color: "rgba(242,238,232,0.55)", fontSize: 9, marginTop: 4, letterSpacing: "0.18em" }}>{tm} · {c.duration_min} MIN · {c.room ?? ""}</div>
-                      </div>
+                    )}
+                  </div>
+                  <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 4 }}>
+                    <div className="e-mono" style={{ color: "rgba(242,238,232,0.5)", fontSize: 9, letterSpacing: "0.18em" }}>{p.category?.toUpperCase()}</div>
+                    <div style={{ fontFamily: "var(--font-display)", fontSize: 16, lineHeight: 1, letterSpacing: "0.02em" }}>{p.name.toUpperCase()}</div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 4 }}>
+                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 13, color: "var(--sky)" }}>{fmtPrice(p.price_cents)}</span>
+                      {p.compare_at_cents && p.compare_at_cents > p.price_cents && (
+                        <span className="e-mono" style={{ color: "rgba(242,238,232,0.4)", fontSize: 9, textDecoration: "line-through" }}>{fmtPrice(p.compare_at_cents)}</span>
+                      )}
                     </div>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                      <span className="e-mono" style={{ fontSize: 9, color: full ? "var(--rose)" : "rgba(242,238,232,0.6)", letterSpacing: "0.18em" }}>
-                        {full ? "WAITLIST" : `${open} OF ${c.capacity} OPEN`}
-                      </span>
-                      <span className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.18em" }}>{fmtPrice(c.price_cents)} · BOOK →</span>
-                    </div>
-                  </Link>
-                );
-              })}
+                  </div>
+                </Link>
+              ))}
+            </div>
+            <div style={{ padding: "10px 22px 0" }}>
+              <Link href="/shop" className="btn btn-sky" style={{ width: "100%" }}>OPEN THE SHOP</Link>
             </div>
           </>
-        )}
-
-        {/* AI Studio rail */}
-        <div style={{ padding: "28px 22px 12px", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-          <div className="e-display" style={{ fontSize: 22 }}>AI STUDIO</div>
-          <Link href="/train" className="e-mono" style={{ color: "var(--sky)" }}>SEE ALL →</Link>
-        </div>
-        <div className="no-scrollbar" style={{ display: "flex", gap: 12, padding: "0 22px", overflowX: "auto" }}>
-          {studio.map((c, i) => (
-            <Link href="/train/player" key={i} className="lift" style={{ minWidth: 200, borderRadius: 16, overflow: "hidden", background: "var(--haze)", flexShrink: 0, color: "var(--bone)", textDecoration: "none" }}>
-              <div style={{ position: "relative", height: 220 }}>
-                <Photo src={c.img} alt={c.t} style={{ position: "absolute", inset: 0 }} />
-                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0) 50%, rgba(0,0,0,0.85) 100%)" }} />
-                <div style={{ position: "absolute", top: 10, left: 10 }}>
-                  <span className="e-tag" style={{ background: "rgba(10,14,20,0.65)", backdropFilter: "blur(8px)", padding: "4px 8px", borderRadius: 4, color: "var(--sky)" }}>{c.tag}</span>
-                </div>
-                <div style={{ position: "absolute", top: 10, right: 10, width: 28, height: 28, borderRadius: "50%", background: "var(--electric)", color: "var(--ink)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <Icon name="play" size={12} />
-                </div>
-                <div style={{ position: "absolute", left: 12, right: 12, bottom: 10 }}>
-                  <div style={{ fontFamily: "var(--font-display)", fontSize: 18, lineHeight: 0.95 }}>{c.t}</div>
-                  <div className="e-mono" style={{ color: "rgba(242,238,232,0.6)", marginTop: 4, fontSize: 9 }}>{c.mins} MIN · {c.lvl} INTENSITY</div>
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
-
-        {/* Next at the gym */}
-        {next && (
-          <div style={{ padding: "28px 22px 12px" }}>
-            <div className="e-display" style={{ fontSize: 22, marginBottom: 12 }}>NEXT AT THE GYM</div>
-            <Link href={`/gym/classes/${next.id}`} style={{ borderRadius: 16, padding: 16, background: "linear-gradient(135deg, rgba(143,184,214,0.15), rgba(77,169,214,0.05))", border: "1px solid rgba(143,184,214,0.25)", display: "flex", gap: 14, color: "var(--bone)" }}>
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minWidth: 56, padding: "12px 0", borderRight: "1px solid rgba(143,184,214,0.2)", paddingRight: 14 }}>
-                <div className="e-mono" style={{ color: "var(--sky)", fontSize: 9 }}>{dayLabel}</div>
-                <div style={{ fontFamily: "var(--font-display)", fontSize: 30, lineHeight: 1, marginTop: 2 }}>{dayNum}</div>
-                <div className="e-mono" style={{ color: "rgba(242,238,232,0.5)", fontSize: 9, marginTop: 2 }}>{time}</div>
-              </div>
-              <div style={{ flex: 1 }}>
-                <div className="e-mono" style={{ color: "var(--sky)", marginBottom: 4 }}>{next.kind?.toUpperCase()} · {next.room}</div>
-                <div style={{ fontFamily: "var(--font-display)", fontSize: 22, lineHeight: 1 }}>{next.name}</div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
-                  <div style={{ display: "flex" }}>
-                    {[0,1,2].map((i) => (
-                      <div key={i} style={{ width: 22, height: 22, borderRadius: "50%", background: ["var(--sky)","var(--rose)","var(--electric)"][i], marginLeft: i ? -6 : 0, border: "2px solid var(--ink)" }} />
-                    ))}
-                  </div>
-                  <span className="e-mono" style={{ color: "rgba(242,238,232,0.6)", fontSize: 10 }}>+{next.booked} BOOKED · WITH KAI</span>
-                </div>
-              </div>
-              <Icon name="chevron" size={20} />
-            </Link>
-          </div>
         )}
 
         {/* THE WALL — feed preview */}
@@ -447,7 +403,7 @@ export default async function HomeScreen() {
           <Link href="/wall" className="e-mono" style={{ color: "var(--sky)" }}>OPEN FEED →</Link>
         </div>
         <div style={{ padding: "0 22px", display: "flex", flexDirection: "column", gap: 12 }}>
-          {wallPosts.map((p, i) => (
+          {wallPosts.slice(0, 3).map((p, i) => (
             <Link key={i} href="/wall" className="lift" style={{
               display: "flex", flexDirection: "column", gap: 10,
               padding: 14, borderRadius: 16,
@@ -497,49 +453,6 @@ export default async function HomeScreen() {
           </Link>
         </div>
 
-        {/* NEW DROPS — shop preview */}
-        {newDrops.length > 0 && (
-          <>
-            <div style={{ padding: "32px 22px 12px", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-              <div className="e-display" style={{ fontSize: 22 }}>NEW DROPS</div>
-              <Link href="/shop" className="e-mono" style={{ color: "var(--sky)" }}>SHOP ALL →</Link>
-            </div>
-            <div className="no-scrollbar" style={{ display: "flex", gap: 12, padding: "0 22px 8px", overflowX: "auto" }}>
-              {newDrops.map(p => (
-                <Link key={p.id} href={`/shop/${p.slug}`} className="lift" style={{
-                  minWidth: 180, flexShrink: 0,
-                  borderRadius: 16, overflow: "hidden",
-                  background: "var(--haze)",
-                  border: "1px solid rgba(255,255,255,0.06)",
-                  color: "var(--bone)", textDecoration: "none",
-                  display: "flex", flexDirection: "column",
-                }}>
-                  <div style={{ position: "relative", aspectRatio: "1 / 1", background: "rgba(255,255,255,0.04)" }}>
-                    {p.hero_image && <Photo src={p.hero_image} alt={p.name} className="zoom-on-hover" style={{ position: "absolute", inset: 0 }} />}
-                    {p.tag && (
-                      <div className="e-mono" style={{ position: "absolute", top: 10, left: 10, padding: "3px 8px", borderRadius: 999, background: "var(--sky)", color: "var(--ink)", fontSize: 8, letterSpacing: "0.2em" }}>
-                        {p.tag.toUpperCase()}
-                      </div>
-                    )}
-                  </div>
-                  <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 4 }}>
-                    <div className="e-mono" style={{ color: "rgba(242,238,232,0.5)", fontSize: 9, letterSpacing: "0.18em" }}>{p.category?.toUpperCase()}</div>
-                    <div style={{ fontFamily: "var(--font-display)", fontSize: 16, lineHeight: 1, letterSpacing: "0.02em" }}>{p.name.toUpperCase()}</div>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 4 }}>
-                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 13, color: "var(--sky)" }}>{fmtPrice(p.price_cents)}</span>
-                      {p.compare_at_cents && p.compare_at_cents > p.price_cents && (
-                        <span className="e-mono" style={{ color: "rgba(242,238,232,0.4)", fontSize: 9, textDecoration: "line-through" }}>{fmtPrice(p.compare_at_cents)}</span>
-                      )}
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-            <div style={{ padding: "10px 22px 0" }}>
-              <Link href="/shop" className="btn btn-sky" style={{ width: "100%" }}>OPEN THE SHOP</Link>
-            </div>
-          </>
-        )}
       </div>
       <TabBar />
       <HomeIndicator dark />

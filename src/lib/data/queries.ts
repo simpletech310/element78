@@ -6,14 +6,20 @@ function isConfigured() {
   return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 }
 
+// Slugs we keep hidden from the catalog without deleting them outright. Lets
+// us drop products from the live site without touching the production DB.
+const HIDDEN_PRODUCT_SLUGS = new Set(["heavy-flask", "element-bra"]);
+
 export async function listProducts(): Promise<Product[]> {
-  if (!isConfigured()) return fallbackProducts;
+  if (!isConfigured()) return fallbackProducts.filter(p => !HIDDEN_PRODUCT_SLUGS.has(p.slug));
   const sb = createClient();
   const { data } = await sb.from("products").select("*").order("sort_order", { ascending: true });
-  return (data as Product[]) ?? fallbackProducts;
+  const rows = (data as Product[]) ?? fallbackProducts;
+  return rows.filter(p => !HIDDEN_PRODUCT_SLUGS.has(p.slug));
 }
 
 export async function getProduct(slug: string): Promise<{ product: Product; variants: ProductVariant[] } | null> {
+  if (HIDDEN_PRODUCT_SLUGS.has(slug)) return null;
   if (!isConfigured()) {
     const product = fallbackProducts.find(p => p.slug === slug);
     return product ? { product, variants: [] } : null;
