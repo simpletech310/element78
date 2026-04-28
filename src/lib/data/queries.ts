@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import type { ClassRow, Location, Post, Product, ProductVariant, Trainer, Program, ProgramSession, ProgramEnrollment, ProgramCompletion } from "./types";
+import type { ClassRow, Location, Post, Product, ProductVariant, Trainer, Program, ProgramSession, ProgramEnrollment, ProgramCompletion, Booking } from "./types";
 import { fallbackProducts, fallbackClasses, fallbackTrainers, fallbackLocations, fallbackPosts, fallbackPrograms, fallbackProgramSessions } from "./fallback";
 
 function isConfigured() {
@@ -108,6 +108,28 @@ export async function listEnrollmentCompletions(enrollmentId: string): Promise<P
   const sb = createClient();
   const { data } = await sb.from("program_completions").select("*").eq("enrollment_id", enrollmentId).order("completed_at", { ascending: false });
   return (data as ProgramCompletion[]) ?? [];
+}
+
+export async function getUserBookingForClass(userId: string, classId: string): Promise<Booking | null> {
+  if (!isConfigured()) return null;
+  const sb = createClient();
+  const { data } = await sb.from("bookings").select("*").eq("user_id", userId).eq("class_id", classId).maybeSingle();
+  return (data as Booking) ?? null;
+}
+
+export async function listUserBookings(userId: string): Promise<Array<{ booking: Booking; class: ClassRow }>> {
+  if (!isConfigured()) return [];
+  const sb = createClient();
+  const { data } = await sb
+    .from("bookings")
+    .select("*, class:classes(*)")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+  if (!data) return [];
+  return (data as Array<Booking & { class: ClassRow }>).map(row => ({
+    booking: { id: row.id, user_id: row.user_id, class_id: row.class_id, status: row.status, paid_status: row.paid_status, price_cents_paid: row.price_cents_paid, surface: row.surface, notes: row.notes, created_at: row.created_at },
+    class: row.class,
+  }));
 }
 
 export async function listPosts(): Promise<Post[]> {

@@ -4,16 +4,23 @@ import { TabBar } from "@/components/chrome/TabBar";
 import { Photo } from "@/components/ui/Photo";
 import { Icon } from "@/components/ui/Icon";
 import { getUser } from "@/lib/auth";
-import { listUserEnrollments, listEnrollmentCompletions } from "@/lib/data/queries";
+import { listUserEnrollments, listEnrollmentCompletions, listUserBookings } from "@/lib/data/queries";
 
 export default async function HistoryPage() {
   const user = await getUser();
   if (!user) redirect("/login?next=/account/history");
 
-  const enrollments = await listUserEnrollments(user.id);
+  const [enrollments, bookings] = await Promise.all([
+    listUserEnrollments(user.id),
+    listUserBookings(user.id),
+  ]);
   const active = enrollments.filter(e => e.enrollment.status === "active");
   const done = enrollments.filter(e => e.enrollment.status === "completed");
   const paused = enrollments.filter(e => e.enrollment.status === "paused" || e.enrollment.status === "left");
+
+  const now = Date.now();
+  const upcoming = bookings.filter(b => b.booking.status === "reserved" && new Date(b.class.starts_at).getTime() >= now);
+  const past = bookings.filter(b => new Date(b.class.starts_at).getTime() < now);
 
   // Aggregate completion counts per enrollment for the active section
   const completionCounts = new Map<string, number>();
@@ -43,12 +50,53 @@ export default async function HistoryPage() {
           </p>
 
           {/* Roll-up tile */}
-          <div style={{ marginTop: 22, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 10 }}>
+          <div style={{ marginTop: 22, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: 10 }}>
             <RollUp label="ACTIVE" v={String(active.length)} />
             <RollUp label="COMPLETED" v={String(done.length)} />
-            <RollUp label="SESSIONS DONE" v={String(totalSessionsCompleted)} />
+            <RollUp label="SESSIONS" v={String(totalSessionsCompleted)} />
+            <RollUp label="UPCOMING" v={String(upcoming.length)} />
           </div>
         </section>
+
+        {/* UPCOMING CLASS RESERVATIONS */}
+        {upcoming.length > 0 && (
+          <section style={{ padding: "28px 22px 0" }}>
+            <div className="e-mono" style={{ color: "var(--sky)", letterSpacing: "0.2em", fontSize: 10 }}>UPCOMING CLASSES</div>
+            <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+              {upcoming.map(({ booking, class: cls }) => {
+                const dt = new Date(cls.starts_at);
+                const dateStr = dt.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "2-digit" }).toUpperCase();
+                const timeStr = dt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+                const priceLabel = booking.paid_status === "free" ? "FREE"
+                                : booking.paid_status === "paid" ? `PAID · $${(booking.price_cents_paid/100).toFixed(0)}`
+                                : `PAY AT CHECK-IN · $${(booking.price_cents_paid/100).toFixed(0)}`;
+                return (
+                  <Link key={booking.id} href={`/classes/${cls.id}`} className="lift" style={{
+                    display: "flex", gap: 14, padding: 14, borderRadius: 14,
+                    background: "linear-gradient(135deg, rgba(143,184,214,0.15), rgba(46,127,176,0.04))",
+                    border: "1px solid rgba(143,184,214,0.28)",
+                    color: "var(--bone)", textDecoration: "none",
+                  }}>
+                    <div style={{ minWidth: 64, paddingRight: 14, borderRight: "1px solid rgba(143,184,214,0.2)" }}>
+                      <div className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.18em" }}>{dateStr}</div>
+                      <div style={{ fontFamily: "var(--font-display)", fontSize: 22, lineHeight: 1, marginTop: 4 }}>{timeStr}</div>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontFamily: "var(--font-display)", fontSize: 18, letterSpacing: "0.02em" }}>{cls.name}</div>
+                      <div className="e-mono" style={{ color: "rgba(242,238,232,0.55)", fontSize: 9, letterSpacing: "0.18em", marginTop: 6 }}>
+                        {cls.kind?.toUpperCase() ?? "CLASS"} · {cls.room ?? ""} · {cls.duration_min}M
+                      </div>
+                      <div className="e-mono" style={{ marginTop: 6, fontSize: 9, color: "var(--sky)", letterSpacing: "0.2em" }}>
+                        {priceLabel}
+                      </div>
+                    </div>
+                    <Icon name="chevron" size={18} />
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
         {/* ACTIVE */}
         <section style={{ padding: "32px 22px 4px" }}>
@@ -116,6 +164,35 @@ export default async function HistoryPage() {
                   <Icon name="chevron" size={18} />
                 </Link>
               ))}
+            </div>
+          </section>
+        )}
+
+        {/* PAST CLASSES */}
+        {past.length > 0 && (
+          <section style={{ padding: "28px 22px 0" }}>
+            <div className="e-mono" style={{ color: "rgba(242,238,232,0.5)", letterSpacing: "0.2em", fontSize: 10 }}>PAST CLASSES</div>
+            <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 8 }}>
+              {past.slice(0, 8).map(({ booking, class: cls }) => {
+                const dt = new Date(cls.starts_at);
+                const dateStr = dt.toLocaleDateString("en-US", { month: "short", day: "2-digit" }).toUpperCase();
+                return (
+                  <Link key={booking.id} href={`/classes/${cls.id}`} style={{
+                    display: "flex", gap: 12, padding: 12, borderRadius: 12,
+                    background: "var(--haze)", border: "1px solid rgba(255,255,255,0.04)",
+                    color: "var(--bone)", textDecoration: "none",
+                    opacity: booking.status === "cancelled" ? 0.5 : 1,
+                  }}>
+                    <div className="e-mono" style={{ color: "rgba(242,238,232,0.5)", fontSize: 10, letterSpacing: "0.18em", minWidth: 50 }}>{dateStr}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontFamily: "var(--font-display)", fontSize: 14, letterSpacing: "0.02em" }}>{cls.name}</div>
+                      <div className="e-mono" style={{ color: "rgba(242,238,232,0.45)", fontSize: 9, letterSpacing: "0.18em", marginTop: 3 }}>
+                        {booking.status === "cancelled" ? "CANCELLED" : "ATTENDED"} · {booking.paid_status.toUpperCase()}
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
           </section>
         )}

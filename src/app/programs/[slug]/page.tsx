@@ -53,8 +53,8 @@ export default async function ProgramDetail({ params }: { params: { slug: string
 
           {/* Stats strip */}
           <div className="reveal reveal-d4" style={{ marginTop: 28, paddingTop: 24, borderTop: "1px solid rgba(242,238,232,0.12)", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 12 }}>
+            <Stat label="PRICE" v={program.price_cents > 0 ? `$${(program.price_cents / 100).toFixed(0)}` : "FREE"} accent />
             <Stat label="SESSIONS" v={String(program.total_sessions)} />
-            <Stat label="LENGTH" v={(program.duration_label ?? "").split(" · ")[0] || "—"} />
             <Stat label="LEVEL" v={program.intensity ?? "—"} />
             <Stat label="WHERE" v={program.surfaces.map(s => s.toUpperCase()).join(" · ")} />
           </div>
@@ -63,15 +63,24 @@ export default async function ProgramDetail({ params }: { params: { slug: string
           <div className="reveal reveal-d4" style={{ marginTop: 30, display: "flex", gap: 10, flexWrap: "wrap" }}>
             {!isAuthed && (
               <>
-                <Link href={`/login?next=/programs/${program.slug}`} className="btn btn-sky" style={{ minWidth: 200 }}>SIGN IN TO ENROLL</Link>
+                <Link href={`/login?next=/programs/${program.slug}`} className="btn btn-sky" style={{ minWidth: 200 }}>
+                  {program.requires_payment ? `SIGN IN · $${(program.price_cents/100).toFixed(0)}` : "SIGN IN TO ENROLL"}
+                </Link>
                 <Link href="/join" className="btn btn-ghost" style={{ color: "var(--bone)", borderColor: "rgba(242,238,232,0.4)" }}>JOIN FREE</Link>
               </>
+            )}
+            {program.requires_payment && (
+              <p className="e-mono" style={{ width: "100%", marginTop: 6, fontSize: 9, color: "rgba(242,238,232,0.5)", letterSpacing: "0.2em" }}>
+                INCLUDED FREE WITH ELITE MEMBERSHIP · ONE-TIME PURCHASE OTHERWISE
+              </p>
             )}
             {isAuthed && !enrollment && (
               <form action={enrollAction}>
                 <input type="hidden" name="program_id" value={program.id} />
                 <input type="hidden" name="program_slug" value={program.slug} />
-                <button type="submit" className="btn btn-sky" style={{ minWidth: 200 }}>ENROLL · START DAY 1</button>
+                <button type="submit" className="btn btn-sky" style={{ minWidth: 200 }}>
+                  {program.requires_payment ? `ENROLL · $${(program.price_cents / 100).toFixed(0)}` : "ENROLL · FREE"}
+                </button>
               </form>
             )}
             {isAuthed && enrollment && enrollment.status === "left" && (
@@ -201,7 +210,9 @@ export default async function ProgramDetail({ params }: { params: { slug: string
               <form action={enrollAction}>
                 <input type="hidden" name="program_id" value={program.id} />
                 <input type="hidden" name="program_slug" value={program.slug} />
-                <button type="submit" className="btn btn-sky" style={{ minWidth: 200 }}>ENROLL · START DAY 1</button>
+                <button type="submit" className="btn btn-sky" style={{ minWidth: 200 }}>
+                  {program.requires_payment ? `ENROLL · $${(program.price_cents / 100).toFixed(0)}` : "ENROLL · FREE"}
+                </button>
               </form>
             )}
             <Link href="/programs" className="btn btn-ghost" style={{ color: "var(--bone)", borderColor: "rgba(242,238,232,0.3)" }}>OTHER PROGRAMS</Link>
@@ -214,10 +225,10 @@ export default async function ProgramDetail({ params }: { params: { slug: string
   );
 }
 
-function Stat({ label, v }: { label: string; v: string }) {
+function Stat({ label, v, accent }: { label: string; v: string; accent?: boolean }) {
   return (
     <div>
-      <div style={{ fontFamily: "var(--font-display)", fontSize: "clamp(18px, 3.5vw, 22px)", color: "var(--sky)", lineHeight: 1 }}>{v}</div>
+      <div style={{ fontFamily: "var(--font-display)", fontSize: "clamp(18px, 3.5vw, 22px)", color: accent ? "var(--sky)" : "var(--bone)", lineHeight: 1, letterSpacing: "0.02em" }}>{v}</div>
       <div className="e-mono" style={{ color: "rgba(242,238,232,0.5)", fontSize: 9, marginTop: 6, letterSpacing: "0.2em" }}>{label}</div>
     </div>
   );

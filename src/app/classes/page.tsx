@@ -97,8 +97,9 @@ export default async function ClassesPage() {
                       const trainer = c.trainer_id ? trainerMap.get(c.trainer_id) : undefined;
                       const open = c.capacity - c.booked;
                       const full = open <= 0;
+                      const priceLabel = c.price_cents > 0 ? `$${(c.price_cents / 100).toFixed(0)}` : "FREE";
                       return (
-                        <div key={c.id} className="lift" style={{
+                        <Link href={`/classes/${c.id}`} key={c.id} className="lift" style={{
                           display: "grid",
                           gridTemplateColumns: "100px 1fr auto",
                           gap: 16,
@@ -108,25 +109,35 @@ export default async function ClassesPage() {
                           background: "rgba(143,184,214,0.05)",
                           border: "1px solid rgba(143,184,214,0.18)",
                           opacity: full ? 0.6 : 1,
+                          color: "var(--bone)", textDecoration: "none",
                         }}>
                           <div style={{ minWidth: 0 }}>
                             <div style={{ fontFamily: "var(--font-display)", fontSize: 22, lineHeight: 1 }}>{time}</div>
                             <div className="e-mono" style={{ fontSize: 9, color: "rgba(242,238,232,0.5)", marginTop: 4, letterSpacing: "0.18em" }}>{c.duration_min} MIN</div>
                           </div>
                           <div style={{ minWidth: 0 }}>
-                            <div className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.2em" }}>{c.kind?.toUpperCase() ?? "CLASS"} · {c.room ?? ""}</div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                              <span className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.2em" }}>{c.kind?.toUpperCase() ?? "CLASS"} · {c.room ?? ""}</span>
+                              <span className="e-mono" style={{
+                                fontSize: 9, letterSpacing: "0.18em",
+                                padding: "3px 8px", borderRadius: 999,
+                                background: c.price_cents > 0 ? "rgba(143,184,214,0.16)" : "rgba(143,184,214,0.06)",
+                                color: c.price_cents > 0 ? "var(--sky)" : "rgba(242,238,232,0.65)",
+                                border: "1px solid rgba(143,184,214,0.3)",
+                              }}>{priceLabel}</span>
+                            </div>
                             <div style={{ fontFamily: "var(--font-display)", fontSize: 19, marginTop: 5, letterSpacing: "0.02em" }}>{c.name}</div>
                             <div className="e-mono" style={{ fontSize: 9, color: "rgba(242,238,232,0.55)", marginTop: 5, letterSpacing: "0.18em" }}>
                               {trainer ? `WITH ${trainer.name.toUpperCase()}` : "TBD"} · {c.intensity ?? "MD"} · {full ? "WAITLIST" : `${open} SPOTS`}
                             </div>
                           </div>
-                          <Link href={user ? `/gym/classes/${c.id}` : "/join"} className="btn" style={{
+                          <span className="btn" style={{
                             padding: "10px 16px", fontSize: 10,
                             background: full ? "transparent" : "var(--sky)",
                             color: full ? "var(--bone)" : "var(--ink)",
                             border: full ? "1px solid rgba(242,238,232,0.25)" : "none",
-                          }}>{full ? "WAITLIST" : "RESERVE"}</Link>
-                        </div>
+                          }}>{full ? "WAITLIST" : "RESERVE"}</span>
+                        </Link>
                       );
                     })}
                   </div>

@@ -110,7 +110,14 @@ export default async function ProgramsPage() {
                   <h3 className="e-display" style={{ fontSize: "clamp(26px, 4vw, 36px)", lineHeight: 0.95 }}>{p.name}</h3>
                   <div className="e-mono" style={{ color: "var(--sky)", fontSize: 10, marginTop: 6, letterSpacing: "0.18em" }}>{p.subtitle}</div>
                   <p style={{ fontSize: 14, color: "rgba(242,238,232,0.72)", marginTop: 12, lineHeight: 1.55 }}>{p.description}</p>
-                  <div style={{ marginTop: 14, display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  <div style={{ marginTop: 14, display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+                    <span style={{
+                      fontSize: 10, fontFamily: "var(--font-mono)", letterSpacing: "0.18em",
+                      padding: "5px 11px", borderRadius: 999,
+                      background: p.price_cents > 0 ? "var(--sky)" : "rgba(143,184,214,0.16)",
+                      color: p.price_cents > 0 ? "var(--ink)" : "var(--sky)",
+                      border: p.price_cents > 0 ? "none" : "1px solid rgba(143,184,214,0.3)",
+                    }}>{p.price_cents > 0 ? `$${(p.price_cents / 100).toFixed(0)}` : "FREE"}</span>
                     <span className="chip-soft" style={{ fontSize: 10, fontFamily: "var(--font-mono)", letterSpacing: "0.14em" }}>{p.total_sessions} SESSIONS</span>
                     {p.intensity && <span className="chip-soft" style={{ fontSize: 10, fontFamily: "var(--font-mono)", letterSpacing: "0.14em" }}>{p.intensity.toUpperCase()}</span>}
                     {p.surfaces.map(s => (

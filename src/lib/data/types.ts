@@ -38,6 +38,22 @@ export type ClassRow = {
   intensity: string | null;
   room: string | null;
   hero_image: string | null;
+  price_cents: number;
+  requires_payment: boolean;
+  summary: string | null;
+  what_to_bring: string | null;
+};
+
+export type Booking = {
+  id: string;
+  user_id: string;
+  class_id: string;
+  status: string;
+  paid_status: "free" | "pending" | "paid" | "refunded" | "cancelled";
+  price_cents_paid: number;
+  surface: string;
+  notes: string | null;
+  created_at: string;
 };
 
 export type Product = {
@@ -78,6 +94,8 @@ export type Program = {
   kind: "in_app" | "in_person" | "both";
   surfaces: string[];
   sort_order: number;
+  price_cents: number;
+  requires_payment: boolean;
 };
 
 export type ProgramSession = {
