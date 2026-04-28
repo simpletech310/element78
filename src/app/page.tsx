@@ -14,12 +14,12 @@ export default async function HomePage() {
   const pillars = [
     {
       num: "I", t: "THE GYM", sub: "24-hour access · classes · 1:1",
-      desc: "Heavyweight reformer studios, weight floor, recovery lounge. Doors open all night.",
+      desc: "Heavy weights, reformer studios, treadmills, mat rooms, recovery lounge. However you need to move — we got you. Doors open all night.",
       img: "/assets/blue-hair-gym.jpg", cta: "TOUR THE FLOOR", href: "/locations",
     },
     {
-      num: "II", t: "THE STUDIO", sub: "AI-guided sessions, anywhere",
-      desc: "Live AI avatars walk you through Pilates, HIIT, and strength flows. Living-room ready.",
+      num: "II", t: "THE STUDIO", sub: "AI + human trainers, anywhere",
+      desc: "Pilates, HIIT, strength, mobility, yoga, conditioning. Trainers — human and AI — top of the game. Live in your living room or in our booths.",
       img: "/assets/editorial-2.png", cta: "TRY A SESSION", href: "/ai-sessions",
     },
     {
@@ -75,12 +75,12 @@ export default async function HomePage() {
             <div style={{ height: 1, background: "var(--sky)", flex: 1, opacity: 0.4 }} />
           </div>
 
-          <p className="reveal reveal-d3" style={{ marginTop: 36, fontSize: "clamp(22px, 4vw, 32px)", fontFamily: "var(--font-serif)", fontStyle: "italic", lineHeight: 1.15, color: "var(--bone)", maxWidth: 480, marginBottom: 0 }}>
-            Pilates with the windows down.
+          <p className="reveal reveal-d3" style={{ marginTop: 36, fontSize: "clamp(22px, 4vw, 32px)", fontFamily: "var(--font-serif)", fontStyle: "italic", lineHeight: 1.15, color: "var(--bone)", maxWidth: 520, marginBottom: 0 }}>
+            However you need to move — we got you.
           </p>
 
-          <p className="reveal reveal-d3" style={{ marginTop: 14, fontSize: 15, color: "rgba(242,238,232,0.7)", maxWidth: 440, lineHeight: 1.6, fontWeight: 300 }}>
-            A gym, a wardrobe, and an AI studio — built for the women the wellness industry forgot. We brought the culture with us.
+          <p className="reveal reveal-d3" style={{ marginTop: 14, fontSize: 15, color: "rgba(242,238,232,0.7)", maxWidth: 460, lineHeight: 1.6, fontWeight: 300 }}>
+            Lift, flow, run, recover. A full-floor gym, an AI studio, and trainers — human and AI — who are top of the game. Built for the women the wellness industry forgot.
           </p>
 
           <div className="reveal reveal-d4" style={{ marginTop: "auto", paddingTop: 36, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
@@ -225,10 +225,10 @@ export default async function HomePage() {
         <div style={{ maxWidth: 720, margin: "0 auto" }}>
           <div className="e-mono" style={{ color: "var(--electric-deep)" }}>03 / WHY 78</div>
           <p style={{ marginTop: 22, fontFamily: "var(--font-serif)", fontStyle: "italic", fontSize: "clamp(26px, 4vw, 38px)", lineHeight: 1.2, fontWeight: 400, marginBottom: 18 }}>
-            Pilates didn’t look like us. So we made it look like home.
+            Fitness didn&rsquo;t look like us. So we built a place that does.
           </p>
           <p style={{ fontSize: 15, lineHeight: 1.7, color: "rgba(10,14,20,0.75)", maxWidth: 580 }}>
-            78 is the atomic number of platinum — soft enough to bend, dense enough not to break. That’s the body we’re building. That’s the woman we’re building it for.
+            Lifters, runners, dancers, beginners — the whole spectrum, on one floor. 78 is the atomic number of platinum: soft enough to bend, dense enough not to break. That&rsquo;s the body we&rsquo;re building. That&rsquo;s the woman we&rsquo;re building it for.
           </p>
         </div>
       </section>

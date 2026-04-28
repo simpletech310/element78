@@ -11,7 +11,7 @@ export default async function AISessionsPage() {
 
   const features: { icon: IconName; t: string; sub: string }[] = [
     { icon: "spark", t: "FORM CHECK · LIVE", sub: "Your phone (or a gym camera) watches you move. The avatar calls form fixes in real time — knee tracking, hip alignment, depth, tempo." },
-    { icon: "play", t: "GUIDED FLOWS", sub: "28 minutes of Pilates, 24 minutes of HIIT, 35 minutes of street strength. Slow tempo, hard work, real cues." },
+    { icon: "play", t: "GUIDED FLOWS", sub: "Pilates, HIIT, strength, conditioning, mobility — short or long, easy or brutal. Real cues, real tempo, no fluff." },
     { icon: "mic", t: "VOICE COACHING", sub: "Hands-free count-in, breath cues, BPM-matched soundtrack — designed to feel like a trainer in the room." },
     { icon: "fire", t: "PROGRESSIVE LOAD", sub: "The system reads how hard yesterday was and tunes today. Intensity that meets you where you actually are." },
     { icon: "flame", t: "STREAK + GOALS", sub: "Set a weekly goal, track it, celebrate it. The streak goes with you across in-app and in-gym sessions." },
@@ -57,10 +57,10 @@ export default async function AISessionsPage() {
             AI THAT<br/>WATCHES.
           </h1>
           <p className="reveal reveal-d2" style={{ marginTop: 22, fontSize: "clamp(20px, 3.4vw, 28px)", fontFamily: "var(--font-serif)", fontStyle: "italic", color: "var(--bone)", maxWidth: 520 }}>
-            A trainer, in your phone. A trainer, in our studio.
+            A coach in your phone. A coach in our studio. Both top of the game.
           </p>
           <p className="reveal reveal-d3" style={{ marginTop: 14, fontSize: 15, color: "rgba(242,238,232,0.7)", maxWidth: 480, lineHeight: 1.6 }}>
-            Live AI avatars walk you through every flow — Pilates, HIIT, strength, mobility — checking your form in real time, picking the right tempo, calling your reps.
+            Live AI avatars walk you through whatever you need to move — Pilates, HIIT, strength, conditioning, mobility, yoga — checking your form in real time, picking the right tempo, calling your reps. Pair them with our human trainers when you want hands-on.
           </p>
           <div className="reveal reveal-d4" style={{ marginTop: 30, display: "flex", gap: 10, flexWrap: "wrap" }}>
             <Link href="/join" className="btn btn-sky" style={{ minWidth: 200 }}>START FREE</Link>

@@ -9,7 +9,7 @@ const serif = Cormorant_Garamond({ subsets: ["latin"], weight: ["400", "500"], s
 
 export const metadata: Metadata = {
   title: "Element 78 — In My Element",
-  description: "Pilates with the windows down. A gym, a wardrobe, and an AI studio — built for the Black women who never saw themselves in this space. Compton, CA.",
+  description: "However you need to move, we got you. Lift, flow, run, recover — with trainers, AI and human, who are top of the game. A gym, a wardrobe, and an AI studio built in Atlanta for the Black women who never saw themselves in this space.",
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "Element 78" },
   icons: { icon: "/icons/icon-192.png", apple: "/icons/icon-192.png" },

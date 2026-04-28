@@ -54,7 +54,7 @@ export default async function AtlantaPage() {
             Our flagship — a luxury gym designed for women, by women. Beautiful. Safe. Loud when you want it, quiet when you don&apos;t. Open every hour of every day.
           </p>
           <div className="reveal reveal-d4" style={{ marginTop: "auto", paddingTop: 36, display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <Link href="/day-pass" className="btn btn-sky" style={{ minWidth: 200 }}>BOOK A DAY PASS</Link>
+            <Link href="/join#day-pass" className="btn btn-sky" style={{ minWidth: 200 }}>BOOK A DAY PASS</Link>
             <Link href="/membership" className="btn btn-ghost" style={{ color: "var(--bone)", borderColor: "rgba(242,238,232,0.4)" }}>SEE MEMBERSHIPS</Link>
           </div>
         </div>
@@ -126,7 +126,7 @@ export default async function AtlantaPage() {
             Day pass · membership · tour. Take the door that fits.
           </p>
           <div style={{ marginTop: 30, display: "flex", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
-            <Link href="/day-pass" className="btn btn-sky" style={{ minWidth: 200 }}>DAY PASS</Link>
+            <Link href="/join#day-pass" className="btn btn-sky" style={{ minWidth: 200 }}>DAY PASS</Link>
             <Link href="/membership" className="btn btn-ghost" style={{ color: "var(--bone)", borderColor: "rgba(242,238,232,0.3)" }}>MEMBERSHIPS</Link>
             <Link href="/contact" className="btn btn-ghost" style={{ color: "var(--bone)", borderColor: "rgba(242,238,232,0.3)" }}>BOOK A TOUR</Link>
           </div>
