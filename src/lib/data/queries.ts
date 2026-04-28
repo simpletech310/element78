@@ -70,7 +70,14 @@ export async function listPrograms(): Promise<Program[]> {
   if (!isConfigured()) return fallbackPrograms;
   const sb = createClient();
   const { data } = await sb.from("programs").select("*").order("sort_order");
-  return (data as Program[]) ?? fallbackPrograms;
+  const live = (data as Program[]) ?? [];
+  // Surface any fallback programs the prod DB hasn't been seeded with yet so
+  // the catalog stays complete during the migration window. Once the rows are
+  // in Supabase (see supabase/migrations/0003_more_programs.sql) this becomes
+  // a no-op because every slug is already represented.
+  const liveSlugs = new Set(live.map(p => p.slug));
+  const supplemental = fallbackPrograms.filter(p => !liveSlugs.has(p.slug));
+  return [...live, ...supplemental].sort((a, b) => a.sort_order - b.sort_order);
 }
 
 export async function getProgram(slug: string): Promise<{ program: Program; sessions: ProgramSession[] } | null> {
@@ -81,10 +88,17 @@ export async function getProgram(slug: string): Promise<{ program: Program; sess
     return { program, sessions };
   }
   const sb = createClient();
-  const { data: program } = await sb.from("programs").select("*").eq("slug", slug).single();
-  if (!program) return null;
-  const { data: sessions } = await sb.from("program_sessions").select("*").eq("program_id", program.id).order("day_index");
-  return { program: program as Program, sessions: (sessions as ProgramSession[]) ?? [] };
+  const { data: program } = await sb.from("programs").select("*").eq("slug", slug).maybeSingle();
+  if (program) {
+    const { data: sessions } = await sb.from("program_sessions").select("*").eq("program_id", program.id).order("day_index");
+    return { program: program as Program, sessions: (sessions as ProgramSession[]) ?? [] };
+  }
+  // Fall back to static program when the DB doesn't have it yet — same merge
+  // strategy as listPrograms keeps the detail page reachable for every slug.
+  const fb = fallbackPrograms.find(p => p.slug === slug);
+  if (!fb) return null;
+  const sessions = fallbackProgramSessions.filter(s => s.program_id === fb.id);
+  return { program: fb, sessions };
 }
 
 export async function getEnrollment(userId: string, programId: string): Promise<ProgramEnrollment | null> {
@@ -164,7 +178,12 @@ export async function listProgramsByTrainer(trainerId: string): Promise<Program[
   const sb = createClient();
   const { data, error } = await sb.from("programs").select("*").eq("trainer_id", trainerId).order("sort_order");
   if (error) return [];
-  return (data as Program[]) ?? [];
+  const live = (data as Program[]) ?? [];
+  // Same merge as listPrograms — covers fallback-only programs while the prod
+  // table is being backfilled.
+  const liveSlugs = new Set(live.map(p => p.slug));
+  const supplemental = fallbackPrograms.filter(p => p.trainer_id === trainerId && !liveSlugs.has(p.slug));
+  return [...live, ...supplemental].sort((a, b) => a.sort_order - b.sort_order);
 }
 
 /**
