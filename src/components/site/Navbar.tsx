@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Wordmark } from "@/components/brand/Wordmark";
 import { Icon } from "@/components/ui/Icon";
+import { signOutAction } from "@/lib/auth-actions";
 
 const links = [
   { label: "HOME", href: "/" },
@@ -13,7 +14,7 @@ const links = [
   { label: "CONTACT", href: "/contact" },
 ];
 
-export function Navbar() {
+export function Navbar({ authed = false }: { authed?: boolean }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -59,8 +60,19 @@ export function Navbar() {
               transition: "color .2s ease",
             }}>{l.label}</Link>
           ))}
-          <Link href="/login" className="e-mono" style={{ color: "var(--sky)", fontSize: 11, letterSpacing: "0.2em" }}>SIGN IN</Link>
-          <Link href="/join" className="btn btn-sky" style={{ padding: "10px 18px", fontSize: 10 }}>JOIN ELEMENT</Link>
+          {authed ? (
+            <>
+              <Link href="/home" className="e-mono" style={{ color: "var(--sky)", fontSize: 11, letterSpacing: "0.2em" }}>MY ELEMENT</Link>
+              <form action={signOutAction}>
+                <button type="submit" className="btn btn-sky" style={{ padding: "10px 18px", fontSize: 10 }}>SIGN OUT</button>
+              </form>
+            </>
+          ) : (
+            <>
+              <Link href="/login" className="e-mono" style={{ color: "var(--sky)", fontSize: 11, letterSpacing: "0.2em" }}>SIGN IN</Link>
+              <Link href="/join" className="btn btn-sky" style={{ padding: "10px 18px", fontSize: 10 }}>JOIN ELEMENT</Link>
+            </>
+          )}
         </nav>
 
         {/* Mobile controls */}
@@ -114,8 +126,19 @@ export function Navbar() {
           </Link>
         ))}
         <div style={{ marginTop: 28, display: "flex", flexDirection: "column", gap: 10 }}>
-          <Link href="/join" className="btn btn-sky" style={{ width: "100%" }}>JOIN ELEMENT</Link>
-          <Link href="/login" className="btn btn-ghost" style={{ width: "100%", color: "var(--bone)", borderColor: "rgba(242,238,232,0.25)" }}>SIGN IN</Link>
+          {authed ? (
+            <>
+              <Link href="/home" className="btn btn-sky" style={{ width: "100%" }}>OPEN MY ELEMENT</Link>
+              <form action={signOutAction}>
+                <button type="submit" className="btn btn-ghost" style={{ width: "100%", color: "var(--bone)", borderColor: "rgba(242,238,232,0.25)" }}>SIGN OUT</button>
+              </form>
+            </>
+          ) : (
+            <>
+              <Link href="/join" className="btn btn-sky" style={{ width: "100%" }}>JOIN ELEMENT</Link>
+              <Link href="/login" className="btn btn-ghost" style={{ width: "100%", color: "var(--bone)", borderColor: "rgba(242,238,232,0.25)" }}>SIGN IN</Link>
+            </>
+          )}
         </div>
         <div className="e-mono" style={{ color: "rgba(242,238,232,0.35)", marginTop: 32, fontSize: 9, letterSpacing: "0.25em" }}>
           ATLANTA · 24/7

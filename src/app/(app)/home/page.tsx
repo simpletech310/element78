@@ -38,12 +38,12 @@ export default async function HomeScreen() {
               GOOD MORNING,<br/><span style={{ color: "var(--sky)" }}>NAYA.</span>
             </div>
           </div>
-          <div style={{ position: "relative" }}>
+          <Link href="/account" aria-label="Account" style={{ position: "relative", display: "block" }}>
             <div style={{ width: 44, height: 44, borderRadius: "50%", overflow: "hidden", border: "1.5px solid var(--sky)" }}>
               <Photo src="/assets/blue-hair-selfie.jpg" alt="profile" style={{ width: "100%", height: "100%" }} />
             </div>
             <div style={{ position: "absolute", bottom: -2, right: -2, background: "var(--electric)", color: "var(--ink)", borderRadius: 999, padding: "1px 5px", fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 600, border: "2px solid var(--ink)" }}>14</div>
-          </div>
+          </Link>
         </div>
 
         {/* Hero — today's ritual */}

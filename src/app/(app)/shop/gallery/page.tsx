@@ -12,10 +12,8 @@ export default async function ShopGallery() {
   const isAuthed = !!user;
   const filters = [{ l: `ALL · ${products.length}`, a: true }, { l: "NEW IN" }, { l: "APPAREL" }, { l: "GEAR" }, { l: "ACCESSORIES" }, { l: "SALE" }];
 
-  return (
-    <div style={{ background: "var(--bone)", color: "var(--ink)", fontFamily: "var(--font-body)", minHeight: "100dvh", paddingBottom: isAuthed ? 80 : 0 }}>
-      {!isAuthed && <Navbar />}
-      <div style={{ paddingBottom: 80, maxWidth: 1180, margin: "0 auto" }}>
+  const body = (
+    <div style={{ paddingBottom: 80, maxWidth: 1180, margin: "0 auto" }}>
         <div style={{ padding: "14px 22px 4px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
             <div className="e-mono" style={{ color: "rgba(10,14,20,0.5)" }}>STORE · SS26</div>
@@ -96,8 +94,20 @@ export default async function ShopGallery() {
             <div style={{ fontFamily: "var(--font-serif)", fontStyle: "italic", fontSize: 18, color: "var(--ink)" }}>Wear it. Train in it. Leave the house in it.</div>
           </div>
         </div>
+    </div>
+  );
+  if (isAuthed) {
+    return (
+      <div className="app" style={{ height: "100dvh", background: "var(--bone)" }}>
+        <div className="app-scroll">{body}</div>
+        <TabBar />
       </div>
-      {isAuthed && <TabBar />}
+    );
+  }
+  return (
+    <div style={{ background: "var(--bone)", color: "var(--ink)", fontFamily: "var(--font-body)", minHeight: "100dvh" }}>
+      <Navbar authed={false} />
+      {body}
     </div>
   );
 }

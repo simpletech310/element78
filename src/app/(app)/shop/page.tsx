@@ -7,18 +7,13 @@ import { CartButton } from "@/components/shop/CartButton";
 import { AddToBagInline } from "@/components/shop/AddToBag";
 import { listProducts } from "@/lib/data/queries";
 import { getUser } from "@/lib/auth";
+import type { Product } from "@/lib/data/types";
 
-export default async function ShopScreen() {
-  const [products, user] = await Promise.all([listProducts(), getUser()]);
-  const isAuthed = !!user;
-  const hero = products.find(p => p.slug === "element-set") ?? products[0];
-  const grid = products.filter(p => p.id !== hero?.id);
-  const cats = [{ l: "ALL", a: true }, { l: "WEAR" }, { l: "GEAR" }, { l: "FUEL" }, { l: "ACCESSORIES" }];
-
+function ShopBody({ products, hero, grid, cats }: {
+  products: Product[]; hero: Product | undefined; grid: Product[]; cats: { l: string; a?: boolean }[];
+}) {
   return (
-    <div style={{ background: "var(--bone)", color: "var(--ink)", fontFamily: "var(--font-body)", minHeight: "100dvh", paddingBottom: isAuthed ? 80 : 0 }}>
-      {!isAuthed && <Navbar />}
-
+    <>
       <section style={{ padding: "32px 22px 12px", maxWidth: 1180, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 16 }}>
         <div>
           <div className="e-mono" style={{ color: "rgba(10,14,20,0.5)" }}>STORE · SS26</div>
@@ -96,7 +91,34 @@ export default async function ShopScreen() {
           ))}
         </div>
       </section>
-      {isAuthed && <TabBar />}
+    </>
+  );
+}
+
+export default async function ShopScreen() {
+  const [products, user] = await Promise.all([listProducts(), getUser()]);
+  const isAuthed = !!user;
+  const hero = products.find(p => p.slug === "element-set") ?? products[0];
+  const grid = products.filter(p => p.id !== hero?.id);
+  const cats = [{ l: "ALL", a: true }, { l: "WEAR" }, { l: "GEAR" }, { l: "FUEL" }, { l: "ACCESSORIES" }];
+
+  // Authed: in-app shell — TabBar anchored to viewport, content scrolls inside.
+  if (isAuthed) {
+    return (
+      <div className="app" style={{ height: "100dvh", background: "var(--bone)" }}>
+        <div className="app-scroll" style={{ paddingBottom: 30 }}>
+          <ShopBody products={products} hero={hero} grid={grid} cats={cats} />
+        </div>
+        <TabBar />
+      </div>
+    );
+  }
+
+  // Public: marketing layout with top Navbar + natural document scroll.
+  return (
+    <div style={{ background: "var(--bone)", color: "var(--ink)", fontFamily: "var(--font-body)", minHeight: "100dvh" }}>
+      <Navbar authed={false} />
+      <ShopBody products={products} hero={hero} grid={grid} cats={cats} />
     </div>
   );
 }

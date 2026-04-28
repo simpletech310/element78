@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 type CookieSetItem = { name: string; value: string; options: CookieOptions };
 
-const PROTECTED_PREFIXES = ["/home", "/train", "/gym", "/wall", "/trainers", "/activity", "/music"];
+const PROTECTED_PREFIXES = ["/home", "/train", "/gym", "/wall", "/trainers", "/activity", "/music", "/account"];
 
 function isProtected(pathname: string) {
   // Marketing pages (/, /shop, /locations, /contact) are public; only the in-app

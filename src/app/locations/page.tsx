@@ -3,16 +3,17 @@ import { Navbar } from "@/components/site/Navbar";
 import { Photo } from "@/components/ui/Photo";
 import { Icon } from "@/components/ui/Icon";
 import { listLocations } from "@/lib/data/queries";
+import { getUser } from "@/lib/auth";
 
 export default async function LocationsPage() {
-  const locs = await listLocations();
+  const [locs, user] = await Promise.all([listLocations(), getUser()]);
   const primary = locs.find(l => l.status === "active") ?? locs[0];
   const waitlist = locs.filter(l => l.status === "waitlist");
   const waitDates = ["SUMMER '26", "FALL '26", "EARLY '27", "MID '27"];
 
   return (
     <div style={{ background: "var(--ink)", color: "var(--bone)", fontFamily: "var(--font-body)", minHeight: "100dvh" }}>
-      <Navbar />
+      <Navbar authed={!!user} />
 
       {/* HERO */}
       <section style={{ position: "relative", padding: "60px 22px 28px", maxWidth: 1180, margin: "0 auto" }}>

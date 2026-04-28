@@ -2,8 +2,10 @@ import Link from "next/link";
 import { Navbar } from "@/components/site/Navbar";
 import { Photo } from "@/components/ui/Photo";
 import { Icon } from "@/components/ui/Icon";
+import { getUser } from "@/lib/auth";
 
-export default function ContactPage() {
+export default async function ContactPage() {
+  const user = await getUser();
   const channels = [
     { l: "PRESS", e: "press@element78life.com", sub: "Editorial · features · interviews" },
     { l: "WHOLESALE", e: "wholesale@element78life.com", sub: "Stockists · partnerships · capsules" },
@@ -13,7 +15,7 @@ export default function ContactPage() {
 
   return (
     <div style={{ background: "var(--ink)", color: "var(--bone)", fontFamily: "var(--font-body)", minHeight: "100dvh" }}>
-      <Navbar />
+      <Navbar authed={!!user} />
 
       {/* HERO */}
       <section style={{ position: "relative", minHeight: 420 }}>

@@ -22,10 +22,8 @@ export default async function ProductDetail({ params }: { params: { slug: string
     { l: "WEIGHT", v: "14.2 OZ" },
   ];
 
-  return (
-    <div style={{ background: "var(--bone)", color: "var(--ink)", fontFamily: "var(--font-body)", minHeight: "100dvh", paddingBottom: isAuthed ? 80 : 0 }}>
-      {!isAuthed && <Navbar />}
-      <div style={{ paddingBottom: 120, maxWidth: 1180, margin: "0 auto" }}>
+  const body = (
+    <div style={{ paddingBottom: 120, maxWidth: 1180, margin: "0 auto" }}>
         <div style={{ padding: "16px 22px 6px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <Link href="/shop" className="e-mono" style={{ display: "inline-flex", alignItems: "center", gap: 8, color: "var(--ink)", fontSize: 11, letterSpacing: "0.2em" }}>
             <span style={{ transform: "rotate(180deg)", display: "inline-flex" }}><Icon name="chevron" size={14} /></span>
@@ -96,8 +94,21 @@ export default async function ProductDetail({ params }: { params: { slug: string
             </div>
           ))}
         </div>
+    </div>
+  );
+
+  if (isAuthed) {
+    return (
+      <div className="app" style={{ height: "100dvh", background: "var(--bone)" }}>
+        <div className="app-scroll">{body}</div>
+        <TabBar />
       </div>
-      {isAuthed && <TabBar />}
+    );
+  }
+  return (
+    <div style={{ background: "var(--bone)", color: "var(--ink)", fontFamily: "var(--font-body)", minHeight: "100dvh" }}>
+      <Navbar authed={false} />
+      {body}
     </div>
   );
 }

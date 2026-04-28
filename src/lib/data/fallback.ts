@@ -4,7 +4,7 @@
 import type { ClassRow, Location, Post, Product, Trainer } from "./types";
 
 export const fallbackLocations: Location[] = [
-  { id: "loc-atl", slug: "atlanta-hq", name: "Atlanta HQ", city: "Atlanta", state: "GA", status: "active", hero_image: "/assets/element78-hero.jpg", lat: 33.749, lng: -84.388, sort_order: 1 },
+  { id: "loc-atl", slug: "atlanta-hq", name: "Atlanta HQ", city: "Atlanta", state: "GA", status: "active", hero_image: "/assets/atlgym.jpg", lat: 33.749, lng: -84.388, sort_order: 1 },
   { id: "loc-la", slug: "los-angeles", name: "Los Angeles", city: "Los Angeles", state: "CA", status: "waitlist", hero_image: "/assets/blue-hair-gym.jpg", lat: 34.0522, lng: -118.2437, sort_order: 2 },
   { id: "loc-hou", slug: "houston", name: "Houston", city: "Houston", state: "TX", status: "waitlist", hero_image: null, lat: 29.7604, lng: -95.3698, sort_order: 3 },
   { id: "loc-nyc", slug: "new-york", name: "New York", city: "Brooklyn", state: "NY", status: "waitlist", hero_image: null, lat: 40.6872, lng: -73.9418, sort_order: 4 },

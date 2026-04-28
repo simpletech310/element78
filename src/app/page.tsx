@@ -5,9 +5,10 @@ import { Icon } from "@/components/ui/Icon";
 import { Navbar } from "@/components/site/Navbar";
 import { FilmTrigger } from "@/components/site/FilmTrigger";
 import { listTrainers } from "@/lib/data/queries";
+import { getUser } from "@/lib/auth";
 
 export default async function HomePage() {
-  const trainers = await listTrainers();
+  const [trainers, user] = await Promise.all([listTrainers(), getUser()]);
 
   const pillars = [
     {
@@ -49,15 +50,15 @@ export default async function HomePage() {
 
   return (
     <div style={{ background: "var(--ink)", color: "var(--bone)", fontFamily: "var(--font-body)", minHeight: "100dvh" }}>
-      <Navbar />
+      <Navbar authed={!!user} />
 
       {/* HERO */}
       <section style={{ position: "relative", minHeight: "min(880px, 100dvh)" }}>
         <Photo
-          src="/assets/atlgym.jpg"
+          src="/assets/IMG_3463.jpg"
           alt=""
           className="zoom-on-hover"
-          style={{ position: "absolute", inset: 0, opacity: 0.78, backgroundPosition: "center 30%" }}
+          style={{ position: "absolute", inset: 0, opacity: 0.85, backgroundPosition: "center 25%" }}
         />
         <div style={{
           position: "absolute", inset: 0,
