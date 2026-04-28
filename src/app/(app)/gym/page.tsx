@@ -4,7 +4,7 @@ import { TabBar } from "@/components/chrome/TabBar";
 import { Wordmark } from "@/components/brand/Wordmark";
 import { Photo } from "@/components/ui/Photo";
 import { Icon, IconName } from "@/components/ui/Icon";
-import { listClasses } from "@/lib/data/queries";
+import { listClasses, listUserBookings } from "@/lib/data/queries";
 import { getUser } from "@/lib/auth";
 
 export default async function GymScreen() {
@@ -13,6 +13,16 @@ export default async function GymScreen() {
     ?? user?.email?.split("@")[0]
     ?? "Member").toUpperCase();
   const memberId = user?.id ? "E78-" + user.id.replace(/-/g, "").slice(0, 6).toUpperCase() : "E78-XXXXXX";
+
+  // User's upcoming bookings drive the "Your Classes" strip + prevent
+  // double-booking on the schedule below
+  const bookings = user ? await listUserBookings(user.id) : [];
+  const now = Date.now();
+  const upcomingBookings = bookings
+    .filter(b => b.booking.status === "reserved" && new Date(b.class.starts_at).getTime() >= now)
+    .sort((a, b) => new Date(a.class.starts_at).getTime() - new Date(b.class.starts_at).getTime());
+  const bookedClassIds = new Set(upcomingBookings.map(b => b.class.id));
+
   const week = Array.from({ length: 7 }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() + i);
@@ -93,9 +103,51 @@ export default async function GymScreen() {
           ))}
         </div>
 
+        {/* YOUR BOOKED CLASSES — only when reserved */}
+        {upcomingBookings.length > 0 && (
+          <>
+            <div style={{ padding: "20px 22px 12px", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+              <div className="e-display" style={{ fontSize: 22 }}>YOUR CLASSES</div>
+              <Link href="/account/history" className="e-mono" style={{ color: "var(--electric-deep)" }}>{upcomingBookings.length} BOOKED →</Link>
+            </div>
+            <div style={{ padding: "0 22px", display: "flex", flexDirection: "column", gap: 10 }}>
+              {upcomingBookings.slice(0, 4).map(({ booking, class: cls }) => {
+                const dt = new Date(cls.starts_at);
+                const dStr = dt.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "2-digit" }).toUpperCase();
+                const tStr = dt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+                const priceLabel = booking.paid_status === "free" ? "FREE"
+                                : booking.paid_status === "paid" ? `PAID · $${(booking.price_cents_paid / 100).toFixed(0)}`
+                                : `PAY AT CHECK-IN · $${(booking.price_cents_paid / 100).toFixed(0)}`;
+                return (
+                  <Link key={booking.id} href={`/gym/classes/${cls.id}`} className="lift" style={{
+                    display: "grid", gridTemplateColumns: "auto 1fr auto", gap: 14, alignItems: "center",
+                    padding: "14px 16px", borderRadius: 14,
+                    background: "linear-gradient(135deg, rgba(46,127,176,0.18), rgba(143,184,214,0.05))",
+                    border: "1px solid rgba(46,127,176,0.35)",
+                    color: "var(--ink)", textDecoration: "none",
+                  }}>
+                    <div style={{ paddingRight: 14, borderRight: "1px solid rgba(46,127,176,0.25)" }}>
+                      <div className="e-mono" style={{ color: "var(--electric-deep)", fontSize: 9, letterSpacing: "0.18em" }}>{dStr}</div>
+                      <div style={{ fontFamily: "var(--font-display)", fontSize: 22, lineHeight: 1, marginTop: 2 }}>{tStr}</div>
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontFamily: "var(--font-display)", fontSize: 17, letterSpacing: "0.02em" }}>{cls.name}</div>
+                      <div className="e-mono" style={{ color: "rgba(10,14,20,0.55)", fontSize: 9, marginTop: 4, letterSpacing: "0.18em" }}>
+                        {cls.kind?.toUpperCase() ?? "CLASS"} · {cls.room ?? ""} · SPOT {booking.spot_number ?? "—"}
+                      </div>
+                      <div className="e-mono" style={{ marginTop: 6, fontSize: 9, color: "var(--electric-deep)", letterSpacing: "0.18em" }}>{priceLabel}</div>
+                    </div>
+                    <Icon name="chevron" size={18} />
+                  </Link>
+                );
+              })}
+            </div>
+          </>
+        )}
+
         {/* Day strip */}
         <div style={{ padding: "20px 22px 8px", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-          <div className="e-display" style={{ fontSize: 22 }}>CLASSES</div>
+          <div className="e-display" style={{ fontSize: 22 }}>{upcomingBookings.length > 0 ? "MORE THIS WEEK" : "CLASSES"}</div>
           <Link href="/gym/classes" className="e-mono" style={{ color: "var(--electric-deep)" }}>SEE ALL →</Link>
         </div>
         <div className="no-scrollbar" style={{ display: "flex", gap: 8, padding: "0 22px", overflowX: "auto" }}>
@@ -117,11 +169,11 @@ export default async function GymScreen() {
 
         {/* Class list */}
         <div style={{ padding: "16px 22px 6px", display: "flex", flexDirection: "column", gap: 10 }}>
-          {todayClasses.map((c, i) => {
+          {todayClasses.map((c) => {
             const dt = new Date(c.starts_at);
             const time = dt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }).replace(" ", "").toUpperCase();
             const full = c.booked >= c.capacity;
-            const booked = i === 0;
+            const booked = bookedClassIds.has(c.id);
             return (
               <Link key={c.id} href={`/gym/classes/${c.id}`} style={{
                 display: "flex", gap: 14, padding: 14, borderRadius: 16,

@@ -110,6 +110,13 @@ export async function listEnrollmentCompletions(enrollmentId: string): Promise<P
   return (data as ProgramCompletion[]) ?? [];
 }
 
+export async function listTakenSpots(classId: string): Promise<number[]> {
+  if (!isConfigured()) return [];
+  const sb = createClient();
+  const { data } = await sb.from("bookings").select("spot_number").eq("class_id", classId).eq("status", "reserved");
+  return ((data as { spot_number: number | null }[]) ?? []).map(r => r.spot_number).filter((n): n is number => typeof n === "number");
+}
+
 export async function getUserBookingForClass(userId: string, classId: string): Promise<Booking | null> {
   if (!isConfigured()) return null;
   const sb = createClient();
@@ -127,7 +134,7 @@ export async function listUserBookings(userId: string): Promise<Array<{ booking:
     .order("created_at", { ascending: false });
   if (!data) return [];
   return (data as Array<Booking & { class: ClassRow }>).map(row => ({
-    booking: { id: row.id, user_id: row.user_id, class_id: row.class_id, status: row.status, paid_status: row.paid_status, price_cents_paid: row.price_cents_paid, surface: row.surface, notes: row.notes, created_at: row.created_at },
+    booking: { id: row.id, user_id: row.user_id, class_id: row.class_id, status: row.status, paid_status: row.paid_status, price_cents_paid: row.price_cents_paid, surface: row.surface, notes: row.notes, spot_number: row.spot_number, created_at: row.created_at },
     class: row.class,
   }));
 }

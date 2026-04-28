@@ -3,17 +3,29 @@ import { StatusBar, HomeIndicator } from "@/components/chrome/StatusBar";
 import { TabBar } from "@/components/chrome/TabBar";
 import { Photo } from "@/components/ui/Photo";
 import { Icon } from "@/components/ui/Icon";
+import { listPrograms, listUserEnrollments, listEnrollmentCompletions } from "@/lib/data/queries";
+import { getUser } from "@/lib/auth";
 
-export default function TrainScreen() {
+export default async function TrainScreen() {
   const filters = [
     { l: "ALL", active: true }, { l: "PILATES" }, { l: "HIIT" },
     { l: "STRENGTH" }, { l: "YOGA" }, { l: "MOBILITY" },
   ];
-  const programs = [
-    { t: "IN MY ELEMENT", sub: "21-day reset · daily Pilates flow", dur: "PROGRAM · 21 DAYS", img: "/assets/floor-mockup.png" },
-    { t: "CITY OF ANGELS", sub: "Outdoor street strength · LA-built", dur: "PROGRAM · 14 DAYS", img: "/assets/IMG_3461.jpg" },
-    { t: "LIVING ROOM LUXURY", sub: "No-equipment, low-impact, high-result", dur: "SERIES · 8 SESSIONS", img: "/assets/IMG_3467.jpg" },
-  ];
+
+  const [user, allPrograms] = await Promise.all([getUser(), listPrograms()]);
+  const enrollments = user ? await listUserEnrollments(user.id) : [];
+  const activePrograms = enrollments.filter(e => e.enrollment.status === "active");
+
+  // Completion counts for each active enrollment
+  const completedCounts: Record<string, number> = {};
+  await Promise.all(activePrograms.map(async ({ enrollment }) => {
+    const cs = await listEnrollmentCompletions(enrollment.id);
+    completedCounts[enrollment.id] = cs.length;
+  }));
+
+  // Programs the user hasn't started — surfaced as "Discover" rail below.
+  const enrolledIds = new Set(enrollments.map(e => e.program.id));
+  const discoverPrograms = allPrograms.filter(p => !enrolledIds.has(p.id));
 
   return (
     <div className="app" style={{ height: "100dvh" }}>
@@ -74,28 +86,75 @@ export default function TrainScreen() {
           ))}
         </div>
 
-        <div style={{ padding: "16px 22px 6px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 12 }}>
-            <div className="e-display" style={{ fontSize: 22 }}>SIGNATURE PROGRAMS</div>
-            <div className="e-mono" style={{ color: "var(--electric-deep)" }}>3</div>
+        {/* YOUR PROGRAMS — only when enrolled */}
+        {activePrograms.length > 0 && (
+          <div style={{ padding: "8px 22px 6px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 12 }}>
+              <div className="e-display" style={{ fontSize: 22 }}>YOUR PROGRAMS</div>
+              <Link href="/account/history" className="e-mono" style={{ color: "var(--electric-deep)" }}>HISTORY →</Link>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {activePrograms.map(({ enrollment, program }) => {
+                const c = completedCounts[enrollment.id] ?? 0;
+                const pct = Math.round((c / Math.max(1, program.total_sessions)) * 100);
+                return (
+                  <Link key={enrollment.id} href={`/programs/${program.slug}`} className="lift" style={{
+                    display: "flex", gap: 14,
+                    padding: 14, borderRadius: 16,
+                    background: "linear-gradient(135deg, rgba(143,184,214,0.18), rgba(46,127,176,0.04))",
+                    border: "1px solid rgba(143,184,214,0.28)",
+                    color: "var(--ink)", textDecoration: "none",
+                  }}>
+                    <div style={{ width: 92, height: 116, borderRadius: 12, overflow: "hidden", flexShrink: 0, position: "relative" }}>
+                      {program.hero_image && <Photo src={program.hero_image} alt={program.name} style={{ position: "absolute", inset: 0 }} />}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                      <div>
+                        <div className="e-mono" style={{ color: "var(--electric-deep)", fontSize: 9, letterSpacing: "0.18em" }}>{program.duration_label}</div>
+                        <div style={{ fontFamily: "var(--font-display)", fontSize: 22, lineHeight: 0.95, marginTop: 4, letterSpacing: "0.02em" }}>{program.name}</div>
+                        <div className="e-mono" style={{ marginTop: 6, fontSize: 9, color: "rgba(10,14,20,0.6)", letterSpacing: "0.18em" }}>
+                          DAY {enrollment.current_day}/{program.total_sessions} · {pct}%
+                        </div>
+                      </div>
+                      <div style={{ height: 4, borderRadius: 2, background: "rgba(46,127,176,0.18)", overflow: "hidden" }}>
+                        <div style={{ width: `${pct}%`, height: "100%", background: "var(--electric)", boxShadow: "0 0 6px rgba(77,169,214,0.6)" }} />
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
           </div>
-          {programs.map((p, i) => (
-            <div key={i} style={{ display: "flex", gap: 14, padding: "14px 0", borderBottom: i < 2 ? "1px solid rgba(10,14,20,0.08)" : "none" }}>
+        )}
+
+        <div style={{ padding: "20px 22px 6px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 12 }}>
+            <div className="e-display" style={{ fontSize: 22 }}>{activePrograms.length > 0 ? "DISCOVER" : "SIGNATURE PROGRAMS"}</div>
+            <div className="e-mono" style={{ color: "var(--electric-deep)" }}>{discoverPrograms.length}</div>
+          </div>
+          {discoverPrograms.map((p, i) => (
+            <Link href={`/programs/${p.slug}`} key={p.id} style={{ display: "flex", gap: 14, padding: "14px 0", borderBottom: i < discoverPrograms.length - 1 ? "1px solid rgba(10,14,20,0.08)" : "none", color: "var(--ink)", textDecoration: "none" }}>
               <div style={{ width: 96, height: 120, borderRadius: 10, overflow: "hidden", flexShrink: 0, position: "relative" }}>
-                <Photo src={p.img} alt={p.t} style={{ position: "absolute", inset: 0 }} />
+                {p.hero_image && <Photo src={p.hero_image} alt={p.name} style={{ position: "absolute", inset: 0 }} />}
               </div>
               <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between", padding: "4px 0" }}>
                 <div>
-                  <div className="e-mono" style={{ color: "var(--electric-deep)", fontSize: 9 }}>{p.dur}</div>
-                  <div style={{ fontFamily: "var(--font-display)", fontSize: 22, lineHeight: 0.95, marginTop: 4, letterSpacing: "0.02em" }}>{p.t}</div>
-                  <div style={{ fontSize: 12, color: "rgba(10,14,20,0.6)", marginTop: 6 }}>{p.sub}</div>
+                  <div className="e-mono" style={{ color: "var(--electric-deep)", fontSize: 9 }}>{p.duration_label}</div>
+                  <div style={{ fontFamily: "var(--font-display)", fontSize: 22, lineHeight: 0.95, marginTop: 4, letterSpacing: "0.02em" }}>{p.name}</div>
+                  <div style={{ fontSize: 12, color: "rgba(10,14,20,0.6)", marginTop: 6 }}>{p.subtitle}</div>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--ink)" }}>
-                  <span className="e-mono" style={{ fontSize: 10 }}>ENROLL</span>
-                  <Icon name="arrowUpRight" size={14} />
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span className="e-mono" style={{
+                    fontSize: 9, padding: "3px 8px", borderRadius: 999, letterSpacing: "0.18em",
+                    background: p.price_cents > 0 ? "var(--ink)" : "rgba(143,184,214,0.18)",
+                    color: p.price_cents > 0 ? "var(--sky)" : "var(--electric-deep)",
+                  }}>{p.price_cents > 0 ? `$${(p.price_cents/100).toFixed(0)}` : "FREE"}</span>
+                  <span className="e-mono" style={{ fontSize: 10, marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 4 }}>
+                    ENROLL <Icon name="arrowUpRight" size={14} />
+                  </span>
                 </div>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       </div>

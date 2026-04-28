@@ -3,7 +3,7 @@ import { StatusBar, HomeIndicator } from "@/components/chrome/StatusBar";
 import { TabBar } from "@/components/chrome/TabBar";
 import { Photo } from "@/components/ui/Photo";
 import { Icon } from "@/components/ui/Icon";
-import { listClasses } from "@/lib/data/queries";
+import { listClasses, listUserEnrollments, listUserBookings, listEnrollmentCompletions } from "@/lib/data/queries";
 import { getUser } from "@/lib/auth";
 
 function greeting(d = new Date()) {
@@ -15,13 +15,32 @@ function greeting(d = new Date()) {
 
 export default async function HomeScreen() {
   const [classes, user] = await Promise.all([listClasses(), getUser()]);
-  const next = classes[0];
 
   const displayName =
     (user?.user_metadata?.display_name as string | undefined)
     ?? (user?.email?.split("@")[0])
     ?? "MEMBER";
-  const firstName = displayName.split(/\s+/)[0]; // first word, used in the greeting
+  const firstName = displayName.split(/\s+/)[0];
+
+  // Pull the user's active programs + upcoming bookings — drives the
+  // personalized strips below the daily ritual.
+  const [enrollments, bookings] = user
+    ? await Promise.all([listUserEnrollments(user.id), listUserBookings(user.id)])
+    : [[], []];
+  const activePrograms = enrollments.filter(e => e.enrollment.status === "active");
+  const completedCounts: Record<string, number> = {};
+  await Promise.all(activePrograms.map(async ({ enrollment }) => {
+    const cs = await listEnrollmentCompletions(enrollment.id);
+    completedCounts[enrollment.id] = cs.length;
+  }));
+
+  const now = Date.now();
+  const upcomingBookings = bookings
+    .filter(b => b.booking.status === "reserved" && new Date(b.class.starts_at).getTime() >= now)
+    .sort((a, b) => new Date(a.class.starts_at).getTime() - new Date(b.class.starts_at).getTime());
+
+  // Next-up class on the gym strip — prefer the user's first booking, fall back to schedule.
+  const next = upcomingBookings[0]?.class ?? classes[0];
   const dt = next ? new Date(next.starts_at) : null;
   const dayLabel = dt?.toLocaleDateString("en-US", { weekday: "short" }).toUpperCase();
   const dayNum = dt?.getDate();
@@ -92,6 +111,91 @@ export default async function HomeScreen() {
             </div>
           ))}
         </div>
+
+        {/* YOUR PROGRAMS — only when enrolled */}
+        {activePrograms.length > 0 && (
+          <>
+            <div style={{ padding: "28px 22px 12px", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+              <div className="e-display" style={{ fontSize: 22 }}>YOUR PROGRAMS</div>
+              <Link href="/account/history" className="e-mono" style={{ color: "var(--sky)" }}>HISTORY →</Link>
+            </div>
+            <div className="no-scrollbar" style={{ display: "flex", gap: 12, padding: "0 22px", overflowX: "auto" }}>
+              {activePrograms.map(({ enrollment, program }) => {
+                const c = completedCounts[enrollment.id] ?? 0;
+                const pct = Math.round((c / Math.max(1, program.total_sessions)) * 100);
+                return (
+                  <Link key={enrollment.id} href={`/programs/${program.slug}`} className="lift" style={{
+                    minWidth: 260, flexShrink: 0,
+                    borderRadius: 16, overflow: "hidden",
+                    background: "linear-gradient(135deg, rgba(143,184,214,0.18), rgba(46,127,176,0.05))",
+                    border: "1px solid rgba(143,184,214,0.3)",
+                    color: "var(--bone)", textDecoration: "none",
+                  }}>
+                    <div style={{ position: "relative", height: 140 }}>
+                      {program.hero_image && <Photo src={program.hero_image} alt="" style={{ position: "absolute", inset: 0 }} />}
+                      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, transparent 30%, rgba(10,14,20,0.85))" }} />
+                      <div style={{ position: "absolute", top: 10, left: 10, padding: "4px 10px", borderRadius: 999, background: "var(--sky)", color: "var(--ink)" }} className="e-mono" >IN PROGRESS</div>
+                      <div style={{ position: "absolute", left: 12, right: 12, bottom: 10 }}>
+                        <div className="e-mono" style={{ color: "rgba(242,238,232,0.7)", fontSize: 9, letterSpacing: "0.18em" }}>{program.duration_label}</div>
+                        <div style={{ fontFamily: "var(--font-display)", fontSize: 18, lineHeight: 0.95, marginTop: 4 }}>{program.name}</div>
+                      </div>
+                    </div>
+                    <div style={{ padding: "12px 14px" }}>
+                      <div style={{ height: 4, background: "rgba(143,184,214,0.18)", borderRadius: 2, overflow: "hidden" }}>
+                        <div style={{ width: `${pct}%`, height: "100%", background: "var(--sky)", boxShadow: "0 0 6px rgba(143,184,214,0.55)" }} />
+                      </div>
+                      <div className="e-mono" style={{ marginTop: 6, fontSize: 9, color: "rgba(242,238,232,0.6)", letterSpacing: "0.18em" }}>
+                        DAY {enrollment.current_day}/{program.total_sessions} · {pct}%
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        {/* YOUR UPCOMING CLASSES — only when reserved */}
+        {upcomingBookings.length > 0 && (
+          <>
+            <div style={{ padding: "28px 22px 12px", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+              <div className="e-display" style={{ fontSize: 22 }}>YOUR CLASSES</div>
+              <Link href="/gym" className="e-mono" style={{ color: "var(--sky)" }}>ALL BOOKED →</Link>
+            </div>
+            <div style={{ padding: "0 22px", display: "flex", flexDirection: "column", gap: 10 }}>
+              {upcomingBookings.slice(0, 3).map(({ booking, class: cls }) => {
+                const dt2 = new Date(cls.starts_at);
+                const dStr = dt2.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "2-digit" }).toUpperCase();
+                const tStr = dt2.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+                const priceLabel = booking.paid_status === "free" ? "FREE"
+                                : booking.paid_status === "paid" ? `PAID · $${(booking.price_cents_paid/100).toFixed(0)}`
+                                : `PAY AT CHECK-IN · $${(booking.price_cents_paid/100).toFixed(0)}`;
+                return (
+                  <Link key={booking.id} href={`/gym/classes/${cls.id}`} className="lift" style={{
+                    display: "grid", gridTemplateColumns: "auto 1fr auto", gap: 14, alignItems: "center",
+                    padding: "14px 16px", borderRadius: 14,
+                    background: "linear-gradient(135deg, rgba(143,184,214,0.12), rgba(77,169,214,0.04))",
+                    border: "1px solid rgba(143,184,214,0.28)",
+                    color: "var(--bone)", textDecoration: "none",
+                  }}>
+                    <div style={{ paddingRight: 14, borderRight: "1px solid rgba(143,184,214,0.2)" }}>
+                      <div className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.18em" }}>{dStr}</div>
+                      <div style={{ fontFamily: "var(--font-display)", fontSize: 22, lineHeight: 1, marginTop: 2 }}>{tStr}</div>
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontFamily: "var(--font-display)", fontSize: 17, letterSpacing: "0.02em" }}>{cls.name}</div>
+                      <div className="e-mono" style={{ color: "rgba(242,238,232,0.55)", fontSize: 9, marginTop: 4, letterSpacing: "0.18em" }}>
+                        {cls.kind?.toUpperCase()} · {cls.room ?? ""} · SPOT {booking.spot_number ?? "—"}
+                      </div>
+                      <div className="e-mono" style={{ marginTop: 6, fontSize: 9, color: "var(--sky)", letterSpacing: "0.2em" }}>{priceLabel}</div>
+                    </div>
+                    <Icon name="chevron" size={18} />
+                  </Link>
+                );
+              })}
+            </div>
+          </>
+        )}
 
         {/* AI Studio rail */}
         <div style={{ padding: "28px 22px 12px", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>

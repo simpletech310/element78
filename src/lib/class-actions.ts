@@ -15,9 +15,12 @@ export async function bookClassAction(formData: FormData) {
   const requiresPayment = String(formData.get("requires_payment") ?? "false") === "true";
   const priceCents = Number(formData.get("price_cents") ?? 0);
   const notes = String(formData.get("notes") ?? "").trim() || null;
+  const spotRaw = formData.get("spot_number");
+  const spot_number = spotRaw ? Number(spotRaw) : null;
+  const returnTo = String(formData.get("return_to") ?? "");
 
   const user = await getUser();
-  if (!user) redirect(`/login?next=/classes/${classId}`);
+  if (!user) redirect(`/login?next=${encodeURIComponent(returnTo || `/classes/${classId}`)}`);
 
   const sb = createClient();
 
@@ -45,7 +48,11 @@ export async function bookClassAction(formData: FormData) {
         paid_status,
         price_cents_paid: priceCents,
         notes,
+        spot_number,
       }).eq("id", existing.id);
+    } else if (spot_number !== null && existing.spot_number !== spot_number) {
+      // Existing reservation, just update the seat
+      await sb.from("bookings").update({ spot_number }).eq("id", existing.id);
     }
   } else {
     await sb.from("bookings").insert({
@@ -56,6 +63,7 @@ export async function bookClassAction(formData: FormData) {
       price_cents_paid: priceCents,
       surface: "class",
       notes,
+      spot_number,
     });
     // bump booked count (best effort — racy but fine for v1)
     await sb.from("classes").update({ booked: cls.booked + 1 }).eq("id", classId);
@@ -63,8 +71,11 @@ export async function bookClassAction(formData: FormData) {
 
   revalidatePath(`/classes/${classId}`);
   revalidatePath(`/classes`);
+  revalidatePath(`/gym/classes/${classId}`);
+  revalidatePath(`/gym`);
+  revalidatePath(`/home`);
   revalidatePath(`/account/history`);
-  redirect(`/classes/${classId}?reserved=1`);
+  redirect(`${returnTo || `/classes/${classId}`}?reserved=1${spot_number ? `&spot=${spot_number}` : ""}`);
 }
 
 export async function cancelBookingAction(formData: FormData) {

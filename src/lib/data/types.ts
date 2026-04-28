@@ -53,6 +53,7 @@ export type Booking = {
   price_cents_paid: number;
   surface: string;
   notes: string | null;
+  spot_number: number | null;
   created_at: string;
 };
 
