@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Navbar } from "@/components/site/Navbar";
 import { StatusBar, HomeIndicator } from "@/components/chrome/StatusBar";
 import { TabBar } from "@/components/chrome/TabBar";
 import { Photo } from "@/components/ui/Photo";
@@ -27,10 +28,19 @@ export default async function TrainScreen() {
   const enrolledIds = new Set(enrollments.map(e => e.program.id));
   const discoverPrograms = allPrograms.filter(p => !enrolledIds.has(p.id));
 
+  // AI Studio rail — moved from /home. Curated short-form sessions you can
+  // tap into right now.
+  const studio = [
+    { t: "GLUTE BRIDGE FLOW", mins: 18, lvl: "LO", img: "/assets/IMG_3467.jpg", tag: "PILATES" },
+    { t: "STREET HIIT", mins: 24, lvl: "HI", img: "/assets/IMG_3465.jpg", tag: "HIIT" },
+    { t: "CORE 78", mins: 30, lvl: "MD", img: "/assets/floor-mockup.png", tag: "CORE" },
+  ];
+
   return (
     <div className="app" style={{ height: "100dvh" }}>
       <StatusBar />
-      <div className="app-scroll app-top" style={{ paddingBottom: 100 }}>
+      <Navbar authed={true} />
+      <div className="app-scroll" style={{ paddingBottom: 100 }}>
         <div style={{ padding: "14px 22px 4px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
             <div className="e-mono" style={{ color: "rgba(10,14,20,0.5)" }}>STUDIO</div>
@@ -83,6 +93,32 @@ export default async function TrainScreen() {
               border: c.active ? "none" : "1px solid rgba(10,14,20,0.15)",
               whiteSpace: "nowrap",
             }}>{c.l}</div>
+          ))}
+        </div>
+
+        {/* AI STUDIO — short-form sessions. Moved here from /home. */}
+        <div style={{ padding: "16px 22px 8px", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+          <div className="e-display" style={{ fontSize: 22 }}>AI STUDIO</div>
+          <Link href="/train/player" className="e-mono" style={{ color: "var(--electric-deep)" }}>SEE ALL →</Link>
+        </div>
+        <div className="no-scrollbar" style={{ display: "flex", gap: 12, padding: "0 22px 4px", overflowX: "auto" }}>
+          {studio.map((c, i) => (
+            <Link href="/train/player" key={i} className="lift" style={{ minWidth: 200, borderRadius: 16, overflow: "hidden", background: "var(--haze)", flexShrink: 0, color: "var(--bone)", textDecoration: "none" }}>
+              <div style={{ position: "relative", height: 220 }}>
+                <Photo src={c.img} alt={c.t} style={{ position: "absolute", inset: 0 }} />
+                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0) 50%, rgba(0,0,0,0.85) 100%)" }} />
+                <div style={{ position: "absolute", top: 10, left: 10 }}>
+                  <span className="e-tag" style={{ background: "rgba(10,14,20,0.65)", backdropFilter: "blur(8px)", padding: "4px 8px", borderRadius: 4, color: "var(--sky)" }}>{c.tag}</span>
+                </div>
+                <div style={{ position: "absolute", top: 10, right: 10, width: 28, height: 28, borderRadius: "50%", background: "var(--electric)", color: "var(--ink)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Icon name="play" size={12} />
+                </div>
+                <div style={{ position: "absolute", left: 12, right: 12, bottom: 10 }}>
+                  <div style={{ fontFamily: "var(--font-display)", fontSize: 18, lineHeight: 0.95 }}>{c.t}</div>
+                  <div className="e-mono" style={{ color: "rgba(242,238,232,0.6)", marginTop: 4, fontSize: 9 }}>{c.mins} MIN · {c.lvl} INTENSITY</div>
+                </div>
+              </div>
+            </Link>
           ))}
         </div>
 

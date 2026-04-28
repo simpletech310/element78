@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Navbar } from "@/components/site/Navbar";
 import { StatusBar, HomeIndicator } from "@/components/chrome/StatusBar";
 import { TabBar } from "@/components/chrome/TabBar";
 import { Photo } from "@/components/ui/Photo";
@@ -16,7 +17,8 @@ export default async function ClassBrowse() {
   return (
     <div className="app" style={{ height: "100dvh" }}>
       <StatusBar />
-      <div className="app-scroll app-top" style={{ paddingBottom: 100 }}>
+      <Navbar authed={true} />
+      <div className="app-scroll" style={{ paddingBottom: 100 }}>
         <div style={{ padding: "14px 22px 4px" }}>
           <div className="e-mono" style={{ color: "rgba(10,14,20,0.5)" }}>COMPTON HQ · TODAY</div>
           <div className="e-display" style={{ fontSize: 36, lineHeight: 0.95, marginTop: 4 }}>WHAT&apos;S<br/>ON THE FLOOR.</div>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Navbar } from "@/components/site/Navbar";
 import { notFound, redirect } from "next/navigation";
 import { TabBar } from "@/components/chrome/TabBar";
 import { Photo } from "@/components/ui/Photo";
@@ -44,6 +45,7 @@ export default async function ClassDetailInApp({
 
   return (
     <div className="app" style={{ height: "100dvh" }}>
+      <Navbar authed={true} />
       <div className="app-scroll" style={{ paddingBottom: 30 }}>
         {banner && (
           <div style={{

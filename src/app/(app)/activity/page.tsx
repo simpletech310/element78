@@ -1,4 +1,5 @@
 import { StatusBar, HomeIndicator } from "@/components/chrome/StatusBar";
+import { Navbar } from "@/components/site/Navbar";
 import { TabBar } from "@/components/chrome/TabBar";
 import { Photo } from "@/components/ui/Photo";
 import { Icon } from "@/components/ui/Icon";
@@ -24,7 +25,8 @@ export default function ActivityScreen() {
   return (
     <div className="app app-dark" style={{ height: "100dvh" }}>
       <StatusBar dark />
-      <div className="app-scroll app-top" style={{ paddingBottom: 100 }}>
+      <Navbar authed={true} />
+      <div className="app-scroll" style={{ paddingBottom: 100 }}>
         <div style={{ padding: "14px 22px 8px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
             <div className="e-mono" style={{ color: "rgba(242,238,232,0.5)" }}>YOUR · ACTIVITY</div>

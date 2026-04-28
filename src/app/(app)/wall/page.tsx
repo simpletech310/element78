@@ -1,4 +1,5 @@
 import { TabBar } from "@/components/chrome/TabBar";
+import { Navbar } from "@/components/site/Navbar";
 import { Photo } from "@/components/ui/Photo";
 import { Icon } from "@/components/ui/Icon";
 
@@ -30,6 +31,7 @@ export default function WallScreen() {
 
   return (
     <div className="app" style={{ height: "100dvh" }}>
+      <Navbar authed={true} />
       <div className="app-scroll" style={{ paddingTop: 20, paddingBottom: 100 }}>
         {/* Header */}
         <div style={{ padding: "10px 22px 6px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>

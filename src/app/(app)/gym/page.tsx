@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Navbar } from "@/components/site/Navbar";
 import { StatusBar, HomeIndicator } from "@/components/chrome/StatusBar";
 import { TabBar } from "@/components/chrome/TabBar";
 import { Wordmark } from "@/components/brand/Wordmark";
@@ -45,7 +46,8 @@ export default async function GymScreen() {
   return (
     <div className="app" style={{ height: "100dvh" }}>
       <StatusBar />
-      <div className="app-scroll app-top" style={{ paddingBottom: 100 }}>
+      <Navbar authed={true} />
+      <div className="app-scroll" style={{ paddingBottom: 100 }}>
         <div style={{ padding: "14px 22px 4px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
             <Link href="/locations" className="e-mono" style={{ color: "rgba(10,14,20,0.5)" }}>HQ · ATLANTA</Link>

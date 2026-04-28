@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Navbar } from "@/components/site/Navbar";
 import { redirect } from "next/navigation";
 import { TabBar } from "@/components/chrome/TabBar";
 import { Photo } from "@/components/ui/Photo";
@@ -24,6 +25,7 @@ export default async function AccountPage() {
 
   return (
     <div className="app app-dark" style={{ height: "100dvh", background: "var(--ink)" }}>
+      <Navbar authed={true} />
       <div className="app-scroll" style={{ paddingBottom: 100 }}>
         {/* Header */}
         <div style={{ padding: "20px 22px 4px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>

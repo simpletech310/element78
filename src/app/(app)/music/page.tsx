@@ -1,4 +1,5 @@
 import { StatusBar, HomeIndicator } from "@/components/chrome/StatusBar";
+import { Navbar } from "@/components/site/Navbar";
 import { TabBar } from "@/components/chrome/TabBar";
 import { Photo } from "@/components/ui/Photo";
 import { Icon } from "@/components/ui/Icon";
@@ -22,12 +23,13 @@ export default function MusicScreen() {
   return (
     <div className="app app-dark" style={{ background: "#000", height: "100dvh" }}>
       <StatusBar dark />
-      <div style={{ position: "absolute", inset: 0 }}>
+      <Navbar authed={true} />
+      <div style={{ position: "absolute", inset: 0, top: 60 }}>
         <Photo src="/assets/blue-hair-selfie.jpg" alt="" style={{ position: "absolute", inset: 0, opacity: 0.45 }} />
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(10,14,20,0.55) 0%, rgba(10,14,20,0.92) 45%, rgba(10,14,20,1) 100%)" }} />
       </div>
 
-      <div className="app-scroll app-top" style={{ position: "relative", paddingBottom: 220, color: "var(--bone)" }}>
+      <div className="app-scroll" style={{ position: "relative", paddingBottom: 220, color: "var(--bone)" }}>
         <div style={{ padding: "14px 22px 6px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
             <div className="e-mono" style={{ color: "var(--sky)" }}>SOUND · TUNED FOR YOU</div>
