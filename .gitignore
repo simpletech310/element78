@@ -8,5 +8,7 @@ next-env.d.ts
 .vercel
 
 
-# Source assets — copied into public/ via scripts/copy-assets.mjs
-Assets/
+# Source assets — copied into public/ via scripts/copy-assets.mjs.
+# Anchored to repo root so it doesn't accidentally match public/assets/ on
+# case-insensitive filesystems (macOS).
+/Assets/

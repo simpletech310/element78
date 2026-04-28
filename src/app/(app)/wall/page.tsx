@@ -24,8 +24,8 @@ export default function WallScreen() {
     { name: "KAI", img: "/assets/blue-hair-gym.jpg", live: true },
     { name: "TASHA", img: "/assets/editorial-1.jpg" },
     { name: "AMARA", img: "/assets/dumbbell-street.jpg" },
-    { name: "NOVA", img: "/assets/IMG_3465.jpg" },
-    { name: "SIMONE", img: "/assets/IMG_3467.jpg" },
+    { name: "JAY", img: "/assets/IMG_3461.jpg" },
+    { name: "SHAY", img: "/assets/IMG_3469.jpg" },
   ];
 
   return (

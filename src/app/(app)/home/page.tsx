@@ -4,10 +4,24 @@ import { TabBar } from "@/components/chrome/TabBar";
 import { Photo } from "@/components/ui/Photo";
 import { Icon } from "@/components/ui/Icon";
 import { listClasses } from "@/lib/data/queries";
+import { getUser } from "@/lib/auth";
+
+function greeting(d = new Date()) {
+  const h = d.getHours();
+  if (h < 12) return "GOOD MORNING";
+  if (h < 18) return "GOOD AFTERNOON";
+  return "GOOD EVENING";
+}
 
 export default async function HomeScreen() {
-  const classes = await listClasses();
+  const [classes, user] = await Promise.all([listClasses(), getUser()]);
   const next = classes[0];
+
+  const displayName =
+    (user?.user_metadata?.display_name as string | undefined)
+    ?? (user?.email?.split("@")[0])
+    ?? "MEMBER";
+  const firstName = displayName.split(/\s+/)[0]; // first word, used in the greeting
   const dt = next ? new Date(next.starts_at) : null;
   const dayLabel = dt?.toLocaleDateString("en-US", { weekday: "short" }).toUpperCase();
   const dayNum = dt?.getDate();
@@ -35,7 +49,7 @@ export default async function HomeScreen() {
               {new Date().toLocaleDateString("en-US", { weekday: "short" }).toUpperCase()} / {(new Date().getMonth()+1).toString().padStart(2,"0")}.{new Date().getDate().toString().padStart(2,"0")} / ATL
             </div>
             <div style={{ fontFamily: "var(--font-display)", fontSize: 30, lineHeight: 0.95, marginTop: 6, letterSpacing: "0.02em" }}>
-              GOOD MORNING,<br/><span style={{ color: "var(--sky)" }}>NAYA.</span>
+              {greeting()},<br/><span style={{ color: "var(--sky)" }}>{firstName.toUpperCase()}.</span>
             </div>
           </div>
           <Link href="/account" aria-label="Account" style={{ position: "relative", display: "block" }}>
@@ -134,8 +148,8 @@ export default async function HomeScreen() {
 
         {/* Crew pulse */}
         <div style={{ padding: "20px 22px 12px", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-          <div className="e-display" style={{ fontSize: 22 }}>CREW PULSE</div>
-          <div className="e-mono" style={{ color: "rgba(242,238,232,0.5)" }}>LIVE · 78</div>
+          <Link href="/wall" className="e-display" style={{ fontSize: 22, color: "var(--bone)", textDecoration: "none" }}>THE WALL</Link>
+          <Link href="/wall" className="e-mono" style={{ color: "rgba(242,238,232,0.5)" }}>LIVE · 78 →</Link>
         </div>
         <div style={{ padding: "0 22px", display: "flex", flexDirection: "column", gap: 10 }}>
           {pulse.map((p, i) => (

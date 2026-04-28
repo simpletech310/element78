@@ -5,9 +5,14 @@ import { Wordmark } from "@/components/brand/Wordmark";
 import { Photo } from "@/components/ui/Photo";
 import { Icon, IconName } from "@/components/ui/Icon";
 import { listClasses } from "@/lib/data/queries";
+import { getUser } from "@/lib/auth";
 
 export default async function GymScreen() {
-  const all = await listClasses();
+  const [all, user] = await Promise.all([listClasses(), getUser()]);
+  const memberName = ((user?.user_metadata?.display_name as string | undefined)
+    ?? user?.email?.split("@")[0]
+    ?? "Member").toUpperCase();
+  const memberId = user?.id ? "E78-" + user.id.replace(/-/g, "").slice(0, 6).toUpperCase() : "E78-XXXXXX";
   const week = Array.from({ length: 7 }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() + i);
@@ -55,12 +60,12 @@ export default async function GymScreen() {
             </div>
             <div style={{ marginTop: 32, position: "relative" }}>
               <div className="e-mono" style={{ color: "rgba(242,238,232,0.55)" }}>MEMBER</div>
-              <div style={{ fontFamily: "var(--font-display)", fontSize: 26, marginTop: 4, letterSpacing: "0.03em" }}>NAYA OKONKWO</div>
+              <div style={{ fontFamily: "var(--font-display)", fontSize: 26, marginTop: 4, letterSpacing: "0.03em" }}>{memberName}</div>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", marginTop: 18, position: "relative" }}>
               <div>
                 <div className="e-mono" style={{ color: "rgba(242,238,232,0.5)", fontSize: 9 }}>ID</div>
-                <div className="e-mono" style={{ marginTop: 2 }}>E78-04287</div>
+                <div className="e-mono" style={{ marginTop: 2 }}>{memberId}</div>
               </div>
               <div>
                 <div className="e-mono" style={{ color: "rgba(242,238,232,0.5)", fontSize: 9 }}>RENEWS</div>

@@ -10,7 +10,7 @@ import { getUser } from "@/lib/auth";
 const aiAvatars = [
   { slug: "zuri", name: "ZURI", spec: "Pilates · Reformer · Mobility", img: "/assets/blue-hair-gym.jpg", note: "Slow tempo, hard work. Modeled on Kai's signature flow." },
   { slug: "mari", name: "MARI", spec: "HIIT · Functional · Conditioning", img: "/assets/dumbbell-street.jpg", note: "Heavy basics, quick rounds. Modeled on Amara." },
-  { slug: "leila", name: "LEILA", spec: "Yoga · Breathwork · Recovery", img: "/assets/pilates-pink.jpg", note: "Breath-led restorative flows. Modeled on Simone." },
+  { slug: "leila", name: "LEILA", spec: "Yoga · Breathwork · Recovery", img: "/assets/pilates-pink.jpg", note: "Breath-led restorative flows. Soft tempo, deeper holds." },
 ];
 
 export default async function TrainersPage() {
