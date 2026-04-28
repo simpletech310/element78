@@ -65,6 +65,52 @@ export type ProductVariant = {
   in_stock: boolean;
 };
 
+export type Program = {
+  id: string;
+  slug: string;
+  name: string;
+  subtitle: string | null;
+  description: string | null;
+  hero_image: string | null;
+  duration_label: string | null;
+  total_sessions: number;
+  intensity: string | null;
+  kind: "in_app" | "in_person" | "both";
+  surfaces: string[];
+  sort_order: number;
+};
+
+export type ProgramSession = {
+  id: string;
+  program_id: string;
+  day_index: number;
+  name: string;
+  duration_min: number;
+  description: string | null;
+  kind: string;
+  video_url: string | null;
+  hero_image: string | null;
+};
+
+export type ProgramEnrollment = {
+  id: string;
+  user_id: string;
+  program_id: string;
+  status: "active" | "completed" | "paused" | "left";
+  started_at: string;
+  completed_at: string | null;
+  current_day: number;
+};
+
+export type ProgramCompletion = {
+  id: string;
+  enrollment_id: string;
+  session_id: string;
+  completed_at: string;
+  duration_actual_min: number | null;
+  surface: "app" | "gym" | "class";
+};
+
 export type Post = {
   id: string;
   author_id: string | null;

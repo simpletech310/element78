@@ -1,7 +1,7 @@
 // Static fallback so the app renders before Supabase is wired up.
 // Mirrors supabase/seed.sql + the imagery-refresh migration.
 
-import type { ClassRow, Location, Post, Product, Trainer } from "./types";
+import type { ClassRow, Location, Post, Product, Trainer, Program, ProgramSession } from "./types";
 
 export const fallbackLocations: Location[] = [
   { id: "loc-atl", slug: "atlanta-hq", name: "Atlanta HQ", city: "Atlanta", state: "GA", status: "active", hero_image: "/assets/atlgym.jpg", lat: 33.749, lng: -84.388, sort_order: 1 },
@@ -45,6 +45,20 @@ export const fallbackProducts: Product[] = [
   { id: "p7", slug: "long-sleeve-set", name: "LONG SLEEVE SET", subtitle: "SKY · XS-XL", category: "wear", price_cents: 11800, compare_at_cents: null, description: "Compression long sleeve crop with the Element 78 wordmark.", hero_image: "/products/long-sleeve-set-1.jpg", gallery: ["/products/long-sleeve-set-1.jpg","/products/long-sleeve-set-2.jpg","/products/pick-set.jpg"], tag: "BACK", in_stock: true, sort_order: 7 },
   { id: "p8", slug: "short-sleeve-set", name: "SHORT SLEEVE SET", subtitle: "SKY · XS-XL", category: "wear", price_cents: 9800, compare_at_cents: null, description: "Quarter-zip mock crop + bike shorts. Sweat-wicking, four-way stretch.", hero_image: "/products/short-sleeve-1.jpg", gallery: ["/products/short-sleeve-1.jpg","/products/short-sleeve-2.jpg","/products/blueset-2.png"], tag: null, in_stock: true, sort_order: 8 },
 ];
+
+export const fallbackPrograms: Program[] = [
+  { id: "prog-1", slug: "in-my-element", name: "IN MY ELEMENT", subtitle: "Series 03 · the signature reset", description: "Daily Pilates flow + breath work. Slow tempo, hard work. Builds the body — and the streak — back from neutral.", hero_image: "/assets/floor-mockup.png", duration_label: "21 DAYS · DAILY", total_sessions: 21, intensity: "Beginner → Intermediate", kind: "both", surfaces: ["app","gym","class"], sort_order: 1 },
+  { id: "prog-2", slug: "city-of-angels", name: "CITY OF ANGELS", subtitle: "Outdoor + weight floor", description: "Heavy basics, quick rounds, no filler. Mixes street strength with reformer accessory work.", hero_image: "/assets/IMG_3461.jpg", duration_label: "14 DAYS · STRENGTH", total_sessions: 14, intensity: "Intermediate", kind: "both", surfaces: ["app","gym"], sort_order: 2 },
+  { id: "prog-3", slug: "living-room-luxury", name: "LIVING ROOM LUXURY", subtitle: "No equipment, low impact", description: "For travel, recovery weeks, and the days you don't want to drive. Mat-only Pilates and mobility you can do in 6×6 feet.", hero_image: "/assets/IMG_3467.jpg", duration_label: "8 SESSIONS · LIVING ROOM", total_sessions: 8, intensity: "All levels", kind: "in_app", surfaces: ["app"], sort_order: 3 },
+];
+
+export const fallbackProgramSessions: ProgramSession[] = (() => {
+  const out: ProgramSession[] = [];
+  for (let d = 1; d <= 21; d++) out.push({ id: `s-ime-${d}`, program_id: "prog-1", day_index: d, name: `IN MY ELEMENT · Day ${d}`, duration_min: 35, description: "Daily Pilates flow + breath work.", kind: "flow", video_url: d === 1 ? "https://xiimrgdfbucpwugxmkrm.supabase.co/storage/v1/object/public/media/flow.mp4" : null, hero_image: "/assets/floor-mockup.png" });
+  for (let d = 1; d <= 14; d++) out.push({ id: `s-coa-${d}`, program_id: "prog-2", day_index: d, name: `CITY OF ANGELS · Day ${d}`, duration_min: 45, description: "Heavy basics, quick rounds.", kind: "strength", video_url: null, hero_image: "/assets/IMG_3461.jpg" });
+  for (let d = 1; d <= 8; d++) out.push({ id: `s-lrl-${d}`, program_id: "prog-3", day_index: d, name: `LIVING ROOM LUXURY · Day ${d}`, duration_min: 25, description: "Mat-only Pilates and mobility.", kind: "flow", video_url: null, hero_image: "/assets/IMG_3467.jpg" });
+  return out;
+})();
 
 export const fallbackPosts: Post[] = [
   { id: "ps1", author_id: null, kind: "trainer_drop", body: "NEW · West Coast Flow Series 04 just dropped. Light reformer + breath. 7 sessions.", media_url: "/assets/blue-set-rooftop.jpg", meta: { author: "KAI · TRAINER", tag: "STAFF" }, created_at: new Date().toISOString() },

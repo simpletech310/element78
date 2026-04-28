@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import type { ClassRow, Location, Post, Product, ProductVariant, Trainer } from "./types";
-import { fallbackProducts, fallbackClasses, fallbackTrainers, fallbackLocations, fallbackPosts } from "./fallback";
+import type { ClassRow, Location, Post, Product, ProductVariant, Trainer, Program, ProgramSession, ProgramEnrollment, ProgramCompletion } from "./types";
+import { fallbackProducts, fallbackClasses, fallbackTrainers, fallbackLocations, fallbackPosts, fallbackPrograms, fallbackProgramSessions } from "./fallback";
 
 function isConfigured() {
   return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
@@ -58,6 +58,56 @@ export async function getClass(id: string): Promise<ClassRow | null> {
   const sb = createClient();
   const { data } = await sb.from("classes").select("*").eq("id", id).single();
   return (data as ClassRow) ?? null;
+}
+
+export async function listPrograms(): Promise<Program[]> {
+  if (!isConfigured()) return fallbackPrograms;
+  const sb = createClient();
+  const { data } = await sb.from("programs").select("*").order("sort_order");
+  return (data as Program[]) ?? fallbackPrograms;
+}
+
+export async function getProgram(slug: string): Promise<{ program: Program; sessions: ProgramSession[] } | null> {
+  if (!isConfigured()) {
+    const program = fallbackPrograms.find(p => p.slug === slug);
+    if (!program) return null;
+    const sessions = fallbackProgramSessions.filter(s => s.program_id === program.id);
+    return { program, sessions };
+  }
+  const sb = createClient();
+  const { data: program } = await sb.from("programs").select("*").eq("slug", slug).single();
+  if (!program) return null;
+  const { data: sessions } = await sb.from("program_sessions").select("*").eq("program_id", program.id).order("day_index");
+  return { program: program as Program, sessions: (sessions as ProgramSession[]) ?? [] };
+}
+
+export async function getEnrollment(userId: string, programId: string): Promise<ProgramEnrollment | null> {
+  if (!isConfigured()) return null;
+  const sb = createClient();
+  const { data } = await sb.from("program_enrollments").select("*").eq("user_id", userId).eq("program_id", programId).maybeSingle();
+  return (data as ProgramEnrollment) ?? null;
+}
+
+export async function listUserEnrollments(userId: string): Promise<{ enrollment: ProgramEnrollment; program: Program }[]> {
+  if (!isConfigured()) return [];
+  const sb = createClient();
+  const { data } = await sb
+    .from("program_enrollments")
+    .select("*, program:programs(*)")
+    .eq("user_id", userId)
+    .order("started_at", { ascending: false });
+  if (!data) return [];
+  return (data as Array<ProgramEnrollment & { program: Program }>).map(row => ({
+    enrollment: { id: row.id, user_id: row.user_id, program_id: row.program_id, status: row.status, started_at: row.started_at, completed_at: row.completed_at, current_day: row.current_day },
+    program: row.program,
+  }));
+}
+
+export async function listEnrollmentCompletions(enrollmentId: string): Promise<ProgramCompletion[]> {
+  if (!isConfigured()) return [];
+  const sb = createClient();
+  const { data } = await sb.from("program_completions").select("*").eq("enrollment_id", enrollmentId).order("completed_at", { ascending: false });
+  return (data as ProgramCompletion[]) ?? [];
 }
 
 export async function listPosts(): Promise<Post[]> {

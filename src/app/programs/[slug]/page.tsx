@@ -1,0 +1,224 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { Navbar } from "@/components/site/Navbar";
+import { SiteFooter } from "@/components/site/SiteFooter";
+import { Photo } from "@/components/ui/Photo";
+import { Icon } from "@/components/ui/Icon";
+import { getProgram, getEnrollment, listEnrollmentCompletions } from "@/lib/data/queries";
+import { getUser } from "@/lib/auth";
+import { enrollAction, completeSessionAction, leaveAction } from "@/lib/program-actions";
+
+export default async function ProgramDetail({ params }: { params: { slug: string } }) {
+  const user = await getUser();
+  const data = await getProgram(params.slug);
+  if (!data) notFound();
+  const { program, sessions } = data;
+
+  const enrollment = user ? await getEnrollment(user.id, program.id) : null;
+  const completions = enrollment ? await listEnrollmentCompletions(enrollment.id) : [];
+  const completedIds = new Set(completions.map(c => c.session_id));
+
+  const isAuthed = !!user;
+  const isActive = enrollment?.status === "active";
+  const isCompleted = enrollment?.status === "completed";
+  const currentDay = enrollment?.current_day ?? 1;
+  const currentSession = sessions.find(s => s.day_index === currentDay) ?? sessions[0];
+  const completedCount = completions.length;
+  const pct = Math.round((completedCount / Math.max(1, program.total_sessions)) * 100);
+
+  return (
+    <div style={{ background: "var(--ink)", color: "var(--bone)", fontFamily: "var(--font-body)", minHeight: "100dvh" }}>
+      <Navbar authed={isAuthed} />
+
+      {/* HERO */}
+      <section style={{ position: "relative", minHeight: 540 }}>
+        {program.hero_image && <Photo src={program.hero_image} alt="" className="zoom-on-hover" style={{ position: "absolute", inset: 0, opacity: 0.6 }} />}
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(10,14,20,0.55) 0%, rgba(10,14,20,0.05) 25%, rgba(10,14,20,0.95) 80%, var(--ink) 100%)" }} />
+        <div style={{ position: "relative", padding: "56px 22px 48px", maxWidth: 1180, margin: "0 auto" }}>
+          <Link href="/programs" className="e-mono reveal" style={{ display: "inline-flex", alignItems: "center", gap: 8, color: "var(--sky)", letterSpacing: "0.18em" }}>
+            <span style={{ transform: "rotate(180deg)", display: "inline-flex" }}><Icon name="chevron" size={14} /></span>
+            ALL PROGRAMS
+          </Link>
+
+          <div className="e-mono reveal reveal-d1" style={{ color: "var(--sky)", marginTop: 24 }}>{program.duration_label}</div>
+          <h1 className="e-display reveal reveal-d2" style={{ fontSize: "clamp(48px, 11vw, 104px)", marginTop: 12, lineHeight: 0.92 }}>{program.name}</h1>
+          {program.subtitle && (
+            <p className="reveal reveal-d3" style={{ marginTop: 18, fontSize: "clamp(20px, 3.4vw, 26px)", fontFamily: "var(--font-serif)", fontStyle: "italic", color: "var(--bone)", maxWidth: 560 }}>
+              {program.subtitle}
+            </p>
+          )}
+          <p className="reveal reveal-d3" style={{ marginTop: 14, fontSize: 15, color: "rgba(242,238,232,0.72)", maxWidth: 560, lineHeight: 1.65 }}>
+            {program.description}
+          </p>
+
+          {/* Stats strip */}
+          <div className="reveal reveal-d4" style={{ marginTop: 28, paddingTop: 24, borderTop: "1px solid rgba(242,238,232,0.12)", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 12 }}>
+            <Stat label="SESSIONS" v={String(program.total_sessions)} />
+            <Stat label="LENGTH" v={(program.duration_label ?? "").split(" · ")[0] || "—"} />
+            <Stat label="LEVEL" v={program.intensity ?? "—"} />
+            <Stat label="WHERE" v={program.surfaces.map(s => s.toUpperCase()).join(" · ")} />
+          </div>
+
+          {/* CTA cluster */}
+          <div className="reveal reveal-d4" style={{ marginTop: 30, display: "flex", gap: 10, flexWrap: "wrap" }}>
+            {!isAuthed && (
+              <>
+                <Link href={`/login?next=/programs/${program.slug}`} className="btn btn-sky" style={{ minWidth: 200 }}>SIGN IN TO ENROLL</Link>
+                <Link href="/join" className="btn btn-ghost" style={{ color: "var(--bone)", borderColor: "rgba(242,238,232,0.4)" }}>JOIN FREE</Link>
+              </>
+            )}
+            {isAuthed && !enrollment && (
+              <form action={enrollAction}>
+                <input type="hidden" name="program_id" value={program.id} />
+                <input type="hidden" name="program_slug" value={program.slug} />
+                <button type="submit" className="btn btn-sky" style={{ minWidth: 200 }}>ENROLL · START DAY 1</button>
+              </form>
+            )}
+            {isAuthed && enrollment && enrollment.status === "left" && (
+              <form action={enrollAction}>
+                <input type="hidden" name="program_id" value={program.id} />
+                <input type="hidden" name="program_slug" value={program.slug} />
+                <button type="submit" className="btn btn-sky" style={{ minWidth: 200 }}>RE-ENROLL</button>
+              </form>
+            )}
+            {isAuthed && enrollment && enrollment.status === "completed" && (
+              <>
+                <span className="btn btn-ghost" style={{ color: "var(--sky)", borderColor: "rgba(143,184,214,0.4)", cursor: "default" }}>✓ COMPLETED · {new Date(enrollment.completed_at ?? enrollment.started_at).toLocaleDateString()}</span>
+                <form action={enrollAction}>
+                  <input type="hidden" name="program_id" value={program.id} />
+                  <input type="hidden" name="program_slug" value={program.slug} />
+                  <button type="submit" className="btn btn-sky">REPEAT THE PROGRAM</button>
+                </form>
+              </>
+            )}
+          </div>
+
+          {/* Active progress strip */}
+          {isAuthed && isActive && (
+            <div style={{ marginTop: 30, padding: 22, borderRadius: 18, background: "rgba(143,184,214,0.08)", border: "1px solid rgba(143,184,214,0.3)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 8 }}>
+                <div className="e-mono" style={{ color: "var(--sky)", letterSpacing: "0.2em" }}>YOUR STREAK</div>
+                <div className="e-mono" style={{ color: "rgba(242,238,232,0.55)" }}>{completedCount} / {program.total_sessions} SESSIONS · {pct}%</div>
+              </div>
+              <div style={{ marginTop: 12, height: 4, borderRadius: 2, background: "rgba(143,184,214,0.18)", overflow: "hidden" }}>
+                <div style={{ width: `${pct}%`, height: "100%", background: "var(--sky)", boxShadow: "0 0 8px rgba(143,184,214,0.6)" }} />
+              </div>
+              {currentSession && (
+                <div style={{ marginTop: 18, display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+                  <div style={{ flex: "1 1 240px", minWidth: 0 }}>
+                    <div className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.2em" }}>UP NEXT · DAY {currentDay}</div>
+                    <div style={{ fontFamily: "var(--font-display)", fontSize: 22, marginTop: 6, letterSpacing: "0.02em" }}>{currentSession.name}</div>
+                    <div className="e-mono" style={{ fontSize: 9, color: "rgba(242,238,232,0.55)", marginTop: 6, letterSpacing: "0.18em" }}>{currentSession.duration_min} MIN · {currentSession.kind?.toUpperCase()}</div>
+                  </div>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <Link href="/train/player" className="btn btn-sky">START IN APP</Link>
+                    <form action={completeSessionAction}>
+                      <input type="hidden" name="enrollment_id" value={enrollment!.id} />
+                      <input type="hidden" name="session_id" value={currentSession.id} />
+                      <input type="hidden" name="program_slug" value={program.slug} />
+                      <input type="hidden" name="day_index" value={currentDay} />
+                      <input type="hidden" name="total_sessions" value={program.total_sessions} />
+                      <input type="hidden" name="surface" value="app" />
+                      <button type="submit" className="btn btn-ghost" style={{ color: "var(--bone)", borderColor: "rgba(242,238,232,0.35)" }}>MARK COMPLETE</button>
+                    </form>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* DAY-BY-DAY BREAKDOWN */}
+      <section style={{ padding: "44px 22px 32px", maxWidth: 1180, margin: "0 auto" }}>
+        <div className="e-mono" style={{ color: "var(--sky)" }}>01 / DAY BY DAY</div>
+        <h2 className="e-display" style={{ fontSize: "clamp(36px, 6vw, 56px)", marginTop: 14, lineHeight: 0.95 }}>THE SCHEDULE.</h2>
+
+        <div style={{ marginTop: 28, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
+          {sessions.map(s => {
+            const done = completedIds.has(s.id);
+            const isCurrent = isAuthed && isActive && s.day_index === currentDay;
+            return (
+              <div key={s.id} style={{
+                padding: 18, borderRadius: 16,
+                background: isCurrent ? "linear-gradient(135deg, rgba(143,184,214,0.18), rgba(46,127,176,0.06))"
+                          : done ? "rgba(143,184,214,0.06)" : "rgba(143,184,214,0.04)",
+                border: isCurrent ? "1px solid var(--sky)"
+                       : done ? "1px solid rgba(143,184,214,0.3)"
+                       : "1px dashed rgba(143,184,214,0.2)",
+                opacity: done && !isCurrent ? 0.75 : 1,
+              }}>
+                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
+                  <div className="e-mono" style={{ color: done ? "var(--sky)" : "rgba(242,238,232,0.5)", fontSize: 10, letterSpacing: "0.25em" }}>
+                    DAY {s.day_index.toString().padStart(2, "0")}
+                  </div>
+                  {done && <span className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.2em" }}>✓ DONE</span>}
+                  {isCurrent && !done && <span className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.2em" }}>↑ TODAY</span>}
+                </div>
+                <div style={{ fontFamily: "var(--font-display)", fontSize: 18, marginTop: 8, letterSpacing: "0.02em" }}>{s.name}</div>
+                <div className="e-mono" style={{ fontSize: 9, color: "rgba(242,238,232,0.55)", marginTop: 6, letterSpacing: "0.18em" }}>{s.duration_min} MIN · {s.kind?.toUpperCase()}</div>
+                {isCurrent && (
+                  <div style={{ marginTop: 14, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <Link href="/train/player" className="btn btn-sky" style={{ padding: "8px 14px", fontSize: 10 }}>START</Link>
+                    <form action={completeSessionAction} style={{ display: "inline-block" }}>
+                      <input type="hidden" name="enrollment_id" value={enrollment!.id} />
+                      <input type="hidden" name="session_id" value={s.id} />
+                      <input type="hidden" name="program_slug" value={program.slug} />
+                      <input type="hidden" name="day_index" value={s.day_index} />
+                      <input type="hidden" name="total_sessions" value={program.total_sessions} />
+                      <input type="hidden" name="surface" value="app" />
+                      <button type="submit" className="btn btn-ghost" style={{ padding: "8px 14px", fontSize: 10, color: "var(--bone)", borderColor: "rgba(242,238,232,0.3)" }}>DONE IT</button>
+                    </form>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* LEAVE button at the bottom for active enrollments */}
+      {isAuthed && isActive && (
+        <section style={{ padding: "0 22px 60px", maxWidth: 720, margin: "0 auto", textAlign: "center" }}>
+          <form action={leaveAction}>
+            <input type="hidden" name="enrollment_id" value={enrollment!.id} />
+            <input type="hidden" name="program_slug" value={program.slug} />
+            <button type="submit" className="e-mono" style={{ background: "transparent", border: "none", color: "rgba(242,238,232,0.45)", letterSpacing: "0.2em", cursor: "pointer", padding: 12 }}>
+              LEAVE PROGRAM
+            </button>
+          </form>
+        </section>
+      )}
+
+      {/* CTA */}
+      <section style={{ padding: "60px 22px 96px", background: "linear-gradient(180deg, var(--ink) 0%, var(--haze) 100%)", textAlign: "center" }}>
+        <div style={{ maxWidth: 640, margin: "0 auto" }}>
+          <div className="e-mono" style={{ color: "var(--sky)" }}>READY?</div>
+          <h2 className="e-display glow" style={{ fontSize: "clamp(36px, 7vw, 56px)", marginTop: 14, lineHeight: 0.95 }}>{program.name}<br/>STARTS WHEN YOU DO.</h2>
+          <div style={{ marginTop: 24, display: "flex", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
+            {!isAuthed && <Link href={`/login?next=/programs/${program.slug}`} className="btn btn-sky" style={{ minWidth: 200 }}>SIGN IN TO ENROLL</Link>}
+            {isAuthed && !isActive && !isCompleted && (
+              <form action={enrollAction}>
+                <input type="hidden" name="program_id" value={program.id} />
+                <input type="hidden" name="program_slug" value={program.slug} />
+                <button type="submit" className="btn btn-sky" style={{ minWidth: 200 }}>ENROLL · START DAY 1</button>
+              </form>
+            )}
+            <Link href="/programs" className="btn btn-ghost" style={{ color: "var(--bone)", borderColor: "rgba(242,238,232,0.3)" }}>OTHER PROGRAMS</Link>
+          </div>
+        </div>
+      </section>
+
+      <SiteFooter />
+    </div>
+  );
+}
+
+function Stat({ label, v }: { label: string; v: string }) {
+  return (
+    <div>
+      <div style={{ fontFamily: "var(--font-display)", fontSize: "clamp(18px, 3.5vw, 22px)", color: "var(--sky)", lineHeight: 1 }}>{v}</div>
+      <div className="e-mono" style={{ color: "rgba(242,238,232,0.5)", fontSize: 9, marginTop: 6, letterSpacing: "0.2em" }}>{label}</div>
+    </div>
+  );
+}

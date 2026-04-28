@@ -15,11 +15,11 @@ export default async function AccountPage() {
   const email = user.email ?? "";
   const handle = (user.user_metadata?.handle as string | undefined) ?? email.split("@")[0];
 
-  const links: { label: string; href: string; icon: "cal" | "bag" | "heart" | "settings" }[] = [
+  const links: { label: string; href: string; icon: "cal" | "bag" | "heart" | "settings" | "fire" }[] = [
+    { label: "PROGRAM HISTORY", href: "/account/history", icon: "fire" },
     { label: "MY BOOKINGS", href: "/gym", icon: "cal" },
     { label: "ORDER HISTORY", href: "/shop", icon: "bag" },
     { label: "SAVED", href: "/shop", icon: "heart" },
-    { label: "PREFERENCES", href: "/account", icon: "settings" },
   ];
 
   return (
