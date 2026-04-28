@@ -19,12 +19,12 @@ export default async function HomePage() {
     {
       num: "II", t: "THE STUDIO", sub: "AI-guided sessions, anywhere",
       desc: "Live AI avatars walk you through Pilates, HIIT, and strength flows. Living-room ready.",
-      img: "/assets/bridge-pose.jpg", cta: "TRY A SESSION", href: "/train",
+      img: "/assets/editorial-2.png", cta: "TRY A SESSION", href: "/ai-sessions",
     },
     {
       num: "III", t: "THE STORE", sub: "Wear, gear, fuel",
       desc: "The “in my element” line. The tripod water bottle. Built so you can train, then leave the house in it.",
-      img: "/assets/hoodie-grey-blonde.jpg", cta: "SHOP THE DROP", href: "/shop",
+      img: "/assets/IMG_3458.jpg", cta: "SHOP THE DROP", href: "/shop",
     },
   ];
 
@@ -283,7 +283,7 @@ export default async function HomePage() {
       <section style={{ padding: "60px 22px 96px", background: "var(--ink)" }}>
         <div style={{ maxWidth: 1180, margin: "0 auto" }}>
           <Link href="/shop/tripod-bottle" className="lift" style={{ position: "relative", borderRadius: 24, overflow: "hidden", minHeight: 540, display: "block", color: "var(--bone)", textDecoration: "none", border: "1px solid rgba(143,184,214,0.08)" }}>
-            <Photo src="/assets/bottle-tripod.jpg" alt="" className="zoom-on-hover" style={{ position: "absolute", inset: 0 }} />
+            <Photo src="/assets/IMG_3470.jpg" alt="" className="zoom-on-hover" style={{ position: "absolute", inset: 0 }} />
             <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, transparent 40%, rgba(0,0,0,0.92))" }} />
             <div style={{ position: "absolute", top: 22, left: 22 }}>
               <span className="e-tag" style={{ background: "var(--bone)", color: "var(--ink)", padding: "6px 10px", borderRadius: 3 }}>SIGNATURE</span>

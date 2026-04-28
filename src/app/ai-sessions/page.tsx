@@ -22,7 +22,7 @@ export default async function AISessionsPage() {
       tag: "IN APP",
       t: "LIVING ROOM READY.",
       sub: "Open the app, prop your phone, hit play. Works on a yoga mat in 6×6 feet. Avatars run on-device — no laggy stream.",
-      img: "/assets/bridge-pose.jpg",
+      img: "/assets/editorial-2.png",
       cta: "TRY A SESSION",
       href: "/join",
     },
@@ -37,9 +37,9 @@ export default async function AISessionsPage() {
   ];
 
   const avatars = [
-    { name: "ZURI", spec: "Pilates · Reformer · Mobility", img: "/assets/blue-hair-gym.jpg" },
-    { name: "MARI", spec: "HIIT · Functional · Conditioning", img: "/assets/dumbbell-street.jpg" },
-    { name: "LEILA", spec: "Yoga · Breathwork · Recovery", img: "/assets/pilates-pink.jpg" },
+    { name: "ZURI", spec: "Pilates · Reformer · Mobility", img: "/assets/floor-mockup.png" },
+    { name: "MARI", spec: "HIIT · Functional · Conditioning", img: "/assets/IMG_3469.jpg" },
+    { name: "LEILA", spec: "Yoga · Breathwork · Recovery", img: "/assets/editorial-2.png" },
   ];
 
   return (
@@ -48,7 +48,7 @@ export default async function AISessionsPage() {
 
       {/* HERO */}
       <section style={{ position: "relative", minHeight: 580 }}>
-        <Photo src="/assets/bridge-pose.jpg" alt="" className="zoom-on-hover" style={{ position: "absolute", inset: 0, opacity: 0.55 }} />
+        <Photo src="/assets/IMG_3467.jpg" alt="" className="zoom-on-hover" style={{ position: "absolute", inset: 0, opacity: 0.55 }} />
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(10,14,20,0.6) 0%, rgba(10,14,20,0.05) 25%, rgba(10,14,20,0.95) 80%, var(--ink) 100%)" }} />
         <div style={{ position: "relative", padding: "60px 22px 48px", maxWidth: 1180, margin: "0 auto" }}>
           <div className="e-mono reveal" style={{ color: "var(--sky)" }}>◉ AI STUDIO · LIVE AVATAR</div>

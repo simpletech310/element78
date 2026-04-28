@@ -12,20 +12,20 @@ export default function WallScreen() {
   };
 
   const posts: Post[] = [
-    { n: "KAI · TRAINER", tag: "STAFF", t: "14m", avatar: "/assets/blue-hair-gym.jpg", text: "Dropped a new flow. Slow tempo, hard work — Studio B at 6:30P. Pull up.", img: "/assets/blue-hair-gym.jpg", likes: 124, comments: 18, ev: { tag: "NEW FLOW", cta: "TRY IT" } },
-    { n: "AALIYAH M.", t: "1h", avatar: "/assets/dumbbell-street.jpg", text: "Day 14 of \"In My Element\" complete. Glutes are gone. Ego intact. 🌊", prog: true, likes: 86, comments: 12 },
-    { n: "TASHA · TRAINER", tag: "STAFF", t: "3h", avatar: "/assets/pilates-pink.jpg", text: "Sunrise Pilates is officially the move. Mats out at 6:25A sharp. Don't be late, don't be loud.", img: "/assets/pilates-pink.jpg", likes: 211, comments: 24 },
-    { n: "SHAY D.", t: "5h", avatar: "/assets/dumbbell-street.jpg", text: "First time hitting the 95lb squat. The whole back row hyped me up. THAT is what membership is.", likes: 342, comments: 41, milestone: { l: "NEW PR · 95 LB SQUAT" } },
-    { n: "EVENT · ELEMENT78", tag: "ANNOUNCE", t: "8h", avatar: "/assets/element78-hero.jpg", text: "May 03 · Sunrise Run + Coffee Meet. 7AM at the lot. Recovery smoothies after.", ev: { tag: "EVENT · MAY 03 · 7A", cta: "RSVP" }, img: "/assets/dumbbell-street.jpg", likes: 88, comments: 9 },
+    { n: "KAI · TRAINER", tag: "STAFF", t: "14m", avatar: "/assets/blue-hair-gym.jpg", text: "Dropped a new flow. Slow tempo, hard work — Studio B at 6:30P. Pull up.", img: "/assets/IMG_3465.jpg", likes: 124, comments: 18, ev: { tag: "NEW FLOW", cta: "TRY IT" } },
+    { n: "AALIYAH M.", t: "1h", avatar: "/assets/IMG_3461.jpg", text: "Day 14 of \"In My Element\" complete. Glutes are gone. Ego intact. 🌊", prog: true, likes: 86, comments: 12 },
+    { n: "TASHA · TRAINER", tag: "STAFF", t: "3h", avatar: "/assets/editorial-1.jpg", text: "Sunrise Pilates is officially the move. Mats out at 6:25A sharp. Don't be late, don't be loud.", img: "/assets/floor-mockup.png", likes: 211, comments: 24 },
+    { n: "SHAY D.", t: "5h", avatar: "/assets/IMG_3469.jpg", text: "First time hitting the 95lb squat. The whole back row hyped me up. THAT is what membership is.", likes: 342, comments: 41, milestone: { l: "NEW PR · 95 LB SQUAT" } },
+    { n: "EVENT · ELEMENT78", tag: "ANNOUNCE", t: "8h", avatar: "/assets/IMG_3471.jpg", text: "May 03 · Sunrise Run + Coffee Meet. 7AM at the lot. Recovery smoothies after.", ev: { tag: "EVENT · MAY 03 · 7A", cta: "RSVP" }, img: "/assets/IMG_3461.jpg", likes: 88, comments: 9 },
   ];
 
   const stories = [
     { name: "YOU", img: "/assets/blue-hair-selfie.jpg", add: true },
     { name: "KAI", img: "/assets/blue-hair-gym.jpg", live: true },
-    { name: "TASHA", img: "/assets/pilates-pink.jpg" },
+    { name: "TASHA", img: "/assets/editorial-1.jpg" },
     { name: "AMARA", img: "/assets/dumbbell-street.jpg" },
-    { name: "AALIYAH", img: "/assets/blue-set-rooftop.jpg" },
-    { name: "NOVA", img: "/assets/hoodie-grey-blonde.jpg" },
+    { name: "NOVA", img: "/assets/IMG_3465.jpg" },
+    { name: "SIMONE", img: "/assets/IMG_3467.jpg" },
   ];
 
   return (
@@ -81,7 +81,7 @@ export default function WallScreen() {
         {/* Pinned challenge */}
         <div style={{ padding: "4px 22px 10px" }}>
           <div style={{ borderRadius: 18, overflow: "hidden", background: "var(--ink)", color: "var(--bone)", position: "relative", height: 200 }}>
-            <Photo src="/assets/blue-set-rooftop.jpg" alt="" style={{ position: "absolute", inset: 0, opacity: 0.55 }} />
+            <Photo src="/assets/IMG_3471.jpg" alt="" style={{ position: "absolute", inset: 0, opacity: 0.55 }} />
             <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, rgba(46,127,176,0.7), rgba(10,14,20,0.85))" }} />
             <div style={{ position: "absolute", inset: 0, padding: 18, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
               <span className="e-tag" style={{ background: "var(--sky)", color: "var(--ink)", padding: "5px 9px", borderRadius: 3, alignSelf: "flex-start" }}>CHALLENGE · 6 DAYS LEFT</span>

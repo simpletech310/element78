@@ -20,7 +20,7 @@ export default async function ContactPage() {
 
       {/* HERO */}
       <section style={{ position: "relative", minHeight: 420 }}>
-        <Photo src="/assets/blue-set-rooftop.jpg" alt="" style={{ position: "absolute", inset: 0, opacity: 0.55 }} />
+        <Photo src="/assets/IMG_3471.jpg" alt="" style={{ position: "absolute", inset: 0, opacity: 0.55 }} />
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(10,14,20,0.55) 0%, rgba(10,14,20,0.05) 30%, rgba(10,14,20,0.95) 100%)" }} />
         <div style={{ position: "relative", padding: "64px 22px 48px", maxWidth: 1180, margin: "0 auto" }}>
           <div className="e-mono reveal" style={{ color: "var(--sky)" }}>◉ ATLANTA · 24/7</div>

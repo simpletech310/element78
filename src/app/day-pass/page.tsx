@@ -30,7 +30,7 @@ export default async function DayPassPage() {
 
       {/* HERO */}
       <section style={{ position: "relative", minHeight: 540 }}>
-        <Photo src="/assets/dumbbell-street.jpg" alt="" className="zoom-on-hover" style={{ position: "absolute", inset: 0, opacity: 0.55 }} />
+        <Photo src="/assets/IMG_3461.jpg" alt="" className="zoom-on-hover" style={{ position: "absolute", inset: 0, opacity: 0.55 }} />
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(10,14,20,0.55) 0%, rgba(10,14,20,0.05) 25%, rgba(10,14,20,0.92) 80%, var(--ink) 100%)" }} />
         <div style={{ position: "relative", padding: "60px 22px 48px", maxWidth: 1180, margin: "0 auto" }}>
           <div className="e-mono reveal" style={{ color: "var(--sky)" }}>◉ DAY PASS · $35</div>
@@ -90,7 +90,7 @@ export default async function DayPassPage() {
             <Link href="/contact" className="btn btn-ink" style={{ marginTop: 22 }}>RESERVE STUDIO B</Link>
           </div>
           <div style={{ position: "relative", borderRadius: 22, overflow: "hidden", aspectRatio: "1.1", background: "var(--bone-2)" }}>
-            <Photo src="/assets/bottle-tripod.jpg" alt="" className="zoom-on-hover" style={{ position: "absolute", inset: 0 }} />
+            <Photo src="/assets/IMG_3462.jpg" alt="" className="zoom-on-hover" style={{ position: "absolute", inset: 0 }} />
           </div>
         </div>
 

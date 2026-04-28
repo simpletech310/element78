@@ -28,9 +28,9 @@ export default async function AtlantaPage() {
 
   const gallery = [
     "/assets/atlgym.jpg",
-    "/assets/blue-set-rooftop.jpg",
-    "/assets/dumbbell-street.jpg",
-    "/assets/bridge-pose.jpg",
+    "/assets/IMG_3465.jpg",
+    "/assets/floor-mockup.png",
+    "/assets/IMG_3467.jpg",
   ];
 
   return (

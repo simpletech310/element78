@@ -5,10 +5,10 @@ import { Icon } from "@/components/ui/Icon";
 
 export default function MusicScreen() {
   const playlists = [
-    { t: "WEST COAST FLOW", sub: "88 BPM · 1H 12M", tag: "PILATES", img: "/assets/blue-hair-gym.jpg" },
-    { t: "SUNRISE STRETCH", sub: "72 BPM · 45M", tag: "AM", img: "/assets/pilates-pink.jpg" },
-    { t: "STREET HIIT", sub: "140 BPM · 32M", tag: "STRENGTH", img: "/assets/dumbbell-street.jpg" },
-    { t: "CANDLELIT", sub: "62 BPM · 1H", tag: "YOGA", img: "/assets/blue-set-rooftop.jpg" },
+    { t: "WEST COAST FLOW", sub: "88 BPM · 1H 12M", tag: "PILATES", img: "/assets/floor-mockup.png" },
+    { t: "SUNRISE STRETCH", sub: "72 BPM · 45M", tag: "AM", img: "/assets/IMG_3467.jpg" },
+    { t: "STREET HIIT", sub: "140 BPM · 32M", tag: "STRENGTH", img: "/assets/IMG_3461.jpg" },
+    { t: "CANDLELIT", sub: "62 BPM · 1H", tag: "YOGA", img: "/assets/editorial-2.png" },
   ];
   const moods = [{ l: "YOUR FLOW", a: true }, { l: "R&B" }, { l: "AFROBEATS" }, { l: "HIP-HOP" }, { l: "AMBIENT" }, { l: "GOSPEL" }, { l: "WEST COAST" }];
   const tracks = [

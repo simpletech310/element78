@@ -14,13 +14,13 @@ export default async function HomeScreen() {
   const time = dt?.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }).toUpperCase();
 
   const studio = [
-    { t: "GLUTE BRIDGE FLOW", mins: 18, lvl: "LO", img: "/assets/bridge-pose.jpg", tag: "PILATES" },
-    { t: "STREET HIIT", mins: 24, lvl: "HI", img: "/assets/dumbbell-street.jpg", tag: "HIIT" },
-    { t: "CORE COMPTON", mins: 30, lvl: "MD", img: "/assets/blue-set-rooftop.jpg", tag: "CORE" },
+    { t: "GLUTE BRIDGE FLOW", mins: 18, lvl: "LO", img: "/assets/IMG_3467.jpg", tag: "PILATES" },
+    { t: "STREET HIIT", mins: 24, lvl: "HI", img: "/assets/IMG_3465.jpg", tag: "HIIT" },
+    { t: "CORE 78", mins: 30, lvl: "MD", img: "/assets/floor-mockup.png", tag: "CORE" },
   ];
 
   const pulse = [
-    { name: "AALIYAH M.", act: "finished CORE COMPTON", time: "2m", img: "/assets/pilates-pink.jpg", tag: false },
+    { name: "AALIYAH M.", act: "finished CORE 78", time: "2m", img: "/assets/editorial-1.jpg", tag: false },
     { name: "KAI · TRAINER", act: "dropped a new flow", time: "14m", img: "/assets/blue-hair-gym.jpg", tag: true },
   ];
 
@@ -49,7 +49,7 @@ export default async function HomeScreen() {
         {/* Hero — today's ritual */}
         <div style={{ padding: "0 22px" }}>
           <Link href="/train/player" className="lift" style={{ position: "relative", borderRadius: 22, overflow: "hidden", height: 380, background: "#000", display: "block", color: "var(--bone)", textDecoration: "none" }}>
-            <Photo src="/assets/blue-hair-gym.jpg" alt="ritual" className="zoom-on-hover" style={{ position: "absolute", inset: 0, opacity: 0.85 }} />
+            <Photo src="/assets/IMG_3467.jpg" alt="glute bridge flow" className="zoom-on-hover" style={{ position: "absolute", inset: 0, opacity: 0.85 }} />
             <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(10,14,20,0.1) 30%, rgba(10,14,20,0.95) 100%)" }} />
             <div style={{ position: "absolute", top: 16, left: 16, right: 16, display: "flex", justifyContent: "space-between" }}>
               <div className="e-tag" style={{ background: "rgba(10,14,20,0.7)", backdropFilter: "blur(12px)", padding: "6px 10px", borderRadius: 999, color: "var(--sky)" }}>◉ TODAY&apos;S RITUAL</div>

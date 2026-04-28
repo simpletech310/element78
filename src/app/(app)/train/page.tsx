@@ -10,9 +10,9 @@ export default function TrainScreen() {
     { l: "STRENGTH" }, { l: "YOGA" }, { l: "MOBILITY" },
   ];
   const programs = [
-    { t: "IN MY ELEMENT", sub: "21-day reset · daily Pilates flow", dur: "PROGRAM · 21 DAYS", img: "/assets/hoodie-grey-blonde-2.jpg" },
-    { t: "CITY OF ANGELS", sub: "Outdoor street strength · LA-built", dur: "PROGRAM · 14 DAYS", img: "/assets/dumbbell-street.jpg" },
-    { t: "LIVING ROOM LUXURY", sub: "No-equipment, low-impact, high-result", dur: "SERIES · 8 SESSIONS", img: "/assets/bridge-pose.jpg" },
+    { t: "IN MY ELEMENT", sub: "21-day reset · daily Pilates flow", dur: "PROGRAM · 21 DAYS", img: "/assets/floor-mockup.png" },
+    { t: "CITY OF ANGELS", sub: "Outdoor street strength · LA-built", dur: "PROGRAM · 14 DAYS", img: "/assets/IMG_3461.jpg" },
+    { t: "LIVING ROOM LUXURY", sub: "No-equipment, low-impact, high-result", dur: "SERIES · 8 SESSIONS", img: "/assets/IMG_3467.jpg" },
   ];
 
   return (
@@ -32,7 +32,7 @@ export default function TrainScreen() {
 
         <div style={{ padding: "14px 22px" }}>
           <Link href="/train/player" style={{ position: "relative", borderRadius: 22, overflow: "hidden", height: 460, background: "#000", display: "block", color: "var(--bone)" }}>
-            <Photo src="/assets/blue-set-rooftop.jpg" alt="featured" style={{ position: "absolute", inset: 0 }} />
+            <Photo src="/assets/IMG_3465.jpg" alt="featured AI session" style={{ position: "absolute", inset: 0 }} />
             <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(10,14,20,0.5) 0%, rgba(10,14,20,0) 30%, rgba(10,14,20,0) 50%, rgba(10,14,20,0.95) 100%)" }} />
             <div style={{ position: "absolute", top: 16, left: 16, right: 16, display: "flex", justifyContent: "space-between" }}>
               <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(10,14,20,0.7)", padding: "6px 10px", borderRadius: 999, color: "var(--sky)", backdropFilter: "blur(10px)" }}>

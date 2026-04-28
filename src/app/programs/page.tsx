@@ -14,7 +14,7 @@ export default async function ProgramsPage() {
       t: "IN MY ELEMENT",
       sub: "Series 03 · the signature reset",
       desc: "Daily Pilates flow + breath work. Slow tempo, hard work. Builds the body — and the streak — back from neutral.",
-      img: "/assets/blue-set-rooftop.jpg",
+      img: "/assets/floor-mockup.png",
       stats: ["21 sessions", "30–45 min/day", "Beginner → Intermediate"],
     },
     {
@@ -22,7 +22,7 @@ export default async function ProgramsPage() {
       t: "CITY OF ANGELS",
       sub: "Outdoor + weight floor",
       desc: "Heavy basics, quick rounds, no filler. Mixes street strength with reformer accessory work. Built to make every other workout feel easier.",
-      img: "/assets/dumbbell-street.jpg",
+      img: "/assets/IMG_3461.jpg",
       stats: ["14 sessions", "45 min/day", "Intermediate"],
     },
     {
@@ -30,7 +30,7 @@ export default async function ProgramsPage() {
       t: "LIVING ROOM LUXURY",
       sub: "No equipment, low impact",
       desc: "For travel, recovery weeks, and the days you don&apos;t want to drive. Mat-only Pilates and mobility you can do in 6×6 feet.",
-      img: "/assets/bridge-pose.jpg",
+      img: "/assets/IMG_3467.jpg",
       stats: ["8 sessions", "20–30 min", "All levels"],
     },
   ];
@@ -54,7 +54,7 @@ export default async function ProgramsPage() {
 
       {/* HERO */}
       <section style={{ position: "relative", minHeight: 540 }}>
-        <Photo src="/assets/hoodie-grey-blonde-2.jpg" alt="" className="zoom-on-hover" style={{ position: "absolute", inset: 0, opacity: 0.55 }} />
+        <Photo src="/assets/IMG_3465.jpg" alt="" className="zoom-on-hover" style={{ position: "absolute", inset: 0, opacity: 0.55 }} />
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(10,14,20,0.55) 0%, rgba(10,14,20,0.05) 25%, rgba(10,14,20,0.95) 80%, var(--ink) 100%)" }} />
         <div style={{ position: "relative", padding: "60px 22px 48px", maxWidth: 1180, margin: "0 auto" }}>
           <div className="e-mono reveal" style={{ color: "var(--sky)" }}>◉ STRUCTURED · GUIDED</div>
