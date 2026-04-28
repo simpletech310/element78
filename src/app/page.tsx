@@ -52,8 +52,20 @@ export default async function HomePage() {
 
       {/* HERO */}
       <section style={{ position: "relative", minHeight: "min(880px, 100dvh)" }}>
-        <Photo src="/assets/element78-hero.jpg" alt="" className="zoom-on-hover" style={{ position: "absolute", inset: 0, opacity: 0.72 }} />
-        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(10,14,20,0.55) 0%, rgba(10,14,20,0.05) 25%, rgba(10,14,20,0.85) 80%, var(--ink) 100%)" }} />
+        <Photo
+          src="/assets/blue-hair-gym.jpg"
+          alt=""
+          className="zoom-on-hover"
+          style={{ position: "absolute", inset: 0, opacity: 0.85, backgroundPosition: "center 25%" }}
+        />
+        <div style={{
+          position: "absolute", inset: 0,
+          background: "linear-gradient(180deg, rgba(10,14,20,0.45) 0%, rgba(10,14,20,0) 25%, rgba(10,14,20,0.55) 65%, rgba(10,14,20,0.95) 88%, var(--ink) 100%)",
+        }} />
+        <div style={{
+          position: "absolute", inset: 0,
+          background: "linear-gradient(90deg, rgba(10,14,20,0.55) 0%, rgba(10,14,20,0.2) 40%, transparent 70%)",
+        }} />
 
         <div style={{ position: "relative", padding: "60px 22px 48px", display: "flex", flexDirection: "column", minHeight: "min(880px, 100dvh)", maxWidth: 1180, margin: "0 auto" }}>
           <div className="e-mono reveal" style={{ color: "var(--sky)", marginBottom: 18 }}>◉ ATLANTA · OPEN 24/7</div>
