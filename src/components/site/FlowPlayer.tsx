@@ -169,25 +169,7 @@ export function FlowPlayer() {
             </div>
           )}
 
-          {/* Center play overlay (only when paused and ready) */}
-          {!playing && loadState !== "error" && (
-            <button
-              type="button"
-              onClick={play}
-              aria-label="Play"
-              style={{
-                position: "absolute", inset: 0, margin: "auto",
-                width: 76, height: 76, borderRadius: 999,
-                background: "var(--sky)", color: "var(--ink)",
-                border: "none", cursor: "pointer",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                boxShadow: "0 0 0 8px rgba(143,184,214,0.18), 0 0 40px rgba(77,169,214,0.45)",
-                animation: "pulseSky 2s ease-in-out infinite",
-              }}
-            >
-              <Icon name="play" size={28} />
-            </button>
-          )}
+          {/* Center play overlay removed — play control lives in the bottom transport bar. */}
 
           {/* TOP-RIGHT: small timer overlay */}
           <div style={{
