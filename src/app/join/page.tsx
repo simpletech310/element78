@@ -1,10 +1,15 @@
 import Link from "next/link";
 import { Photo } from "@/components/ui/Photo";
-import { Wordmark } from "@/components/brand/Wordmark";
 import { Icon } from "@/components/ui/Icon";
+import { Navbar } from "@/components/site/Navbar";
 import { signUpAction } from "@/lib/auth-actions";
+import { getUser } from "@/lib/auth";
+import { redirect } from "next/navigation";
 
-export default function JoinPage({ searchParams }: { searchParams: { error?: string } }) {
+export default async function JoinPage({ searchParams }: { searchParams: { error?: string } }) {
+  const user = await getUser();
+  if (user) redirect("/home");
+
   const pillars: { i: "pin" | "play" | "bag"; t: string; s: string }[] = [
     { i: "pin", t: "THE FLAGSHIP", s: "Atlanta · 24-hour access · classes · 1:1" },
     { i: "play", t: "AI STUDIO", s: "Live avatar coaching, anywhere" },
@@ -13,94 +18,91 @@ export default function JoinPage({ searchParams }: { searchParams: { error?: str
   const proofs = ["/assets/pilates-pink.jpg","/assets/blue-hair-selfie.jpg","/assets/dumbbell-street.jpg","/assets/blue-set-rooftop.jpg"];
 
   return (
-    <div style={{ background: "#000", minHeight: "100dvh", position: "relative", overflow: "hidden" }}>
-      <div style={{ position: "fixed", inset: 0 }}>
-        <Photo src="/assets/blue-set-rooftop.jpg" alt="" style={{ position: "absolute", inset: 0, opacity: 0.85 }} />
-        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(10,14,20,0.5) 0%, rgba(10,14,20,0.05) 30%, rgba(10,14,20,0.85) 75%, rgba(10,14,20,1) 100%)" }} />
-      </div>
+    <div style={{ background: "var(--ink)", color: "var(--bone)", fontFamily: "var(--font-body)", minHeight: "100dvh" }}>
+      <Navbar authed={false} />
 
-      <div style={{ position: "relative", padding: "28px 22px 40px", maxWidth: 520, margin: "0 auto" }}>
-        <div style={{ padding: "0 22px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <Wordmark size={20} color="var(--bone)" />
-          <Link href="/login" style={{ background: "transparent", border: "none", color: "var(--bone)", fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.14em" }}>
-            SIGN IN
-          </Link>
-        </div>
+      {/* HERO */}
+      <section style={{ position: "relative", minHeight: 560 }}>
+        <Photo src="/assets/blue-set-rooftop.jpg" alt="" className="zoom-on-hover" style={{ position: "absolute", inset: 0, opacity: 0.7 }} />
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(10,14,20,0.55) 0%, rgba(10,14,20,0.05) 25%, rgba(10,14,20,0.9) 80%, var(--ink) 100%)" }} />
 
-        <div style={{ padding: "60px 0 30px" }}>
-          <div className="e-mono" style={{ color: "var(--sky)" }}>◉ FROM ATLANTA · 24/7</div>
-          <div className="e-display glow" style={{ fontSize: 64, lineHeight: 0.88, marginTop: 14 }}>
+        <div style={{ position: "relative", padding: "60px 22px 48px", maxWidth: 720, margin: "0 auto" }}>
+          <div className="e-mono reveal" style={{ color: "var(--sky)" }}>◉ FROM ATLANTA · 24/7</div>
+          <h1 className="e-display glow reveal reveal-d1" style={{ fontSize: "clamp(56px, 11vw, 96px)", lineHeight: 0.88, marginTop: 14 }}>
             BE IN<br/>YOUR<br/>ELEMENT.
-          </div>
-          <div style={{ fontFamily: "var(--font-serif)", fontStyle: "italic", fontSize: 22, marginTop: 18, lineHeight: 1.2, color: "var(--bone)", maxWidth: 280 }}>
+          </h1>
+          <p className="reveal reveal-d2" style={{ fontFamily: "var(--font-serif)", fontStyle: "italic", fontSize: "clamp(20px, 3.5vw, 28px)", marginTop: 22, lineHeight: 1.2, color: "var(--bone)", maxWidth: 360 }}>
             Pilates with the windows down.
-          </div>
-          <div style={{ marginTop: 12, fontSize: 14, color: "rgba(242,238,232,0.7)", maxWidth: 300, lineHeight: 1.55 }}>
+          </p>
+          <p className="reveal reveal-d3" style={{ marginTop: 14, fontSize: 14, color: "rgba(242,238,232,0.7)", maxWidth: 380, lineHeight: 1.6 }}>
             A gym, a wardrobe, and an AI studio — built for the women the wellness industry forgot.
-          </div>
+          </p>
         </div>
+      </section>
 
-        <div style={{ padding: "0 22px", display: "flex", flexDirection: "column", gap: 8 }}>
+      {/* CONTENT */}
+      <section style={{ padding: "32px 22px 80px", maxWidth: 720, margin: "0 auto" }}>
+        {/* Pillars */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {pillars.map((p, i) => (
-            <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: 14, borderRadius: 14, background: "rgba(10,14,20,0.55)", backdropFilter: "blur(14px)", border: "1px solid rgba(143,184,214,0.18)" }}>
-              <div style={{ width: 38, height: 38, borderRadius: 10, background: "rgba(143,184,214,0.2)", color: "var(--sky)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Icon name={p.i} size={18} />
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 14, padding: 16, borderRadius: 14, background: "rgba(143,184,214,0.06)", border: "1px solid rgba(143,184,214,0.18)" }}>
+              <div style={{ width: 44, height: 44, borderRadius: 12, background: "rgba(143,184,214,0.18)", color: "var(--sky)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Icon name={p.i} size={20} />
               </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontFamily: "var(--font-display)", fontSize: 16, color: "var(--bone)" }}>{p.t}</div>
-                <div className="e-mono" style={{ fontSize: 9, color: "rgba(242,238,232,0.55)", marginTop: 3 }}>{p.s}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontFamily: "var(--font-display)", fontSize: 18, letterSpacing: "0.02em" }}>{p.t}</div>
+                <div className="e-mono" style={{ fontSize: 9, color: "rgba(242,238,232,0.55)", marginTop: 4, letterSpacing: "0.18em" }}>{p.s}</div>
               </div>
-              <Icon name="chevron" size={16} />
             </div>
           ))}
         </div>
 
-        <div style={{ padding: "24px 22px 0", display: "flex", alignItems: "center", gap: 10 }}>
+        {/* Social proof */}
+        <div style={{ marginTop: 28, display: "flex", alignItems: "center", gap: 12 }}>
           <div style={{ display: "flex" }}>
             {proofs.map((s, i) => (
-              <div key={i} style={{ width: 28, height: 28, borderRadius: "50%", overflow: "hidden", border: "2px solid var(--ink)", marginLeft: i ? -8 : 0 }}>
+              <div key={i} style={{ width: 30, height: 30, borderRadius: "50%", overflow: "hidden", border: "2px solid var(--ink)", marginLeft: i ? -10 : 0 }}>
                 <Photo src={s} alt="" style={{ width: "100%", height: "100%" }} />
               </div>
             ))}
           </div>
-          <div className="e-mono" style={{ fontSize: 10, color: "rgba(242,238,232,0.6)" }}>1,408 WOMEN ALREADY IN.</div>
+          <div className="e-mono" style={{ fontSize: 11, color: "rgba(242,238,232,0.6)", letterSpacing: "0.18em" }}>1,408 WOMEN ALREADY IN.</div>
         </div>
 
-        <form action={signUpAction} style={{ padding: "28px 22px 0", display: "flex", flexDirection: "column", gap: 10 }}>
+        {/* Form */}
+        <form action={signUpAction} style={{ marginTop: 36, display: "flex", flexDirection: "column", gap: 14 }}>
+          <div className="e-mono" style={{ color: "var(--sky)", fontSize: 10, letterSpacing: "0.25em", marginBottom: 4 }}>◉ START FREE — 7 DAYS</div>
           {searchParams?.error && (
-            <div style={{ fontSize: 12, color: "var(--rose)", fontFamily: "var(--font-mono)" }}>{searchParams.error}</div>
+            <div style={{ padding: "10px 14px", borderRadius: 10, background: "rgba(232,181,168,0.08)", border: "1px solid rgba(232,181,168,0.3)", fontSize: 12, color: "var(--rose)", fontFamily: "var(--font-mono)", letterSpacing: "0.06em" }}>
+              {searchParams.error}
+            </div>
           )}
-          <input
-            name="display_name"
-            placeholder="YOUR NAME"
-            required
-            className="field-input"
-          />
-          <input
-            name="email"
-            type="email"
-            placeholder="EMAIL"
-            required
-            autoComplete="email"
-            className="field-input"
-          />
-          <input
-            name="password"
-            type="password"
-            placeholder="PASSWORD · MIN 6"
-            required
-            minLength={6}
-            autoComplete="new-password"
-            className="field-input"
-          />
-          <button type="submit" className="btn btn-sky" style={{ padding: "18px 22px", fontSize: 12 }}>
-            JOIN ELEMENT — START FREE
+          <div>
+            <div className="e-mono" style={{ fontSize: 9, color: "rgba(242,238,232,0.55)", marginBottom: 8, letterSpacing: "0.2em" }}>YOUR NAME</div>
+            <input name="display_name" placeholder="HOW WE GREET YOU" required autoComplete="name" className="field-input" />
+          </div>
+          <div>
+            <div className="e-mono" style={{ fontSize: 9, color: "rgba(242,238,232,0.55)", marginBottom: 8, letterSpacing: "0.2em" }}>EMAIL</div>
+            <input name="email" type="email" placeholder="YOU@SOMEWHERE.COM" required autoComplete="email" className="field-input" />
+          </div>
+          <div>
+            <div className="e-mono" style={{ fontSize: 9, color: "rgba(242,238,232,0.55)", marginBottom: 8, letterSpacing: "0.2em" }}>PASSWORD · MIN 6</div>
+            <input name="password" type="password" placeholder="••••••••" required minLength={6} autoComplete="new-password" className="field-input" />
+          </div>
+          <button type="submit" className="btn btn-sky" style={{ marginTop: 8, padding: "18px 22px" }}>
+            JOIN ELEMENT
           </button>
-          <div className="e-mono" style={{ textAlign: "center", fontSize: 9, color: "rgba(242,238,232,0.45)" }}>
+          <div className="e-mono" style={{ textAlign: "center", fontSize: 9, color: "rgba(242,238,232,0.45)", letterSpacing: "0.2em", marginTop: 4 }}>
             7 DAYS FREE · CANCEL ANYTIME · NO CARD UP FRONT
           </div>
+          <div style={{ marginTop: 16, textAlign: "center", fontSize: 13, color: "rgba(242,238,232,0.55)" }}>
+            Already in?{" "}
+            <Link href="/login" style={{ color: "var(--sky)", fontFamily: "var(--font-mono)", letterSpacing: "0.14em", fontSize: 11 }}>
+              SIGN IN →
+            </Link>
+          </div>
         </form>
-      </div>
+      </section>
     </div>
   );
 }
