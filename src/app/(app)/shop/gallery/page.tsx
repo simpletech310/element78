@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { StatusBar, HomeIndicator } from "@/components/chrome/StatusBar";
-import { TabBar } from "@/components/chrome/TabBar";
+import { Navbar } from "@/components/site/Navbar";
 import { Photo } from "@/components/ui/Photo";
 import { Icon } from "@/components/ui/Icon";
 import { CartButton } from "@/components/shop/CartButton";
@@ -11,9 +10,9 @@ export default async function ShopGallery() {
   const filters = [{ l: `ALL · ${products.length}`, a: true }, { l: "NEW IN" }, { l: "APPAREL" }, { l: "GEAR" }, { l: "ACCESSORIES" }, { l: "SALE" }];
 
   return (
-    <div className="app" style={{ height: "100dvh" }}>
-      <StatusBar />
-      <div className="app-scroll app-top" style={{ paddingBottom: 100 }}>
+    <div style={{ background: "var(--bone)", color: "var(--ink)", fontFamily: "var(--font-body)", minHeight: "100dvh" }}>
+      <Navbar />
+      <div style={{ paddingBottom: 80, maxWidth: 1180, margin: "0 auto" }}>
         <div style={{ padding: "14px 22px 4px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
             <div className="e-mono" style={{ color: "rgba(10,14,20,0.5)" }}>STORE · SS26</div>
@@ -95,8 +94,6 @@ export default async function ShopGallery() {
           </div>
         </div>
       </div>
-      <TabBar />
-      <HomeIndicator />
     </div>
   );
 }

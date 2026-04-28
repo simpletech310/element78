@@ -3,13 +3,12 @@ import { NextResponse, type NextRequest } from "next/server";
 
 type CookieSetItem = { name: string; value: string; options: CookieOptions };
 
-const PROTECTED_PREFIXES = ["/home", "/train", "/gym", "/shop", "/crew", "/trainers", "/activity", "/music"];
+const PROTECTED_PREFIXES = ["/home", "/train", "/gym", "/wall", "/trainers", "/activity", "/music"];
 
 function isProtected(pathname: string) {
-  // /shop and /shop/[slug] are also public on (site); the (app) versions live at the same paths.
-  // Auth gate covers /home, /train, /gym, /crew, /trainers, /activity, /music — the app-only routes.
-  // /shop is dual-mode; we keep it public.
-  return PROTECTED_PREFIXES.some(p => pathname === p || pathname.startsWith(p + "/")) && !pathname.startsWith("/shop");
+  // Marketing pages (/, /shop, /locations, /contact) are public; only the in-app
+  // routes below require an authenticated session.
+  return PROTECTED_PREFIXES.some(p => pathname === p || pathname.startsWith(p + "/"));
 }
 
 export async function updateSession(request: NextRequest) {

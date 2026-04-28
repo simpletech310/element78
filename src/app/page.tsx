@@ -94,11 +94,11 @@ export default async function HomePage() {
           </div>
 
           {/* Proof bar */}
-          <div className="reveal reveal-d4" style={{ marginTop: 40, paddingTop: 28, borderTop: "1px solid rgba(242,238,232,0.12)", display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
+          <div className="reveal reveal-d4" style={{ marginTop: 40, paddingTop: 28, borderTop: "1px solid rgba(242,238,232,0.12)", display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, textAlign: "center" }}>
             {stats.map(s => (
-              <div key={s.l}>
+              <div key={s.l} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                 <div style={{ fontFamily: "var(--font-display)", fontSize: "clamp(22px, 5vw, 32px)", color: "var(--sky)", lineHeight: 1 }}>{s.v}</div>
-                <div className="e-mono" style={{ color: "rgba(242,238,232,0.5)", fontSize: 9, marginTop: 6 }}>{s.l.toUpperCase()}</div>
+                <div className="e-mono" style={{ color: "rgba(242,238,232,0.5)", fontSize: 9, marginTop: 8, letterSpacing: "0.18em" }}>{s.l.toUpperCase()}</div>
               </div>
             ))}
           </div>

@@ -9,7 +9,7 @@ const items: { id: string; label: string; icon: IconName; href: string }[] = [
   { id: "train", label: "Train", icon: "play", href: "/train" },
   { id: "gym", label: "Gym", icon: "pin", href: "/gym" },
   { id: "shop", label: "Shop", icon: "bag", href: "/shop" },
-  { id: "crew", label: "Crew", icon: "crew", href: "/crew" },
+  { id: "wall", label: "Wall", icon: "crew", href: "/wall" },
 ];
 
 export function TabBar() {

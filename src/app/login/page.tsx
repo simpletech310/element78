@@ -2,20 +2,18 @@ import Link from "next/link";
 import { Photo } from "@/components/ui/Photo";
 import { Wordmark } from "@/components/brand/Wordmark";
 import { Icon } from "@/components/ui/Icon";
-import { StatusBar, HomeIndicator } from "@/components/chrome/StatusBar";
 import { signInAction } from "@/lib/auth-actions";
 
 export default function LoginPage({ searchParams }: { searchParams: { next?: string; error?: string } }) {
   const next = searchParams?.next ?? "/home";
   return (
-    <div className="app app-dark" style={{ background: "#000", height: "100dvh" }}>
-      <StatusBar dark />
-      <div style={{ position: "absolute", inset: 0 }}>
-        <Photo src="/assets/blue-hair-selfie.jpg" alt="" style={{ position: "absolute", inset: 0, opacity: 0.6 }} />
+    <div style={{ background: "#000", minHeight: "100dvh", position: "relative", overflow: "hidden" }}>
+      <div style={{ position: "fixed", inset: 0 }}>
+        <Photo src="/assets/blue-hair-selfie.jpg" alt="" style={{ position: "absolute", inset: 0, opacity: 0.55 }} />
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(10,14,20,0.4) 0%, rgba(10,14,20,0.85) 55%, rgba(10,14,20,1) 100%)" }} />
       </div>
 
-      <div className="app-top" style={{ position: "relative", height: "100%", display: "flex", flexDirection: "column", padding: "14px 22px 30px", color: "var(--bone)" }}>
+      <div style={{ position: "relative", minHeight: "100dvh", display: "flex", flexDirection: "column", padding: "28px 22px 40px", color: "var(--bone)", maxWidth: 480, margin: "0 auto" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <Link href="/" aria-label="Back" style={{ width: 40, height: 40, borderRadius: 999, background: "rgba(10,14,20,0.55)", backdropFilter: "blur(10px)", border: "none", color: "var(--bone)", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <span style={{ transform: "rotate(180deg)", display: "inline-flex" }}><Icon name="chevron" size={18} /></span>
@@ -83,7 +81,6 @@ export default function LoginPage({ searchParams }: { searchParams: { next?: str
           </div>
         </form>
       </div>
-      <HomeIndicator dark />
     </div>
   );
 }

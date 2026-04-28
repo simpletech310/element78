@@ -7,11 +7,10 @@ import { Wordmark } from "@/components/brand/Wordmark";
 import { Icon } from "@/components/ui/Icon";
 
 const links = [
-  { label: "GYM", href: "/locations" },
-  { label: "TRAIN", href: "/train" },
+  { label: "HOME", href: "/" },
   { label: "SHOP", href: "/shop" },
-  { label: "TEAM", href: "/trainers" },
-  { label: "CREW", href: "/crew" },
+  { label: "LOCATIONS", href: "/locations" },
+  { label: "CONTACT", href: "/contact" },
 ];
 
 export function Navbar() {
@@ -28,6 +27,9 @@ export function Navbar() {
 
   useEffect(() => { setOpen(false); }, [pathname]);
 
+  const isActive = (href: string) =>
+    href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(href + "/");
+
   return (
     <>
       <header
@@ -36,6 +38,7 @@ export function Navbar() {
           padding: "14px 22px",
           background: scrolled ? "rgba(10,14,20,0.92)" : "rgba(10,14,20,0.55)",
           backdropFilter: "blur(18px)",
+          WebkitBackdropFilter: "blur(18px)",
           borderBottom: scrolled ? "1px solid rgba(143,184,214,0.12)" : "1px solid transparent",
           transition: "background .25s ease, border-color .25s ease",
           display: "flex", justifyContent: "space-between", alignItems: "center",
@@ -46,16 +49,18 @@ export function Navbar() {
         </Link>
 
         {/* Desktop nav */}
-        <nav className="nav-desktop" aria-label="Primary" style={{ display: "none", gap: 24, alignItems: "center" }}>
+        <nav className="nav-desktop" aria-label="Primary" style={{ display: "none", gap: 26, alignItems: "center" }}>
           {links.map(l => (
             <Link key={l.href} href={l.href} className="e-mono" style={{
-              color: "rgba(242,238,232,0.7)", fontSize: 11, letterSpacing: "0.18em",
-              textDecoration: "none", padding: "6px 0",
-              borderBottom: pathname.startsWith(l.href) ? "1px solid var(--sky)" : "1px solid transparent",
+              color: isActive(l.href) ? "var(--sky)" : "rgba(242,238,232,0.7)",
+              fontSize: 11, letterSpacing: "0.2em",
+              padding: "6px 0",
+              borderBottom: isActive(l.href) ? "1px solid var(--sky)" : "1px solid transparent",
+              transition: "color .2s ease",
             }}>{l.label}</Link>
           ))}
-          <Link href="/login" className="e-mono" style={{ color: "var(--sky)", fontSize: 11, letterSpacing: "0.18em", textDecoration: "none" }}>SIGN IN</Link>
-          <Link href="/join" className="btn btn-sky" style={{ padding: "10px 18px", fontSize: 10 }}>JOIN</Link>
+          <Link href="/login" className="e-mono" style={{ color: "var(--sky)", fontSize: 11, letterSpacing: "0.2em" }}>SIGN IN</Link>
+          <Link href="/join" className="btn btn-sky" style={{ padding: "10px 18px", fontSize: 10 }}>JOIN ELEMENT</Link>
         </nav>
 
         {/* Mobile controls */}
@@ -86,14 +91,14 @@ export function Navbar() {
         aria-hidden={!open}
         style={{
           position: "fixed", inset: 0, top: 0, zIndex: 30,
-          background: "rgba(10,14,20,0.97)", backdropFilter: "blur(20px)",
+          background: "rgba(10,14,20,0.97)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)",
           padding: "84px 22px 40px",
           transform: open ? "translateY(0)" : "translateY(-100%)",
           transition: "transform .3s cubic-bezier(.2,.8,.2,1)",
           display: "flex", flexDirection: "column", gap: 4,
         }}
       >
-        <div className="e-mono" style={{ color: "var(--sky)", fontSize: 10, marginBottom: 18, letterSpacing: "0.2em" }}>◉ MENU</div>
+        <div className="e-mono" style={{ color: "var(--sky)", fontSize: 10, marginBottom: 18, letterSpacing: "0.25em" }}>◉ MENU</div>
         {links.map((l, i) => (
           <Link
             key={l.href}
@@ -112,13 +117,13 @@ export function Navbar() {
           <Link href="/join" className="btn btn-sky" style={{ width: "100%" }}>JOIN ELEMENT</Link>
           <Link href="/login" className="btn btn-ghost" style={{ width: "100%", color: "var(--bone)", borderColor: "rgba(242,238,232,0.25)" }}>SIGN IN</Link>
         </div>
-        <div className="e-mono" style={{ color: "rgba(242,238,232,0.35)", marginTop: 32, fontSize: 9, letterSpacing: "0.2em" }}>
+        <div className="e-mono" style={{ color: "rgba(242,238,232,0.35)", marginTop: 32, fontSize: 9, letterSpacing: "0.25em" }}>
           ATLANTA · 24/7
         </div>
       </div>
 
       <style>{`
-        @media (min-width: 820px) {
+        @media (min-width: 880px) {
           .nav-desktop { display: flex !important; }
           .nav-mobile { display: none !important; }
         }

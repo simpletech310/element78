@@ -1,15 +1,16 @@
-import { StatusBar, HomeIndicator } from "@/components/chrome/StatusBar";
 import { TabBar } from "@/components/chrome/TabBar";
 import { Photo } from "@/components/ui/Photo";
 import { Icon } from "@/components/ui/Icon";
 
-export default function TimelineScreen() {
+export default function WallScreen() {
   const filters = [{ l: "ALL", a: true }, { l: "EVENTS" }, { l: "WINS" }, { l: "TRAINERS" }, { l: "CHALLENGES" }, { l: "OPEN MIC" }];
+
   type Post = {
     n: string; tag?: string; t: string; avatar: string; text: string;
     img?: string; likes: number; comments: number;
     ev?: { tag: string; cta: string }; prog?: boolean; milestone?: { l: string };
   };
+
   const posts: Post[] = [
     { n: "KAI · TRAINER", tag: "STAFF", t: "14m", avatar: "/assets/blue-hair-gym.jpg", text: "Dropped a new flow. Slow tempo, hard work — Studio B at 6:30P. Pull up.", img: "/assets/blue-hair-gym.jpg", likes: 124, comments: 18, ev: { tag: "NEW FLOW", cta: "TRY IT" } },
     { n: "AALIYAH M.", t: "1h", avatar: "/assets/dumbbell-street.jpg", text: "Day 14 of \"In My Element\" complete. Glutes are gone. Ego intact. 🌊", prog: true, likes: 86, comments: 12 },
@@ -18,25 +19,58 @@ export default function TimelineScreen() {
     { n: "EVENT · ELEMENT78", tag: "ANNOUNCE", t: "8h", avatar: "/assets/element78-hero.jpg", text: "May 03 · Sunrise Run + Coffee Meet. 7AM at the lot. Recovery smoothies after.", ev: { tag: "EVENT · MAY 03 · 7A", cta: "RSVP" }, img: "/assets/dumbbell-street.jpg", likes: 88, comments: 9 },
   ];
 
+  const stories = [
+    { name: "YOU", img: "/assets/blue-hair-selfie.jpg", add: true },
+    { name: "KAI", img: "/assets/blue-hair-gym.jpg", live: true },
+    { name: "TASHA", img: "/assets/pilates-pink.jpg" },
+    { name: "AMARA", img: "/assets/dumbbell-street.jpg" },
+    { name: "AALIYAH", img: "/assets/blue-set-rooftop.jpg" },
+    { name: "NOVA", img: "/assets/hoodie-grey-blonde.jpg" },
+  ];
+
   return (
     <div className="app" style={{ height: "100dvh" }}>
-      <StatusBar />
-      <div className="app-scroll app-top" style={{ paddingBottom: 100 }}>
-        <div style={{ padding: "14px 22px 6px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div className="app-scroll" style={{ paddingTop: 20, paddingBottom: 100 }}>
+        {/* Header */}
+        <div style={{ padding: "10px 22px 6px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
-            <div className="e-mono" style={{ color: "rgba(10,14,20,0.5)" }}>FAMILY · TIMELINE</div>
+            <div className="e-mono" style={{ color: "rgba(10,14,20,0.5)" }}>FAMILY · TIMELINE · 1,408</div>
             <div className="e-display" style={{ fontSize: 36, marginTop: 2 }}>THE WALL</div>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
-            <button style={{ width: 40, height: 40, borderRadius: 999, background: "var(--ink)", color: "var(--bone)", border: "none", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name="bell" size={18} /></button>
-            <button style={{ width: 40, height: 40, borderRadius: 999, background: "var(--electric)", color: "var(--ink)", border: "none", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name="plus" size={18} /></button>
+            <button style={{ width: 40, height: 40, borderRadius: 999, background: "var(--ink)", color: "var(--bone)", border: "none", display: "flex", alignItems: "center", justifyContent: "center" }} aria-label="Notifications"><Icon name="bell" size={18} /></button>
+            <button style={{ width: 40, height: 40, borderRadius: 999, background: "var(--electric)", color: "var(--ink)", border: "none", display: "flex", alignItems: "center", justifyContent: "center" }} aria-label="New post"><Icon name="plus" size={18} /></button>
           </div>
         </div>
 
-        <div className="no-scrollbar" style={{ padding: "12px 22px 4px", display: "flex", gap: 8, overflowX: "auto" }}>
+        {/* Stories rail */}
+        <div className="no-scrollbar" style={{ display: "flex", gap: 12, padding: "12px 22px 16px", overflowX: "auto" }}>
+          {stories.map((s, i) => (
+            <div key={i} style={{ textAlign: "center", flexShrink: 0 }}>
+              <div style={{
+                width: 64, height: 64, borderRadius: "50%", padding: 2,
+                background: s.live ? "linear-gradient(135deg, var(--electric), var(--rose))"
+                          : s.add ? "transparent"
+                          : "linear-gradient(135deg, var(--sky), var(--bone-3))",
+                border: s.add ? "1.5px dashed rgba(10,14,20,0.3)" : "none",
+                position: "relative",
+              }}>
+                <div style={{ width: "100%", height: "100%", borderRadius: "50%", overflow: "hidden", border: "2px solid var(--bone)" }}>
+                  <Photo src={s.img} alt={s.name} style={{ width: "100%", height: "100%" }} />
+                </div>
+                {s.live && <div style={{ position: "absolute", bottom: -2, left: "50%", transform: "translateX(-50%)", background: "var(--electric)", color: "var(--ink)", padding: "1px 6px", borderRadius: 4, fontSize: 8, fontFamily: "var(--font-mono)", fontWeight: 600, letterSpacing: "0.1em" }}>LIVE</div>}
+                {s.add && <div style={{ position: "absolute", bottom: 0, right: 0, width: 22, height: 22, background: "var(--ink)", color: "var(--bone)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid var(--bone)" }}><Icon name="plus" size={12} /></div>}
+              </div>
+              <div className="e-mono" style={{ fontSize: 9, marginTop: 6 }}>{s.name}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Filter chips */}
+        <div className="no-scrollbar" style={{ padding: "0 22px 12px", display: "flex", gap: 8, overflowX: "auto" }}>
           {filters.map(c => (
             <div key={c.l} className="e-tag" style={{
-              padding: "8px 14px", borderRadius: 999, whiteSpace: "nowrap",
+              padding: "8px 14px", borderRadius: 999, whiteSpace: "nowrap", cursor: "pointer",
               background: c.a ? "var(--ink)" : "transparent",
               color: c.a ? "var(--bone)" : "var(--ink)",
               border: c.a ? "none" : "1px solid rgba(10,14,20,0.15)",
@@ -44,15 +78,16 @@ export default function TimelineScreen() {
           ))}
         </div>
 
-        <div style={{ padding: "14px 22px 6px" }}>
-          <div style={{ borderRadius: 16, overflow: "hidden", background: "var(--ink)", color: "var(--bone)", position: "relative", height: 200 }}>
+        {/* Pinned challenge */}
+        <div style={{ padding: "4px 22px 10px" }}>
+          <div style={{ borderRadius: 18, overflow: "hidden", background: "var(--ink)", color: "var(--bone)", position: "relative", height: 200 }}>
             <Photo src="/assets/blue-set-rooftop.jpg" alt="" style={{ position: "absolute", inset: 0, opacity: 0.55 }} />
             <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, rgba(46,127,176,0.7), rgba(10,14,20,0.85))" }} />
             <div style={{ position: "absolute", inset: 0, padding: 18, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-              <span className="e-tag" style={{ background: "var(--sky)", color: "var(--ink)", padding: "4px 8px", borderRadius: 3, alignSelf: "flex-start" }}>CHALLENGE · 6 DAYS LEFT</span>
+              <span className="e-tag" style={{ background: "var(--sky)", color: "var(--ink)", padding: "5px 9px", borderRadius: 3, alignSelf: "flex-start" }}>CHALLENGE · 6 DAYS LEFT</span>
               <div>
                 <div className="e-display" style={{ fontSize: 28, lineHeight: 0.95 }}>21 DAYS<br/>IN MY ELEMENT</div>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 14 }}>
                   <div className="e-mono" style={{ color: "var(--sky)", fontSize: 10 }}>412 WOMEN IN</div>
                   <div style={{ flex: 1, height: 3, background: "rgba(255,255,255,0.18)", borderRadius: 2, overflow: "hidden" }}>
                     <div style={{ width: "67%", height: "100%", background: "var(--sky)" }} />
@@ -64,19 +99,19 @@ export default function TimelineScreen() {
           </div>
         </div>
 
-        <div style={{ padding: "16px 22px 4px", display: "flex", gap: 10, alignItems: "center" }}>
-          <div style={{ width: 38, height: 38, borderRadius: "50%", overflow: "hidden" }}>
+        {/* Compose row */}
+        <div style={{ padding: "16px 22px 6px", display: "flex", gap: 10, alignItems: "center" }}>
+          <div style={{ width: 38, height: 38, borderRadius: "50%", overflow: "hidden", flexShrink: 0 }}>
             <Photo src="/assets/blue-hair-selfie.jpg" alt="" style={{ width: "100%", height: "100%" }} />
           </div>
-          <div style={{ flex: 1, padding: "10px 14px", borderRadius: 999, background: "var(--paper)", border: "1px solid rgba(10,14,20,0.08)", fontSize: 13, color: "rgba(10,14,20,0.5)" }}>
+          <button style={{ flex: 1, padding: "12px 16px", borderRadius: 999, background: "var(--paper)", border: "1px solid rgba(10,14,20,0.08)", fontSize: 13, color: "rgba(10,14,20,0.5)", textAlign: "left", cursor: "pointer" }}>
             Share something with the family…
-          </div>
-          <button style={{ width: 38, height: 38, borderRadius: 999, background: "var(--ink)", color: "var(--bone)", border: "none", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Icon name="play" size={14} />
           </button>
+          <button style={{ width: 38, height: 38, borderRadius: 999, background: "var(--ink)", color: "var(--bone)", border: "none", display: "flex", alignItems: "center", justifyContent: "center" }} aria-label="Live"><Icon name="play" size={14} /></button>
         </div>
 
-        <div style={{ padding: "14px 22px 4px", display: "flex", flexDirection: "column", gap: 14 }}>
+        {/* Posts */}
+        <div style={{ padding: "12px 22px 4px", display: "flex", flexDirection: "column", gap: 14 }}>
           {posts.map((p, i) => (
             <div key={i} style={{ borderRadius: 16, background: "var(--paper)", border: "1px solid rgba(10,14,20,0.06)", overflow: "hidden" }}>
               <div style={{ padding: "12px 14px", display: "flex", alignItems: "center", gap: 10 }}>
@@ -88,7 +123,7 @@ export default function TimelineScreen() {
                     <span style={{ fontFamily: "var(--font-display)", fontSize: 14 }}>{p.n}</span>
                     {p.tag && <span className="e-mono" style={{ background: p.tag === "ANNOUNCE" ? "var(--rose)" : "var(--sky)", color: "var(--ink)", padding: "1px 5px", borderRadius: 3, fontSize: 8 }}>{p.tag}</span>}
                   </div>
-                  <div className="e-mono" style={{ fontSize: 9, color: "rgba(10,14,20,0.5)", marginTop: 2 }}>{p.t} · COMPTON HQ</div>
+                  <div className="e-mono" style={{ fontSize: 9, color: "rgba(10,14,20,0.5)", marginTop: 2 }}>{p.t} · ATL HQ</div>
                 </div>
                 <span style={{ color: "rgba(10,14,20,0.5)", letterSpacing: "2px" }}>···</span>
               </div>
@@ -129,8 +164,8 @@ export default function TimelineScreen() {
               )}
 
               <div style={{ padding: "12px 14px", display: "flex", gap: 16, alignItems: "center", borderTop: "1px solid rgba(10,14,20,0.06)" }}>
-                <div style={{ display: "flex", gap: 5, alignItems: "center" }}><Icon name="heart" size={16} /><span className="e-mono" style={{ fontSize: 10 }}>{p.likes}</span></div>
-                <div style={{ display: "flex", gap: 5, alignItems: "center" }}><Icon name="crew" size={16} /><span className="e-mono" style={{ fontSize: 10 }}>{p.comments}</span></div>
+                <button style={{ display: "flex", gap: 5, alignItems: "center", background: "transparent", border: "none", color: "var(--ink)", cursor: "pointer", padding: 0 }}><Icon name="heart" size={16} /><span className="e-mono" style={{ fontSize: 10 }}>{p.likes}</span></button>
+                <button style={{ display: "flex", gap: 5, alignItems: "center", background: "transparent", border: "none", color: "var(--ink)", cursor: "pointer", padding: 0 }}><Icon name="crew" size={16} /><span className="e-mono" style={{ fontSize: 10 }}>{p.comments}</span></button>
                 <div style={{ marginLeft: "auto" }}><Icon name="arrowUpRight" size={16} /></div>
               </div>
             </div>
@@ -138,7 +173,6 @@ export default function TimelineScreen() {
         </div>
       </div>
       <TabBar />
-      <HomeIndicator />
     </div>
   );
 }

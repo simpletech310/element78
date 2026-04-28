@@ -1,10 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { StatusBar, HomeIndicator } from "@/components/chrome/StatusBar";
+import { Navbar } from "@/components/site/Navbar";
 import { Photo } from "@/components/ui/Photo";
 import { Icon } from "@/components/ui/Icon";
 import { AddToBagFull } from "@/components/shop/AddToBag";
-import { CartButton } from "@/components/shop/CartButton";
 import { getProduct } from "@/lib/data/queries";
 
 export default async function ProductDetail({ params }: { params: { slug: string } }) {
@@ -21,28 +20,26 @@ export default async function ProductDetail({ params }: { params: { slug: string
   ];
 
   return (
-    <div className="app" style={{ height: "100dvh" }}>
-      <StatusBar />
-      <div className="app-scroll" style={{ paddingBottom: 110 }}>
-        <div style={{ position: "absolute", top: 50, left: 22, right: 22, zIndex: 10, display: "flex", justifyContent: "space-between" }}>
-          <Link href="/shop" style={{ width: 40, height: 40, borderRadius: 999, background: "rgba(242,238,232,0.85)", backdropFilter: "blur(10px)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ink)" }}>
-            <span style={{ transform: "rotate(180deg)", display: "inline-flex" }}><Icon name="chevron" size={18} /></span>
+    <div style={{ background: "var(--bone)", color: "var(--ink)", fontFamily: "var(--font-body)", minHeight: "100dvh" }}>
+      <Navbar />
+      <div style={{ paddingBottom: 120, maxWidth: 1180, margin: "0 auto" }}>
+        <div style={{ padding: "16px 22px 6px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <Link href="/shop" className="e-mono" style={{ display: "inline-flex", alignItems: "center", gap: 8, color: "var(--ink)", fontSize: 11, letterSpacing: "0.2em" }}>
+            <span style={{ transform: "rotate(180deg)", display: "inline-flex" }}><Icon name="chevron" size={14} /></span>
+            BACK TO SHOP
           </Link>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button style={{ width: 40, height: 40, borderRadius: 999, background: "rgba(242,238,232,0.85)", backdropFilter: "blur(10px)", border: "none", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name="heart" size={18} /></button>
-            <CartButton />
-          </div>
+          <button style={{ width: 40, height: 40, borderRadius: 999, background: "rgba(10,14,20,0.06)", border: "none", display: "flex", alignItems: "center", justifyContent: "center" }} aria-label="Save"><Icon name="heart" size={18} /></button>
         </div>
 
-        <div style={{ position: "relative", height: 540, background: "var(--bone-2)" }}>
+        <div style={{ position: "relative", height: "min(620px, 75vh)", background: "var(--bone-2)" }}>
           {gallery[0] && <Photo src={gallery[0]} alt={product.name} style={{ position: "absolute", inset: 0 }} />}
-          <div style={{ position: "absolute", bottom: 14, left: 0, right: 0, display: "flex", gap: 6, justifyContent: "center" }}>
+          <div style={{ position: "absolute", bottom: 16, left: 0, right: 0, display: "flex", gap: 6, justifyContent: "center" }}>
             {gallery.map((_, i) => (
               <div key={i} style={{ width: i === 0 ? 22 : 6, height: 6, borderRadius: 999, background: i === 0 ? "var(--ink)" : "rgba(10,14,20,0.3)" }} />
             ))}
           </div>
           {product.tag && (
-            <div style={{ position: "absolute", top: 110, left: 22 }}>
+            <div style={{ position: "absolute", top: 18, left: 22 }}>
               <span className="e-tag" style={{ background: "var(--ink)", color: "var(--sky)", padding: "5px 9px", borderRadius: 3 }}>{product.tag} · NEW</span>
             </div>
           )}
@@ -97,7 +94,6 @@ export default async function ProductDetail({ params }: { params: { slug: string
           ))}
         </div>
       </div>
-      <HomeIndicator />
     </div>
   );
 }

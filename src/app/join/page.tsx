@@ -2,7 +2,6 @@ import Link from "next/link";
 import { Photo } from "@/components/ui/Photo";
 import { Wordmark } from "@/components/brand/Wordmark";
 import { Icon } from "@/components/ui/Icon";
-import { StatusBar, HomeIndicator } from "@/components/chrome/StatusBar";
 import { signUpAction } from "@/lib/auth-actions";
 
 export default function JoinPage({ searchParams }: { searchParams: { error?: string } }) {
@@ -14,14 +13,13 @@ export default function JoinPage({ searchParams }: { searchParams: { error?: str
   const proofs = ["/assets/pilates-pink.jpg","/assets/blue-hair-selfie.jpg","/assets/dumbbell-street.jpg","/assets/blue-set-rooftop.jpg"];
 
   return (
-    <div className="app app-dark" style={{ background: "#000", height: "100dvh" }}>
-      <StatusBar dark />
-      <div style={{ position: "absolute", inset: 0 }}>
+    <div style={{ background: "#000", minHeight: "100dvh", position: "relative", overflow: "hidden" }}>
+      <div style={{ position: "fixed", inset: 0 }}>
         <Photo src="/assets/blue-set-rooftop.jpg" alt="" style={{ position: "absolute", inset: 0, opacity: 0.85 }} />
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(10,14,20,0.5) 0%, rgba(10,14,20,0.05) 30%, rgba(10,14,20,0.85) 75%, rgba(10,14,20,1) 100%)" }} />
       </div>
 
-      <div className="app-scroll app-top" style={{ position: "relative", paddingBottom: 30 }}>
+      <div style={{ position: "relative", padding: "28px 22px 40px", maxWidth: 520, margin: "0 auto" }}>
         <div style={{ padding: "0 22px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <Wordmark size={20} color="var(--bone)" />
           <Link href="/login" style={{ background: "transparent", border: "none", color: "var(--bone)", fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.14em" }}>
@@ -29,7 +27,7 @@ export default function JoinPage({ searchParams }: { searchParams: { error?: str
           </Link>
         </div>
 
-        <div style={{ padding: "120px 22px 30px" }}>
+        <div style={{ padding: "60px 0 30px" }}>
           <div className="e-mono" style={{ color: "var(--sky)" }}>◉ FROM ATLANTA · 24/7</div>
           <div className="e-display glow" style={{ fontSize: 64, lineHeight: 0.88, marginTop: 14 }}>
             BE IN<br/>YOUR<br/>ELEMENT.
@@ -103,7 +101,6 @@ export default function JoinPage({ searchParams }: { searchParams: { error?: str
           </div>
         </form>
       </div>
-      <HomeIndicator dark />
     </div>
   );
 }
