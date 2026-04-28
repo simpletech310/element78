@@ -6,10 +6,10 @@ import { listLocations } from "@/lib/data/queries";
 
 export default async function LocationsPage() {
   const locs = await listLocations();
-  const primary = locs.find(l => l.slug === "compton-hq") ?? locs[0];
+  const primary = locs.find(l => l.status === "active" && l.sort_order === 1) ?? locs[0];
   const otherActive = locs.filter(l => l.status === "active" && l.id !== primary?.id);
   const waitlist = locs.filter(l => l.status === "waitlist");
-  const waitDates = ["SUMMER '26", "FALL '26", "EARLY '27"];
+  const waitDates = ["SUMMER '26", "FALL '26", "EARLY '27", "MID '27"];
 
   return (
     <div className="app" style={{ height: "100dvh" }}>
@@ -37,14 +37,10 @@ export default async function LocationsPage() {
               <path d="M0 90 Q80 70 160 95 T320 80" stroke="#8FB8D6" strokeWidth="1" fill="none" opacity="0.4" />
               <path d="M0 130 Q100 115 200 140 T320 125" stroke="#8FB8D6" strokeWidth="1" fill="none" opacity="0.3" />
             </svg>
-            <div style={{ position: "absolute", left: "22%", top: "58%" }}>
+            <div style={{ position: "absolute", left: "70%", top: "44%" }}>
               <div style={{ position: "absolute", inset: -10, borderRadius: "50%", background: "rgba(143,184,214,0.3)", animation: "pulse-ring 2s infinite" }} />
               <div style={{ width: 18, height: 18, borderRadius: "50%", background: "var(--sky)", border: "3px solid var(--ink)", position: "relative" }} />
-              <div className="e-mono" style={{ marginTop: 6, color: "var(--sky)", fontSize: 9, whiteSpace: "nowrap" }}>COMPTON HQ</div>
-            </div>
-            <div style={{ position: "absolute", left: "74%", top: "40%" }}>
-              <div style={{ width: 14, height: 14, borderRadius: "50%", background: "var(--rose)", border: "2px solid var(--ink)" }} />
-              <div className="e-mono" style={{ marginTop: 6, color: "var(--rose)", fontSize: 9, whiteSpace: "nowrap" }}>ATL · WEST END</div>
+              <div className="e-mono" style={{ marginTop: 6, color: "var(--sky)", fontSize: 9, whiteSpace: "nowrap" }}>ATLANTA HQ</div>
             </div>
             <div style={{ position: "absolute", left: "52%", top: "72%" }}>
               <div style={{ width: 10, height: 10, borderRadius: "50%", background: "transparent", border: "2px dashed rgba(242,238,232,0.6)" }} />
@@ -66,8 +62,8 @@ export default async function LocationsPage() {
               <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, transparent 35%, rgba(10,14,20,0.95))" }} />
               <div style={{ position: "absolute", top: 14, left: 14, padding: "5px 10px", borderRadius: 999, background: "var(--sky)", color: "var(--ink)" }} className="e-mono">◉ CURRENT</div>
               <div style={{ position: "absolute", left: 16, right: 16, bottom: 14, color: "var(--bone)" }}>
-                <div className="e-mono" style={{ color: "var(--sky)" }}>ELEMENT 78 · {primary.name.toUpperCase()}</div>
-                <div className="e-display" style={{ fontSize: 26, lineHeight: 0.95, marginTop: 4 }}>1408 W ROSECRANS</div>
+                <div className="e-mono" style={{ color: "var(--sky)" }}>FLAGSHIP · ELEMENT 78</div>
+                <div className="e-display" style={{ fontSize: 30, lineHeight: 0.95, marginTop: 4 }}>{primary.name.toUpperCase()}</div>
                 <div style={{ display: "flex", gap: 10, marginTop: 10, alignItems: "center" }}>
                   <span className="e-mono" style={{ color: "rgba(242,238,232,0.7)", fontSize: 9 }}>OPEN 24/7</span>
                   <span style={{ width: 3, height: 3, borderRadius: "50%", background: "rgba(242,238,232,0.4)" }} />
@@ -90,9 +86,9 @@ export default async function LocationsPage() {
                   <div style={{ flex: 1 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                       <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--rose)" }} />
-                      <span className="e-mono" style={{ color: "rgba(10,14,20,0.5)" }}>{l.name.toUpperCase()}</span>
+                      <span className="e-mono" style={{ color: "rgba(10,14,20,0.5)" }}>SISTER LOCATION</span>
                     </div>
-                    <div style={{ fontFamily: "var(--font-display)", fontSize: 17, marginTop: 4, lineHeight: 1.05 }}>845 RALPH D ABERNATHY BLVD</div>
+                    <div style={{ fontFamily: "var(--font-display)", fontSize: 17, marginTop: 4, lineHeight: 1.05 }}>{l.name.toUpperCase()}</div>
                     <div style={{ display: "flex", gap: 10, marginTop: 8 }} className="e-mono">
                       <span style={{ fontSize: 9, color: "rgba(10,14,20,0.5)" }}>OPEN 24/7</span>
                     </div>

@@ -33,7 +33,7 @@ export default async function GymScreen() {
       <div className="app-scroll app-top" style={{ paddingBottom: 100 }}>
         <div style={{ padding: "14px 22px 4px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
-            <Link href="/locations" className="e-mono" style={{ color: "rgba(10,14,20,0.5)" }}>HQ · COMPTON</Link>
+            <Link href="/locations" className="e-mono" style={{ color: "rgba(10,14,20,0.5)" }}>HQ · ATLANTA</Link>
             <div className="e-display" style={{ fontSize: 36, marginTop: 2 }}>THE GYM</div>
           </div>
           <button style={{ width: 40, height: 40, borderRadius: 999, background: "var(--ink)", color: "var(--sky)", border: "none", display: "flex", alignItems: "center", justifyContent: "center" }}>

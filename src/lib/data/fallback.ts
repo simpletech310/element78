@@ -4,17 +4,19 @@
 import type { ClassRow, Location, Post, Product, Trainer } from "./types";
 
 export const fallbackLocations: Location[] = [
-  { id: "loc-cpt", slug: "compton-hq", name: "Compton HQ", city: "Compton", state: "CA", status: "active", hero_image: "/assets/blue-hair-gym.jpg", lat: 33.8958, lng: -118.2201, sort_order: 1 },
-  { id: "loc-atl", slug: "atl-west-end", name: "ATL West End", city: "Atlanta", state: "GA", status: "active", hero_image: "/assets/dumbbell-street.jpg", lat: 33.749, lng: -84.388, sort_order: 2 },
-  { id: "loc-hou", slug: "houston-third-ward", name: "Houston · Third Ward", city: "Houston", state: "TX", status: "waitlist", hero_image: null, lat: 29.7604, lng: -95.3698, sort_order: 3 },
-  { id: "loc-nyc", slug: "nyc-bed-stuy", name: "NYC · Bed-Stuy", city: "Brooklyn", state: "NY", status: "waitlist", hero_image: null, lat: 40.6872, lng: -73.9418, sort_order: 4 },
-  { id: "loc-oak", slug: "oakland-fruitvale", name: "Oakland · Fruitvale", city: "Oakland", state: "CA", status: "waitlist", hero_image: null, lat: 37.7749, lng: -122.2247, sort_order: 5 },
+  { id: "loc-atl", slug: "atlanta-hq", name: "Atlanta HQ", city: "Atlanta", state: "GA", status: "active", hero_image: "/assets/element78-hero.jpg", lat: 33.749, lng: -84.388, sort_order: 1 },
+  { id: "loc-la", slug: "los-angeles", name: "Los Angeles", city: "Los Angeles", state: "CA", status: "waitlist", hero_image: "/assets/blue-hair-gym.jpg", lat: 34.0522, lng: -118.2437, sort_order: 2 },
+  { id: "loc-hou", slug: "houston", name: "Houston", city: "Houston", state: "TX", status: "waitlist", hero_image: null, lat: 29.7604, lng: -95.3698, sort_order: 3 },
+  { id: "loc-nyc", slug: "new-york", name: "New York", city: "Brooklyn", state: "NY", status: "waitlist", hero_image: null, lat: 40.6872, lng: -73.9418, sort_order: 4 },
+  { id: "loc-dc", slug: "washington-dc", name: "Washington DC", city: "Washington", state: "DC", status: "waitlist", hero_image: null, lat: 38.9072, lng: -77.0369, sort_order: 5 },
 ];
 
 export const fallbackTrainers: Trainer[] = [
-  { id: "tr-kai", slug: "kai-brooks", name: "Kai Brooks", headline: "Pilates + reformer. Certified BASI. 8 yrs.", bio: "Compton-raised, LA-trained. Builds slow strength and long lines. Music loud, cues precise.", specialties: ["Reformer","Mat Pilates","Mobility"], avatar_url: "/assets/blue-hair-gym.jpg", hero_image: "/assets/blue-hair-gym.jpg", home_location_id: "loc-cpt", rating: 4.95 },
+  { id: "tr-kai", slug: "kai-brooks", name: "Kai Brooks", headline: "Pilates + reformer. Certified BASI. 8 yrs.", bio: "Builds slow strength and long lines. Music loud, cues precise. Lead reformer trainer.", specialties: ["Reformer","Mat Pilates","Mobility"], avatar_url: "/assets/blue-hair-gym.jpg", hero_image: "/assets/blue-hair-gym.jpg", home_location_id: "loc-atl", rating: 4.95 },
   { id: "tr-amara", slug: "amara-jones", name: "Amara Jones", headline: "HIIT + functional strength. NSCA-CPT.", bio: "Heavy basics. Quick rounds. No filler.", specialties: ["HIIT","Strength","Conditioning"], avatar_url: "/assets/dumbbell-street.jpg", hero_image: "/assets/dumbbell-street.jpg", home_location_id: "loc-atl", rating: 4.91 },
-  { id: "tr-simone", slug: "simone-okafor", name: "Simone Okafor", headline: "Mobility + recovery. Yoga + breathwork.", bio: "Restoration as resistance.", specialties: ["Yoga","Breathwork","Mobility"], avatar_url: "/assets/pilates-pink.jpg", hero_image: "/assets/pilates-pink.jpg", home_location_id: "loc-cpt", rating: 4.97 },
+  { id: "tr-nova", slug: "nova-thomas", name: "Nova Thomas", headline: "Reformer + barre. 5 yrs.", bio: "Long lines, slow burns. Music loud, breath quiet.", specialties: ["Reformer","Barre","Pilates"], avatar_url: "/assets/blue-hair-selfie.jpg", hero_image: "/assets/blue-hair-selfie.jpg", home_location_id: "loc-atl", rating: 4.93 },
+  { id: "tr-jay", slug: "jay-elias", name: "Jay Elias", headline: "Strength + 1-on-1. 7 yrs.", bio: "Big numbers, sharp form. Builds the engine and the architecture.", specialties: ["Strength","1-on-1"], avatar_url: "/assets/hoodie-grey-blonde.jpg", hero_image: "/assets/hoodie-grey-blonde.jpg", home_location_id: "loc-atl", rating: 4.88 },
+  { id: "tr-simone", slug: "simone-okafor", name: "Simone Okafor", headline: "Mobility + recovery. Yoga + breathwork.", bio: "Restoration as resistance.", specialties: ["Yoga","Breathwork","Mobility"], avatar_url: "/assets/pilates-pink.jpg", hero_image: "/assets/pilates-pink.jpg", home_location_id: "loc-atl", rating: 4.97 },
 ];
 
 const today = new Date();
@@ -26,12 +28,12 @@ const at = (dayOffset: number, hour: number, min = 0) => {
 };
 
 export const fallbackClasses: ClassRow[] = [
-  { id: "cls-1", slug: "west-coast-flow-1", location_id: "loc-cpt", trainer_id: "tr-kai", name: "WEST COAST FLOW", kind: "reformer", starts_at: at(2, 18, 30), duration_min: 50, capacity: 14, booked: 9, intensity: "MD", room: "STUDIO B", hero_image: "/assets/blue-set-rooftop.jpg" },
-  { id: "cls-2", slug: "core-compton-1", location_id: "loc-cpt", trainer_id: "tr-simone", name: "CORE COMPTON", kind: "pilates", starts_at: at(0, 7, 0), duration_min: 45, capacity: 12, booked: 8, intensity: "HI", room: "STUDIO A", hero_image: "/assets/pilates-pink.jpg" },
-  { id: "cls-3", slug: "morning-mobility", location_id: "loc-cpt", trainer_id: "tr-simone", name: "MORNING MOBILITY", kind: "yoga", starts_at: at(0, 6, 0), duration_min: 30, capacity: 16, booked: 4, intensity: "LO", room: "STUDIO C", hero_image: "/assets/bridge-pose.jpg" },
+  { id: "cls-1", slug: "west-coast-flow-1", location_id: "loc-atl", trainer_id: "tr-kai", name: "WEST COAST FLOW", kind: "reformer", starts_at: at(2, 18, 30), duration_min: 50, capacity: 14, booked: 9, intensity: "MD", room: "STUDIO B", hero_image: "/assets/blue-set-rooftop.jpg" },
+  { id: "cls-2", slug: "core-compton-1", location_id: "loc-atl", trainer_id: "tr-simone", name: "CORE COMPTON", kind: "pilates", starts_at: at(0, 7, 0), duration_min: 45, capacity: 12, booked: 8, intensity: "HI", room: "STUDIO A", hero_image: "/assets/pilates-pink.jpg" },
+  { id: "cls-3", slug: "morning-mobility", location_id: "loc-atl", trainer_id: "tr-simone", name: "MORNING MOBILITY", kind: "yoga", starts_at: at(0, 6, 0), duration_min: 30, capacity: 16, booked: 4, intensity: "LO", room: "STUDIO C", hero_image: "/assets/bridge-pose.jpg" },
   { id: "cls-4", slug: "street-hiit", location_id: "loc-atl", trainer_id: "tr-amara", name: "STREET HIIT", kind: "hiit", starts_at: at(0, 12, 0), duration_min: 30, capacity: 20, booked: 20, intensity: "HI", room: "FLOOR", hero_image: "/assets/dumbbell-street.jpg" },
-  { id: "cls-5", slug: "private-1on1", location_id: "loc-cpt", trainer_id: "tr-kai", name: "PRIVATE · 1:1", kind: "private", starts_at: at(0, 17, 0), duration_min: 60, capacity: 1, booked: 0, intensity: "MD", room: "STUDIO B", hero_image: "/assets/blue-hair-gym.jpg" },
-  { id: "cls-6", slug: "rooftop-sunset", location_id: "loc-cpt", trainer_id: "tr-kai", name: "ROOFTOP SUNSET", kind: "reformer", starts_at: at(0, 19, 30), duration_min: 50, capacity: 12, booked: 12, intensity: "MD", room: "ROOF", hero_image: "/assets/blue-set-rooftop.jpg" },
+  { id: "cls-5", slug: "private-1on1", location_id: "loc-atl", trainer_id: "tr-kai", name: "PRIVATE · 1:1", kind: "private", starts_at: at(0, 17, 0), duration_min: 60, capacity: 1, booked: 0, intensity: "MD", room: "STUDIO B", hero_image: "/assets/blue-hair-gym.jpg" },
+  { id: "cls-6", slug: "rooftop-sunset", location_id: "loc-atl", trainer_id: "tr-kai", name: "ROOFTOP SUNSET", kind: "reformer", starts_at: at(0, 19, 30), duration_min: 50, capacity: 12, booked: 12, intensity: "MD", room: "ROOF", hero_image: "/assets/blue-set-rooftop.jpg" },
 ];
 
 export const fallbackProducts: Product[] = [

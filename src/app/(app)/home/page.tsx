@@ -32,7 +32,7 @@ export default async function HomeScreen() {
         <div style={{ padding: "14px 22px 18px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
             <div className="e-mono" style={{ color: "rgba(242,238,232,0.5)" }}>
-              {new Date().toLocaleDateString("en-US", { weekday: "short" }).toUpperCase()} / {(new Date().getMonth()+1).toString().padStart(2,"0")}.{new Date().getDate().toString().padStart(2,"0")} / COMPTON
+              {new Date().toLocaleDateString("en-US", { weekday: "short" }).toUpperCase()} / {(new Date().getMonth()+1).toString().padStart(2,"0")}.{new Date().getDate().toString().padStart(2,"0")} / ATL
             </div>
             <div style={{ fontFamily: "var(--font-display)", fontSize: 30, lineHeight: 0.95, marginTop: 6, letterSpacing: "0.02em" }}>
               GOOD MORNING,<br/><span style={{ color: "var(--sky)" }}>NAYA.</span>

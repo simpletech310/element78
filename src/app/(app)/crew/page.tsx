@@ -93,7 +93,7 @@ export default async function CrewScreen() {
                       <span style={{ fontFamily: "var(--font-display)", fontSize: 14, letterSpacing: "0.02em" }}>{meta.author ?? "MEMBER"}</span>
                       {meta.tag && <span className="e-mono" style={{ background: "var(--sky)", color: "var(--ink)", padding: "1px 5px", borderRadius: 3, fontSize: 8 }}>{meta.tag}</span>}
                     </div>
-                    <div className="e-mono" style={{ fontSize: 9, color: "rgba(10,14,20,0.5)", marginTop: 2 }}>{new Date(p.created_at).toLocaleString()}</div>
+                    <div className="e-mono" style={{ fontSize: 9, color: "rgba(10,14,20,0.5)", marginTop: 2 }}>{new Date(p.created_at).toLocaleString()} · ATL HQ</div>
                   </div>
                   <Icon name="chevron" size={18} />
                 </div>

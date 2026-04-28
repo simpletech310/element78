@@ -7,7 +7,7 @@ import { signUpAction } from "@/lib/auth-actions";
 
 export default function JoinPage({ searchParams }: { searchParams: { error?: string } }) {
   const pillars: { i: "pin" | "play" | "bag"; t: string; s: string }[] = [
-    { i: "pin", t: "COMPTON GYM", s: "24-hour access · classes · 1:1" },
+    { i: "pin", t: "THE FLAGSHIP", s: "Atlanta · 24-hour access · classes · 1:1" },
     { i: "play", t: "AI STUDIO", s: "Live avatar coaching, anywhere" },
     { i: "bag", t: "THE STORE", s: "Wear it. Train in it. Leave the house in it." },
   ];
@@ -30,7 +30,7 @@ export default function JoinPage({ searchParams }: { searchParams: { error?: str
         </div>
 
         <div style={{ padding: "120px 22px 30px" }}>
-          <div className="e-mono" style={{ color: "var(--sky)" }}>◉ FROM COMPTON, CA</div>
+          <div className="e-mono" style={{ color: "var(--sky)" }}>◉ FROM ATLANTA · 24/7</div>
           <div className="e-display glow" style={{ fontSize: 64, lineHeight: 0.88, marginTop: 14 }}>
             BE IN<br/>YOUR<br/>ELEMENT.
           </div>
