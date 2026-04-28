@@ -182,7 +182,7 @@ export default async function MembershipPage() {
           <h2 className="e-display glow" style={{ fontSize: "clamp(40px, 8vw, 64px)", marginTop: 14, lineHeight: 0.95 }}>START FREE.<br/>STAY AS LONG AS IT&apos;S WORKING.</h2>
           <div style={{ marginTop: 24, display: "flex", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
             <Link href="/join" className="btn btn-sky" style={{ minWidth: 200 }}>JOIN ELEMENT</Link>
-            <Link href="/join#day-pass" className="btn btn-ghost" style={{ color: "var(--bone)", borderColor: "rgba(242,238,232,0.3)" }}>TRY A DAY FIRST</Link>
+            <Link href="/classes" className="btn btn-ghost" style={{ color: "var(--bone)", borderColor: "rgba(242,238,232,0.3)" }}>SEE CLASSES</Link>
           </div>
         </div>
       </section>

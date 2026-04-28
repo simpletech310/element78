@@ -102,7 +102,7 @@ export default async function LocationsPage() {
                 <span className="e-mono" style={{ color: "rgba(242,238,232,0.7)", fontSize: 10 }}>14 CLASSES TODAY</span>
                 <span style={{ width: 4, height: 4, borderRadius: "50%", background: "rgba(242,238,232,0.4)" }} />
                 <span className="e-mono" style={{ color: "rgba(242,238,232,0.7)", fontSize: 10 }}>6 TRAINERS ON DECK</span>
-                <span className="btn btn-sky" style={{ marginLeft: "auto", padding: "10px 18px" }}>GET A DAY PASS</span>
+                <span className="btn btn-sky" style={{ marginLeft: "auto", padding: "10px 18px" }}>VISIT THE FLOOR</span>
               </div>
             </div>
           </Link>

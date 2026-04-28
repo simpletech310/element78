@@ -7,7 +7,7 @@ const cols: { h: string; items: { label: string; href: string }[] }[] = [
     items: [
       { label: "Atlanta", href: "/atlanta" },
       { label: "Membership", href: "/membership" },
-      { label: "Day Pass", href: "/join#day-pass" },
+      { label: "Classes", href: "/classes" },
     ],
   },
   {

@@ -31,14 +31,6 @@ export default async function JoinPage({ searchParams }: { searchParams: { error
     "/assets/pilates-pink.jpg",
   ];
 
-  // What the day pass actually gets you — kept tight, the long-form page is gone.
-  const dayPassIncludes: { i: IconName; t: string }[] = [
-    { i: "gym", t: "Full floor access" },
-    { i: "play", t: "Two classes on the day" },
-    { i: "spark", t: "One AI session" },
-    { i: "heart", t: "Recovery lounge · 30 min" },
-  ];
-
   return (
     <div style={{ background: "var(--ink)", color: "var(--bone)", fontFamily: "var(--font-body)", minHeight: "100dvh" }}>
       <Navbar authed={false} />
@@ -126,53 +118,12 @@ export default async function JoinPage({ searchParams }: { searchParams: { error
         </form>
       </section>
 
-      {/* DAY PASS — for the iffy. Anchor matches /day-pass redirect. */}
-      <section id="day-pass" style={{ padding: "60px 22px", maxWidth: 1180, margin: "0 auto", scrollMarginTop: 80 }}>
-        <div style={{
-          position: "relative", borderRadius: 22, overflow: "hidden",
-          padding: "44px 28px", background: "linear-gradient(135deg, rgba(143,184,214,0.18), rgba(46,127,176,0.04))",
-          border: "1px solid rgba(143,184,214,0.32)",
-        }}>
-          <Photo src="/assets/atlgym.jpg" alt="" style={{ position: "absolute", inset: 0, opacity: 0.18 }} />
-          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, rgba(10,14,20,0.85), rgba(10,14,20,0.5))" }} />
-
-          <div style={{ position: "relative", display: "grid", gridTemplateColumns: "minmax(0, 1fr)", gap: 28, maxWidth: 1180 }}>
-            <div>
-              <div className="e-mono" style={{ color: "var(--sky)", letterSpacing: "0.25em" }}>◉ NOT READY YET? · DAY PASS · $35</div>
-              <h2 className="e-display" style={{ fontSize: "clamp(36px, 7vw, 60px)", marginTop: 14, lineHeight: 0.92 }}>
-                POP IN.<br/>
-                <span style={{ fontFamily: "var(--font-serif)", fontStyle: "italic", textTransform: "none", letterSpacing: 0, fontWeight: 500 }}>see if it fits.</span>
-              </h2>
-              <p style={{ marginTop: 14, fontSize: 15, color: "rgba(242,238,232,0.78)", maxWidth: 520, lineHeight: 1.6 }}>
-                Visiting Atlanta? Testing the floor before signing up? Pick a class below or grab a day pass — full floor, two classes, an AI session, and recovery time. No commitment.
-              </p>
-
-              <div style={{ marginTop: 22, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
-                {dayPassIncludes.map((it, i) => (
-                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", borderRadius: 12, background: "rgba(143,184,214,0.08)", border: "1px solid rgba(143,184,214,0.2)" }}>
-                    <div style={{ width: 28, height: 28, borderRadius: 8, background: "rgba(143,184,214,0.2)", color: "var(--sky)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <Icon name={it.i} size={14} />
-                    </div>
-                    <div style={{ fontSize: 13, color: "rgba(242,238,232,0.85)" }}>{it.t}</div>
-                  </div>
-                ))}
-              </div>
-
-              <div style={{ marginTop: 24, display: "flex", gap: 10, flexWrap: "wrap" }}>
-                <Link href="/contact" className="btn btn-sky" style={{ minWidth: 200 }}>BOOK A DAY PASS</Link>
-                <Link href="/classes" className="btn btn-ghost" style={{ color: "var(--bone)", borderColor: "rgba(242,238,232,0.3)" }}>SEE ALL CLASSES</Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* CLASSES PREVIEW — drop into one to test-drive */}
       {upcoming.length > 0 && (
-        <section style={{ padding: "20px 22px 80px", maxWidth: 1180, margin: "0 auto" }}>
+        <section style={{ padding: "60px 22px 80px", maxWidth: 1180, margin: "0 auto" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 8 }}>
             <div>
-              <div className="e-mono" style={{ color: "var(--sky)", letterSpacing: "0.25em" }}>OR · DROP INTO A CLASS</div>
+              <div className="e-mono" style={{ color: "var(--sky)", letterSpacing: "0.25em" }}>NOT READY YET? · DROP INTO A CLASS</div>
               <h3 className="e-display" style={{ fontSize: "clamp(28px, 5vw, 40px)", marginTop: 10, lineHeight: 0.95 }}>
                 THIS WEEK ON THE FLOOR.
               </h3>

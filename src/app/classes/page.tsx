@@ -52,7 +52,7 @@ export default async function ClassesPage() {
             Pull up. Take the floor. Leave better.
           </p>
           <p className="reveal reveal-d3" style={{ marginTop: 14, fontSize: 15, color: "rgba(242,238,232,0.7)", maxWidth: 520, lineHeight: 1.6 }}>
-            {totalThisWeek} classes on the schedule this week — strength, HIIT, reformer, Pilates, yoga, conditioning, and mobility. However you need to move, the schedule&rsquo;s got it. Members reserve in-app, day-pass guests sign up at the desk.
+            {totalThisWeek} classes on the schedule this week — strength, HIIT, reformer, Pilates, yoga, conditioning, and mobility. However you need to move, the schedule&rsquo;s got it. Members reserve in-app.
           </p>
         </div>
       </section>
@@ -156,7 +156,7 @@ export default async function ClassesPage() {
           <h2 className="e-display glow" style={{ fontSize: "clamp(40px, 8vw, 64px)", marginTop: 14, lineHeight: 0.95 }}>RESERVE A SPOT.<br/>SEVEN DAYS FREE.</h2>
           <div style={{ marginTop: 24, display: "flex", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
             <Link href="/join" className="btn btn-sky" style={{ minWidth: 200 }}>JOIN ELEMENT</Link>
-            <Link href="/join#day-pass" className="btn btn-ghost" style={{ color: "var(--bone)", borderColor: "rgba(242,238,232,0.3)" }}>OR GRAB A DAY PASS</Link>
+            <Link href="/membership" className="btn btn-ghost" style={{ color: "var(--bone)", borderColor: "rgba(242,238,232,0.3)" }}>SEE MEMBERSHIPS</Link>
           </div>
         </div>
       </section>
