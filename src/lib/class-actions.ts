@@ -158,8 +158,83 @@ export async function cancelBookingAction(formData: FormData) {
     await refundPurchase(linkedPurchase.id, { reason: "requested_by_customer" });
   }
 
+  // Auto-promote the next waitlisted person, oldest waitlist_position first.
+  const { data: nextWaitlist } = await sb
+    .from("bookings")
+    .select("id, user_id")
+    .eq("class_id", classId)
+    .eq("status", "waitlist")
+    .order("waitlist_position", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (nextWaitlist) {
+    const promo = nextWaitlist as { id: string; user_id: string };
+    // Promote: status → reserved, paid_status stays whatever it was on
+    // waitlist (typically "free" — we don't pre-charge waitlists). Booked
+    // count compensates immediately.
+    await sb.from("bookings").update({
+      status: "reserved",
+      waitlist_position: null,
+      waitlisted_at: null,
+    }).eq("id", promo.id);
+    if (cls) {
+      // We just decremented; promotion takes the spot back.
+      await sb.from("classes").update({ booked: Math.max(0, cls.booked) }).eq("id", classId);
+    }
+  }
+
   revalidatePath(`/classes/${classId}`);
   revalidatePath(`/classes`);
   revalidatePath(`/account/history`);
   redirect(`/classes/${classId}?cancelled=1`);
+}
+
+/** Add the current user to a class's waitlist. Idempotent. */
+export async function joinWaitlistAction(formData: FormData) {
+  const classId = String(formData.get("class_id") ?? "");
+  const user = await getUser();
+  if (!user) redirect(`/login?next=${encodeURIComponent(`/classes/${classId}`)}`);
+
+  const sb = createClient();
+  const { data: existing } = await sb.from("bookings").select("id, status").eq("user_id", user.id).eq("class_id", classId).maybeSingle();
+  if (existing) {
+    if ((existing as { status: string }).status === "waitlist") {
+      redirect(`/classes/${classId}?waitlist=already`);
+    }
+    redirect(`/classes/${classId}?error=${encodeURIComponent("You already have a booking here")}`);
+  }
+
+  // Position = current count of waitlisted entries + 1.
+  const { count } = await sb
+    .from("bookings")
+    .select("id", { count: "exact", head: true })
+    .eq("class_id", classId)
+    .eq("status", "waitlist");
+  const position = (count ?? 0) + 1;
+
+  await sb.from("bookings").insert({
+    user_id: user.id,
+    class_id: classId,
+    status: "waitlist",
+    paid_status: "free",
+    price_cents_paid: 0,
+    surface: "class",
+    waitlist_position: position,
+    waitlisted_at: new Date().toISOString(),
+  });
+
+  revalidatePath(`/classes/${classId}`);
+  redirect(`/classes/${classId}?waitlist=joined`);
+}
+
+/** Leave a waitlist entry (user only). */
+export async function leaveWaitlistAction(formData: FormData) {
+  const classId = String(formData.get("class_id") ?? "");
+  const user = await getUser();
+  if (!user) redirect("/login");
+
+  const sb = createClient();
+  await sb.from("bookings").delete().eq("user_id", user.id).eq("class_id", classId).eq("status", "waitlist");
+  revalidatePath(`/classes/${classId}`);
+  redirect(`/classes/${classId}?waitlist=left`);
 }

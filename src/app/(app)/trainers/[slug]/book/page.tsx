@@ -20,7 +20,7 @@ import { requestTrainerBookingAction } from "@/lib/trainer-booking-actions";
 import { joinGroupSessionAction } from "@/lib/trainer-session-actions";
 import type { TrainerSessionMode } from "@/lib/data/types";
 
-type SearchParams = { mode?: string; day?: string; error?: string; program_session?: string };
+type SearchParams = { mode?: string; day?: string; error?: string; program_session?: string; reschedule?: string };
 
 function fmtDollars(cents: number) {
   return `$${(cents / 100).toFixed(0)}`;
@@ -243,6 +243,9 @@ export default async function TrainerBookingPage({
           <input type="hidden" name="mode" value={requestedMode} />
           {searchParams.program_session && (
             <input type="hidden" name="program_session_id" value={searchParams.program_session} />
+          )}
+          {searchParams.reschedule && (
+            <input type="hidden" name="reschedule_of" value={String(searchParams.reschedule)} />
           )}
 
           <div className="e-mono" style={{ color: "var(--sky)", letterSpacing: "0.2em", fontSize: 10 }}>03 · TIME</div>

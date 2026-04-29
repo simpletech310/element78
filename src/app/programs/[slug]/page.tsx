@@ -5,7 +5,8 @@ import { SiteFooter } from "@/components/site/SiteFooter";
 import { FloatingTabBar } from "@/components/site/FloatingTabBar";
 import { Photo } from "@/components/ui/Photo";
 import { Icon } from "@/components/ui/Icon";
-import { getProgram, getEnrollment, listEnrollmentCompletions, listProgramAnnouncements } from "@/lib/data/queries";
+import { getProgram, getEnrollment, listEnrollmentCompletions, listProgramAnnouncements, listJournalEntriesForEnrollment } from "@/lib/data/queries";
+import { saveJournalEntryAction } from "@/lib/journal-actions";
 import { getSavedKindRefs } from "@/lib/data/saved-queries";
 import { getUser } from "@/lib/auth";
 import { enrollAction, completeSessionAction, leaveAction } from "@/lib/program-actions";
@@ -33,6 +34,7 @@ export default async function ProgramDetail({
   const enrollment = user ? await getEnrollment(user.id, program.id) : null;
   const completions = enrollment ? await listEnrollmentCompletions(enrollment.id) : [];
   const announcements = enrollment ? await listProgramAnnouncements(program.id) : [];
+  const journalEntries = enrollment ? await listJournalEntriesForEnrollment(enrollment.id) : {};
   const completedIds = new Set(completions.map(c => c.session_id));
   const savedProgramIds = user ? await getSavedKindRefs(user.id, "program") : new Set<string>();
   const isSaved = savedProgramIds.has(program.id);
@@ -260,6 +262,29 @@ export default async function ProgramDetail({
                         );
                       })}
                     </div>
+
+                    {isAuthed && enrollment && dayItems[0] && (
+                      <details style={{ marginTop: 12 }}>
+                        <summary className="e-mono" style={{ cursor: "pointer", color: "var(--sky)", fontSize: 10, letterSpacing: "0.18em", padding: "4px 0" }}>
+                          + JOURNAL
+                          {journalEntries[dayItems[0].id] ? " · SAVED" : ""}
+                        </summary>
+                        <form action={saveJournalEntryAction} style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8 }}>
+                          <input type="hidden" name="enrollment_id" value={enrollment.id} />
+                          <input type="hidden" name="session_id" value={dayItems[0].id} />
+                          <input type="hidden" name="program_slug" value={program.slug} />
+                          <textarea
+                            name="body"
+                            rows={3}
+                            maxLength={4000}
+                            placeholder="What worked? What hurt? Energy level?"
+                            defaultValue={journalEntries[dayItems[0].id]?.body ?? ""}
+                            style={{ padding: 10, borderRadius: 8, background: "rgba(10,14,20,0.4)", border: "1px solid rgba(143,184,214,0.2)", color: "var(--bone)", fontSize: 13, fontFamily: "var(--font-body)", resize: "vertical" }}
+                          />
+                          <button type="submit" className="btn btn-sky" style={{ alignSelf: "flex-start", padding: "6px 12px", fontSize: 10 }}>SAVE NOTE</button>
+                        </form>
+                      </details>
+                    )}
                   </div>
                 );
               })}

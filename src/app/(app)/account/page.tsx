@@ -44,6 +44,8 @@ export default async function AccountPage({ searchParams }: { searchParams?: { u
     { label: "MY BOOKINGS", href: "/gym", icon: "cal" },
     { label: "SAVED", href: "/account/saved", icon: "heart" },
     { label: "BECOME A COACH", href: "/coach/apply", icon: "fire" },
+    { label: "NOTIFICATIONS", href: "/account/notifications", icon: "settings" },
+    { label: "SECURITY", href: "/account/security", icon: "settings" },
     { label: "WAIVER · WELLNESS", href: "/account/waiver", icon: "heart" },
     { label: "EXPORT MY DATA", href: "/api/account/export", icon: "settings" },
     { label: "DELETE ACCOUNT", href: "/account/delete", icon: "settings" },

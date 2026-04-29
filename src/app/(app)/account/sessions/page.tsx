@@ -160,13 +160,31 @@ function BookingCard({ booking, trainer, compact }: { booking: import("@/lib/dat
           </Link>
         )}
         {(booking.status === "pending_trainer" || booking.status === "confirmed") && (
-          <form action={cancelTrainerBookingAction}>
-            <input type="hidden" name="booking_id" value={booking.id} />
-            <input type="hidden" name="return_to" value="/account/sessions" />
-            <button type="submit" className="btn" style={{ padding: "8px 14px", fontSize: 10, background: "transparent", color: "rgba(242,238,232,0.6)", border: "1px solid rgba(143,184,214,0.2)" }}>
-              CANCEL
-            </button>
-          </form>
+          <>
+            <a
+              href={`/api/ics/trainer-booking/${booking.id}`}
+              className="btn"
+              style={{ padding: "8px 14px", fontSize: 10, background: "transparent", color: "rgba(242,238,232,0.7)", border: "1px solid rgba(143,184,214,0.25)" }}
+            >
+              ADD TO CALENDAR
+            </a>
+            {trainer && (
+              <Link
+                href={`/trainers/${trainer.slug}/book?reschedule=${booking.id}`}
+                className="btn"
+                style={{ padding: "8px 14px", fontSize: 10, background: "transparent", color: "var(--sky)", border: "1px solid rgba(143,184,214,0.4)" }}
+              >
+                RESCHEDULE
+              </Link>
+            )}
+            <form action={cancelTrainerBookingAction}>
+              <input type="hidden" name="booking_id" value={booking.id} />
+              <input type="hidden" name="return_to" value="/account/sessions" />
+              <button type="submit" className="btn" style={{ padding: "8px 14px", fontSize: 10, background: "transparent", color: "rgba(242,238,232,0.6)", border: "1px solid rgba(143,184,214,0.2)" }}>
+                CANCEL
+              </button>
+            </form>
+          </>
         )}
       </div>
     </div>

@@ -788,6 +788,44 @@ export async function getTrainerEarnings(trainerId: string): Promise<TrainerEarn
   return { thisMonthCents, lifetimeCents, thisMonthCount, lifetimeCount, pendingCents, byKind, recent };
 }
 
+export async function listJournalEntriesForEnrollment(enrollmentId: string): Promise<Record<string, { body: string; updated_at: string }>> {
+  if (!isConfigured()) return {};
+  const sb = createClient();
+  const { data } = await sb
+    .from("program_journal_entries")
+    .select("session_id, body, updated_at")
+    .eq("enrollment_id", enrollmentId);
+  const out: Record<string, { body: string; updated_at: string }> = {};
+  for (const r of (data as Array<{ session_id: string; body: string; updated_at: string }>) ?? []) {
+    out[r.session_id] = { body: r.body, updated_at: r.updated_at };
+  }
+  return out;
+}
+
+/** Full-text search across coaches + programs + classes. Returns up to 20 hits. */
+export async function searchAll(query: string): Promise<{
+  trainers: Array<{ id: string; slug: string; name: string; headline: string | null }>;
+  programs: Array<{ id: string; slug: string; name: string; subtitle: string | null }>;
+  classes: Array<{ id: string; name: string; kind: string | null; starts_at: string }>;
+}> {
+  const empty = { trainers: [], programs: [], classes: [] };
+  const q = query.trim();
+  if (!q || !isConfigured()) return empty;
+  const sb = createClient();
+  // websearch_to_tsquery is gentler than plainto_tsquery for casual input.
+  const tsQuery = q.split(/\s+/).filter(Boolean).join(" & ");
+  const [trainers, programs, classes] = await Promise.all([
+    sb.from("trainers").select("id, slug, name, headline").textSearch("search_doc", tsQuery, { type: "websearch" }).limit(8),
+    sb.from("programs").select("id, slug, name, subtitle").textSearch("search_doc", tsQuery, { type: "websearch" }).limit(8),
+    sb.from("classes").select("id, name, kind, starts_at").textSearch("search_doc", tsQuery, { type: "websearch" }).gte("starts_at", new Date().toISOString()).order("starts_at").limit(8),
+  ]);
+  return {
+    trainers: (trainers.data as Array<{ id: string; slug: string; name: string; headline: string | null }>) ?? [],
+    programs: (programs.data as Array<{ id: string; slug: string; name: string; subtitle: string | null }>) ?? [],
+    classes: (classes.data as Array<{ id: string; name: string; kind: string | null; starts_at: string }>) ?? [],
+  };
+}
+
 export async function listProgramAnnouncements(programId: string): Promise<Array<{ id: string; title: string; body: string; created_at: string }>> {
   if (!isConfigured()) return [];
   const sb = createClient();

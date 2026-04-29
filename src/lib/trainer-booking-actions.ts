@@ -44,6 +44,7 @@ export async function requestTrainerBookingAction(formData: FormData) {
   const goals = String(formData.get("goals") ?? "").trim() || null;
   const routineSlug = String(formData.get("routine_slug") ?? "").trim() || null;
   const programSessionId = String(formData.get("program_session_id") ?? "").trim() || null;
+  const rescheduleOf = String(formData.get("reschedule_of") ?? "").trim() || null;
 
   if (!trainerId || !startsAt || !endsAt) {
     redirect(`/trainers/${trainerSlug}/book?error=${encodeURIComponent("Missing booking details")}`);
@@ -55,6 +56,41 @@ export async function requestTrainerBookingAction(formData: FormData) {
   }
 
   await requireWaivers(user!.id, `/trainers/${trainerSlug}/book`);
+
+  // Reschedule mode: cancel + refund the old booking first, then proceed
+  // with a normal new booking flow. Refund happens via Stripe API; the local
+  // row flips immediately so the slot is freed.
+  if (rescheduleOf) {
+    const sbCancel = createClient();
+    const { data: oldBooking } = await sbCancel
+      .from("trainer_bookings")
+      .select("id, user_id, paid_status, session_id")
+      .eq("id", rescheduleOf)
+      .maybeSingle();
+    const oldRow = oldBooking as { id: string; user_id: string; paid_status: string; session_id: string | null } | null;
+    if (!oldRow || oldRow.user_id !== user!.id) {
+      redirect(`/trainers/${trainerSlug}/book?error=${encodeURIComponent("Booking to reschedule not found")}`);
+    }
+    const wasPaid = oldRow.paid_status === "paid";
+    await sbCancel
+      .from("trainer_bookings")
+      .update({
+        status: "cancelled",
+        paid_status: wasPaid ? "refunded" : oldRow.paid_status,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", oldRow.id);
+    if (wasPaid) {
+      const adminCli = createAdminClient();
+      const { data: purchase } = await adminCli.from("purchases").select("id").eq("trainer_booking_id", oldRow.id).maybeSingle();
+      if (purchase) {
+        try { await refundPurchase((purchase as { id: string }).id, { reason: "requested_by_customer" }); } catch (e) { console.warn("[reschedule] refund failed", e); }
+      }
+    }
+    if (oldRow.session_id) {
+      await createAdminClient().from("trainer_sessions").update({ status: "cancelled" }).eq("id", oldRow.session_id);
+    }
+  }
 
   const sb = createClient();
   const settings = await getTrainerSessionSettings(trainerId);

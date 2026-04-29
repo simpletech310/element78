@@ -465,3 +465,26 @@ export type CoachApplication = {
   created_at: string;
   updated_at: string;
 };
+
+/* -------------------------------------------------------------------------- */
+/*  V1 wave 3 (migration 0020)                                                */
+/* -------------------------------------------------------------------------- */
+
+export type NotificationPreferences = {
+  user_id: string;
+  email_booking_confirmations: boolean;
+  email_class_reminders: boolean;
+  email_program_announcements: boolean;
+  email_messages: boolean;
+  email_marketing: boolean;
+  updated_at: string;
+};
+
+export type ProgramJournalEntry = {
+  id: string;
+  enrollment_id: string;
+  session_id: string;
+  body: string;
+  created_at: string;
+  updated_at: string;
+};

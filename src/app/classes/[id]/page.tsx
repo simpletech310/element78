@@ -10,7 +10,7 @@ import { getSavedKindRefs } from "@/lib/data/saved-queries";
 import { SaveButton } from "@/components/site/SaveButton";
 import { SpotPicker } from "@/components/site/SpotPicker";
 import { getUser } from "@/lib/auth";
-import { bookClassAction, cancelBookingAction } from "@/lib/class-actions";
+import { bookClassAction, cancelBookingAction, joinWaitlistAction } from "@/lib/class-actions";
 
 function fmtPrice(cents: number) {
   if (!cents) return "FREE";
@@ -152,10 +152,8 @@ export default async function ClassDetail({
               </form>
             )}
             {user && !isReserved && isFull && !c.has_equipment && (
-              <form action={bookClassAction}>
+              <form action={joinWaitlistAction}>
                 <input type="hidden" name="class_id" value={c.id} />
-                <input type="hidden" name="requires_payment" value={String(c.requires_payment)} />
-                <input type="hidden" name="price_cents" value={c.price_cents} />
                 <button type="submit" className="btn btn-ghost" style={{ color: "var(--bone)", borderColor: "rgba(242,238,232,0.4)", minWidth: 200 }}>JOIN WAITLIST</button>
               </form>
             )}
