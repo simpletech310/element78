@@ -54,7 +54,7 @@ export default async function TrainScreen() {
             <div style={{ position: "absolute", top: 16, left: 16, right: 16, display: "flex", justifyContent: "space-between" }}>
               <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(10,14,20,0.7)", padding: "6px 10px", borderRadius: 999, color: "var(--sky)", backdropFilter: "blur(10px)" }}>
                 <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--sky)" }} />
-                <span className="e-tag">AI GUIDED · LIVE AVATAR</span>
+                <span className="e-tag">STUDIO · GUIDED</span>
               </div>
               <div className="e-tag" style={{ background: "rgba(10,14,20,0.7)", backdropFilter: "blur(10px)", padding: "6px 10px", borderRadius: 999, color: "var(--bone)" }}>NEW</div>
             </div>
@@ -95,7 +95,7 @@ export default async function TrainScreen() {
             that auto-advances through sets and rests. */}
         <div style={{ padding: "16px 22px 8px", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
           <div>
-            <div className="e-display" style={{ fontSize: 22 }}>AI STUDIO</div>
+            <div className="e-display" style={{ fontSize: 22 }}>STUDIO</div>
             <div className="e-mono" style={{ color: "rgba(10,14,20,0.5)", fontSize: 9, marginTop: 2, letterSpacing: "0.18em" }}>{routines.length} ROUTINES · GUIDED SETS + REPS</div>
           </div>
         </div>
@@ -158,7 +158,7 @@ export default async function TrainScreen() {
           <div style={{ padding: "20px 22px 4px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 12 }}>
               <div>
-                <div className="e-display" style={{ fontSize: 22 }}>WORK WITH A HUMAN</div>
+                <div className="e-display" style={{ fontSize: 22 }}>BOOK A COACH</div>
                 <div className="e-mono" style={{ color: "rgba(10,14,20,0.5)", fontSize: 9, marginTop: 2, letterSpacing: "0.18em" }}>
                   {humanTrainers.length} TRAINERS · 1-ON-1 + PROGRAMS
                 </div>

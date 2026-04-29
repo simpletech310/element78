@@ -11,6 +11,8 @@ import {
   listProgramsByTrainer,
   listClassesByTrainer,
 } from "@/lib/data/queries";
+import { getSavedKindRefs } from "@/lib/data/saved-queries";
+import { SaveButton } from "@/components/site/SaveButton";
 import { getUser } from "@/lib/auth";
 
 function fmtPrice(cents: number) {
@@ -26,11 +28,13 @@ export default async function TrainerProfile({ params }: { params: { slug: strin
 
   // Flows + programs are gated; classes are always public-viewable so we
   // never block the click — anonymous visitors can browse the schedule.
-  const [flows, programs, classes] = await Promise.all([
+  const [flows, programs, classes, savedTrainerIds] = await Promise.all([
     listFlowsByTrainer(t.id),
     listProgramsByTrainer(t.id),
     listClassesByTrainer(t.id, 6),
+    user ? getSavedKindRefs(user.id, "trainer") : Promise.resolve(new Set<string>()),
   ]);
+  const isSaved = savedTrainerIds.has(t.id);
 
   // Auth-aware href: gated routes redirect through /login with `next`.
   // Classes pass through directly since the schedule is public.
@@ -50,16 +54,27 @@ export default async function TrainerProfile({ params }: { params: { slug: strin
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(10,14,20,0.55) 0%, rgba(10,14,20,0.05) 25%, rgba(10,14,20,0.55) 60%, var(--ink) 100%)" }} />
 
         <div style={{ position: "relative", padding: "32px 22px 40px", maxWidth: 1180, margin: "0 auto", display: "flex", flexDirection: "column", minHeight: 520 }}>
-          <Link href="/trainers" className="e-mono" style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "rgba(242,238,232,0.7)", textDecoration: "none" }}>
-            <span style={{ transform: "rotate(180deg)", display: "inline-flex" }}><Icon name="chevron" size={14} /></span>
-            ALL TRAINERS
-          </Link>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+            <Link href="/trainers" className="e-mono" style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "rgba(242,238,232,0.7)", textDecoration: "none" }}>
+              <span style={{ transform: "rotate(180deg)", display: "inline-flex" }}><Icon name="chevron" size={14} /></span>
+              ALL TRAINERS
+            </Link>
+            <SaveButton
+              kind="trainer"
+              ref_id={t.id}
+              ref_slug={t.slug}
+              ref_name={t.name}
+              ref_image={t.avatar_url}
+              isSaved={isSaved}
+              return_to={`/trainers/${t.slug}`}
+            />
+          </div>
 
           <div style={{ marginTop: "auto" }}>
             {/* AI / human badge */}
             <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 11px", borderRadius: 999, background: isAI ? "var(--sky)" : "rgba(143,184,214,0.18)", color: isAI ? "var(--ink)" : "var(--sky)", border: isAI ? "none" : "1px solid rgba(143,184,214,0.4)" }}>
               <span style={{ width: 5, height: 5, borderRadius: "50%", background: isAI ? "var(--ink)" : "var(--sky)" }} />
-              <span className="e-mono" style={{ fontSize: 10, letterSpacing: "0.22em" }}>{isAI ? "AI AVATAR · 24/7" : "HUMAN TRAINER · ATLANTA"}</span>
+              <span className="e-mono" style={{ fontSize: 10, letterSpacing: "0.22em" }}>{isAI ? "STUDIO COACH · 24/7" : "COACH · ATLANTA"}</span>
             </div>
 
             <h1 className="e-display glow" style={{ fontSize: "clamp(56px, 12vw, 112px)", lineHeight: 0.86, marginTop: 14 }}>

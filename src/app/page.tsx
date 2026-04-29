@@ -31,8 +31,8 @@ export default async function HomePage() {
 
   const tiers = [
     { name: "WEEKDAY", sub: "Mon-Fri · 5A-9P", price: "49", best: false, perks: ["Full floor access", "Group classes", "Discounted store"] },
-    { name: "ELITE", sub: "24/7 · all access", price: "129", best: true, perks: ["24-hour access", "Unlimited classes", "AI Studio included", "+1 guest pass / mo"] },
-    { name: "STUDIO", sub: "App only", price: "19", best: false, perks: ["AI Studio + library", "Crew timeline", "Store member pricing"] },
+    { name: "ELITE", sub: "24/7 · all access", price: "129", best: true, perks: ["24-hour access", "Unlimited classes", "Studio included", "+1 guest pass / mo"] },
+    { name: "STUDIO", sub: "App only", price: "19", best: false, perks: ["Studio + library", "Crew timeline", "Store member pricing"] },
   ];
 
   const stats = [

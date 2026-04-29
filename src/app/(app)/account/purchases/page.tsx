@@ -6,6 +6,8 @@ import { Icon } from "@/components/ui/Icon";
 import { getUser } from "@/lib/auth";
 import { listPurchasesForUser } from "@/lib/purchases";
 import type { Purchase } from "@/lib/purchases";
+import { isRefundable, type RefundEligibility } from "@/lib/refund-eligibility";
+import { requestRefundAction } from "@/lib/refund-actions";
 
 const KIND_LABEL: Record<Purchase["kind"], string> = {
   class_booking: "GYM CLASS",
@@ -23,11 +25,15 @@ const STATUS_COLOR: Record<Purchase["status"], string> = {
   cancelled: "rgba(242,238,232,0.45)",
 };
 
-export default async function PurchasesPage({ searchParams }: { searchParams: { paid?: string } }) {
+export default async function PurchasesPage({ searchParams }: { searchParams: { paid?: string; refunded?: string; error?: string } }) {
   const user = await getUser();
   if (!user) redirect("/login?next=/account/purchases");
 
   const purchases = await listPurchasesForUser(user.id);
+
+  // Resolve refund eligibility server-side. Small N (one user's purchases),
+  // safe to fan out in parallel.
+  const eligibilities = await Promise.all(purchases.map(p => isRefundable(p)));
 
   const totalPaid = purchases
     .filter(p => p.status === "paid")
@@ -66,6 +72,22 @@ export default async function PurchasesPage({ searchParams }: { searchParams: { 
           </section>
         )}
 
+        {searchParams.refunded && (
+          <section style={{ padding: "14px 22px 0" }}>
+            <div className="e-mono" style={{ padding: "12px 14px", borderRadius: 12, background: "rgba(143,184,214,0.1)", border: "1px solid var(--sky)", color: "var(--sky)", fontSize: 11, letterSpacing: "0.18em" }}>
+              ✓ REFUND ISSUED · CHECK YOUR EMAIL
+            </div>
+          </section>
+        )}
+
+        {searchParams.error && (
+          <section style={{ padding: "14px 22px 0" }}>
+            <div className="e-mono" style={{ padding: "12px 14px", borderRadius: 12, background: "rgba(220,120,120,0.1)", border: "1px solid var(--rose)", color: "var(--rose)", fontSize: 11, letterSpacing: "0.18em" }}>
+              ✕ {searchParams.error.toUpperCase()}
+            </div>
+          </section>
+        )}
+
         <section style={{ padding: "32px 22px 0" }}>
           {purchases.length === 0 ? (
             <div style={{ marginTop: 14, padding: "18px 22px", borderRadius: 14, border: "1px dashed rgba(143,184,214,0.25)", color: "rgba(242,238,232,0.55)", fontSize: 13 }}>
@@ -76,8 +98,8 @@ export default async function PurchasesPage({ searchParams }: { searchParams: { 
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {purchases.map(p => (
-                <PurchaseRow key={p.id} purchase={p} />
+              {purchases.map((p, i) => (
+                <PurchaseRow key={p.id} purchase={p} eligibility={eligibilities[i]} />
               ))}
             </div>
           )}
@@ -88,40 +110,87 @@ export default async function PurchasesPage({ searchParams }: { searchParams: { 
   );
 }
 
-function PurchaseRow({ purchase }: { purchase: Purchase }) {
+function PurchaseRow({ purchase, eligibility }: { purchase: Purchase; eligibility: RefundEligibility }) {
   const dt = new Date(purchase.created_at);
   const dateStr = dt.toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" }).toUpperCase();
   const linkHref = hrefForPurchase(purchase);
+  const showRefundButton = purchase.status === "paid" && eligibility.eligible;
+  const showRefundClosed = purchase.status === "paid" && !eligibility.eligible;
 
   return (
-    <Link
-      href={linkHref ?? "#"}
+    <div
       style={{
-        display: "flex", gap: 14, padding: 14, borderRadius: 14,
+        display: "flex", flexDirection: "column", gap: 10, padding: 14, borderRadius: 14,
         background: "var(--haze)", border: "1px solid rgba(143,184,214,0.18)",
-        color: "var(--bone)", textDecoration: "none",
         opacity: purchase.status === "refunded" || purchase.status === "cancelled" ? 0.6 : 1,
       }}
     >
-      <div style={{ minWidth: 90, paddingRight: 14, borderRight: "1px solid rgba(143,184,214,0.18)" }}>
-        <div className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.18em" }}>{dateStr}</div>
-        <div style={{ fontFamily: "var(--font-display)", fontSize: 22, lineHeight: 1, marginTop: 4 }}>
-          ${(purchase.amount_cents / 100).toFixed(0)}
+      <Link
+        href={linkHref ?? "#"}
+        style={{ display: "flex", gap: 14, color: "var(--bone)", textDecoration: "none" }}
+      >
+        <div style={{ minWidth: 90, paddingRight: 14, borderRight: "1px solid rgba(143,184,214,0.18)" }}>
+          <div className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.18em" }}>{dateStr}</div>
+          <div style={{ fontFamily: "var(--font-display)", fontSize: 22, lineHeight: 1, marginTop: 4 }}>
+            ${(purchase.amount_cents / 100).toFixed(0)}
+          </div>
         </div>
-      </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.2em" }}>
-          {KIND_LABEL[purchase.kind]}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.2em" }}>
+            {KIND_LABEL[purchase.kind]}
+          </div>
+          <div style={{ fontFamily: "var(--font-display)", fontSize: 16, marginTop: 4, letterSpacing: "0.02em" }}>
+            {purchase.description ?? "—"}
+          </div>
+          <div className="e-mono" style={{ marginTop: 6, fontSize: 9, color: STATUS_COLOR[purchase.status], letterSpacing: "0.2em" }}>
+            {purchase.status.toUpperCase()}
+          </div>
         </div>
-        <div style={{ fontFamily: "var(--font-display)", fontSize: 16, marginTop: 4, letterSpacing: "0.02em" }}>
-          {purchase.description ?? "—"}
+        {linkHref && <Icon name="chevron" size={18} />}
+      </Link>
+
+      {showRefundButton && (
+        <form
+          action={requestRefundAction}
+          style={{ display: "flex", justifyContent: "flex-end", borderTop: "1px solid rgba(143,184,214,0.12)", paddingTop: 10 }}
+        >
+          <input type="hidden" name="purchase_id" value={purchase.id} />
+          <button
+            type="submit"
+            className="e-mono"
+            style={{
+              padding: "8px 14px",
+              borderRadius: 8,
+              background: "transparent",
+              color: "var(--sky)",
+              border: "1px solid var(--sky)",
+              fontSize: 10,
+              letterSpacing: "0.2em",
+              cursor: "pointer",
+            }}
+          >
+            REQUEST REFUND
+          </button>
+        </form>
+      )}
+
+      {showRefundClosed && (
+        <div
+          className="e-mono"
+          style={{
+            display: "flex",
+            justifyContent: "flex-end",
+            borderTop: "1px solid rgba(143,184,214,0.12)",
+            paddingTop: 10,
+            fontSize: 9,
+            letterSpacing: "0.18em",
+            color: "rgba(242,238,232,0.4)",
+          }}
+        >
+          REFUND WINDOW CLOSED · {(eligibility.reason ?? "not eligible").toUpperCase()}
         </div>
-        <div className="e-mono" style={{ marginTop: 6, fontSize: 9, color: STATUS_COLOR[purchase.status], letterSpacing: "0.2em" }}>
-          {purchase.status.toUpperCase()}
-        </div>
-      </div>
-      {linkHref && <Icon name="chevron" size={18} />}
-    </Link>
+      )}
+    </div>
   );
 }
 

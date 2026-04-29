@@ -6,6 +6,8 @@ import { Photo } from "@/components/ui/Photo";
 import { Icon } from "@/components/ui/Icon";
 import { SpotPicker } from "@/components/site/SpotPicker";
 import { getClass, getTrainer, getUserBookingForClass, listTakenSpots } from "@/lib/data/queries";
+import { getSavedKindRefs } from "@/lib/data/saved-queries";
+import { SaveButton } from "@/components/site/SaveButton";
 import { getUser } from "@/lib/auth";
 import { cancelBookingAction } from "@/lib/class-actions";
 
@@ -27,11 +29,13 @@ export default async function ClassDetailInApp({
   const c = await getClass(params.id);
   if (!c) notFound();
 
-  const [taken, trainer, booking] = await Promise.all([
+  const [taken, trainer, booking, savedClassIds] = await Promise.all([
     listTakenSpots(c.id),
     c.trainer_id ? getTrainer(c.trainer_id).then(t => t).catch(() => null) : Promise.resolve(null),
     getUserBookingForClass(user.id, c.id),
+    getSavedKindRefs(user.id, "class"),
   ]);
+  const isSaved = savedClassIds.has(c.id);
 
   const dt = new Date(c.starts_at);
   const dateStr = dt.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "2-digit" }).toUpperCase();
@@ -70,7 +74,16 @@ export default async function ClassDetailInApp({
               <span style={{ transform: "rotate(180deg)", display: "inline-flex" }}><Icon name="chevron" size={18} /></span>
             </Link>
             <div style={{ display: "flex", gap: 8 }}>
-              <button style={{ width: 40, height: 40, borderRadius: 999, background: "rgba(10,14,20,0.6)", backdropFilter: "blur(10px)", border: "none", color: "var(--bone)", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name="heart" size={18} /></button>
+              <SaveButton
+                kind="class"
+                ref_id={c.id}
+                ref_slug={c.slug}
+                ref_name={c.name}
+                ref_image={c.hero_image}
+                isSaved={isSaved}
+                return_to={`/gym/classes/${c.id}`}
+                size={40}
+              />
             </div>
           </div>
           <div style={{ position: "absolute", left: 22, right: 22, bottom: 18, color: "var(--bone)" }}>

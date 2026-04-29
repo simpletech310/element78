@@ -275,7 +275,7 @@ function refKindToLegacyKind(refKind: ProgramSessionRefKind): string {
 
 function autoNameFor(refKind: ProgramSessionRefKind, formData: FormData): string {
   switch (refKind) {
-    case "routine": return `AI Studio · ${String(formData.get("routine_slug") ?? "").replace(/-/g, " ")}`;
+    case "routine": return `Studio · ${String(formData.get("routine_slug") ?? "").replace(/-/g, " ")}`;
     case "class_kind": return `Class · ${String(formData.get("class_slug") ?? "").replace(/-/g, " ")}`;
     case "trainer_1on1": return "1-on-1 Session";
     default: return "Custom Session";

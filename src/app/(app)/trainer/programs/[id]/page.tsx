@@ -140,7 +140,7 @@ export default async function EditProgramPage({
         <section style={{ marginTop: 32 }}>
           <div className="e-mono" style={{ color: "var(--sky)", letterSpacing: "0.2em", fontSize: 10 }}>02 / SCHEDULE</div>
           <p style={{ marginTop: 6, fontSize: 13, color: "rgba(242,238,232,0.55)" }}>
-            Each day can hold one or more sessions. Add an AI Studio routine, a gym class type, or a 1-on-1 with a trainer.
+            Each day can hold one or more sessions. Add a Studio routine, a gym class type, or a 1-on-1 with a trainer.
           </p>
 
           <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 12 }}>
@@ -211,7 +211,7 @@ function AddSessionForm({
 
       <Field label="TYPE">
         <select name="ref_kind" defaultValue="routine" className="ta-input">
-          <option value="routine">AI Studio routine</option>
+          <option value="routine">Studio routine</option>
           <option value="class_kind">Gym class type</option>
           <option value="trainer_1on1">1-on-1 with trainer</option>
           <option value="custom">Custom (free-form)</option>

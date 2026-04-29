@@ -153,7 +153,7 @@ export default async function LocationsPage() {
           </div>
           <div style={{ flex: 1 }}>
             <div className="e-mono" style={{ color: "var(--sky)", fontSize: 10 }}>NO GYM IN YOUR CITY?</div>
-            <div style={{ fontFamily: "var(--font-display)", fontSize: 22, marginTop: 4 }}>THE AI STUDIO TRAVELS WITH YOU.</div>
+            <div style={{ fontFamily: "var(--font-display)", fontSize: 22, marginTop: 4 }}>THE STUDIO TRAVELS WITH YOU.</div>
             <div style={{ fontSize: 13, color: "rgba(242,238,232,0.65)", marginTop: 6 }}>Live avatar coaching in your living room. No reformer needed.</div>
           </div>
           <Icon name="chevron" size={18} />

@@ -6,6 +6,8 @@ import { FloatingTabBar } from "@/components/site/FloatingTabBar";
 import { Photo } from "@/components/ui/Photo";
 import { Icon } from "@/components/ui/Icon";
 import { getClass, listTrainers, getUserBookingForClass } from "@/lib/data/queries";
+import { getSavedKindRefs } from "@/lib/data/saved-queries";
+import { SaveButton } from "@/components/site/SaveButton";
 import { getUser } from "@/lib/auth";
 import { bookClassAction, cancelBookingAction } from "@/lib/class-actions";
 
@@ -26,6 +28,8 @@ export default async function ClassDetail({
   const trainer = c.trainer_id ? trainers.find(t => t.id === c.trainer_id) ?? null : null;
   const booking = user ? await getUserBookingForClass(user.id, c.id) : null;
   const isReserved = booking && booking.status === "reserved";
+  const savedClassIds = user ? await getSavedKindRefs(user.id, "class") : new Set<string>();
+  const isSaved = savedClassIds.has(c.id);
 
   const dt = new Date(c.starts_at);
   const dayLabel = dt.toLocaleDateString("en-US", { weekday: "long" }).toUpperCase();
@@ -75,10 +79,21 @@ export default async function ClassDetail({
         {c.hero_image && <Photo src={c.hero_image} alt="" className="zoom-on-hover" style={{ position: "absolute", inset: 0, opacity: 0.55 }} />}
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(10,14,20,0.55) 0%, rgba(10,14,20,0.05) 25%, rgba(10,14,20,0.95) 80%, var(--ink) 100%)" }} />
         <div style={{ position: "relative", padding: "56px 22px 48px", maxWidth: 1180, margin: "0 auto" }}>
-          <Link href="/classes" className="e-mono reveal" style={{ display: "inline-flex", alignItems: "center", gap: 8, color: "var(--sky)", letterSpacing: "0.18em" }}>
-            <span style={{ transform: "rotate(180deg)", display: "inline-flex" }}><Icon name="chevron" size={14} /></span>
-            ALL CLASSES
-          </Link>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+            <Link href="/classes" className="e-mono reveal" style={{ display: "inline-flex", alignItems: "center", gap: 8, color: "var(--sky)", letterSpacing: "0.18em" }}>
+              <span style={{ transform: "rotate(180deg)", display: "inline-flex" }}><Icon name="chevron" size={14} /></span>
+              ALL CLASSES
+            </Link>
+            <SaveButton
+              kind="class"
+              ref_id={c.id}
+              ref_slug={c.slug}
+              ref_name={c.name}
+              ref_image={c.hero_image}
+              isSaved={isSaved}
+              return_to={`/classes/${c.id}`}
+            />
+          </div>
 
           <div className="e-mono reveal reveal-d1" style={{ color: "var(--sky)", marginTop: 24 }}>
             {dayLabel} · {dateLabel} · {timeStr}

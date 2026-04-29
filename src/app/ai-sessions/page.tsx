@@ -52,7 +52,7 @@ export default async function AISessionsPage() {
         <Photo src="/assets/IMG_3467.jpg" alt="" className="zoom-on-hover" style={{ position: "absolute", inset: 0, opacity: 0.55 }} />
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(10,14,20,0.6) 0%, rgba(10,14,20,0.05) 25%, rgba(10,14,20,0.95) 80%, var(--ink) 100%)" }} />
         <div style={{ position: "relative", padding: "60px 22px 48px", maxWidth: 1180, margin: "0 auto" }}>
-          <div className="e-mono reveal" style={{ color: "var(--sky)" }}>◉ AI STUDIO · LIVE AVATAR</div>
+          <div className="e-mono reveal" style={{ color: "var(--sky)" }}>◉ STUDIO · LIVE AVATAR</div>
           <h1 className="e-display glow reveal reveal-d1" style={{ fontSize: "clamp(56px, 13vw, 124px)", marginTop: 18, lineHeight: 0.88 }}>
             AI THAT<br/>WATCHES.
           </h1>
@@ -134,7 +134,7 @@ export default async function AISessionsPage() {
                   <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, transparent 50%, rgba(10,14,20,0.95) 100%)" }} />
                   <div style={{ position: "absolute", top: 12, left: 12, display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 10px", borderRadius: 999, background: "rgba(10,14,20,0.55)", backdropFilter: "blur(10px)" }}>
                     <span style={{ width: 5, height: 5, borderRadius: "50%", background: "var(--sky)" }} />
-                    <span className="e-mono" style={{ fontSize: 9, color: "var(--sky)", letterSpacing: "0.2em" }}>AI AVATAR</span>
+                    <span className="e-mono" style={{ fontSize: 9, color: "var(--sky)", letterSpacing: "0.2em" }}>STUDIO COACH</span>
                   </div>
                   <div style={{ position: "absolute", left: 18, right: 18, bottom: 18 }}>
                     <div className="e-display" style={{ fontSize: 28, lineHeight: 0.95, letterSpacing: "0.02em" }}>{a.name}</div>

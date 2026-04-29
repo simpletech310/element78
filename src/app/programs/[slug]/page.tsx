@@ -6,10 +6,12 @@ import { FloatingTabBar } from "@/components/site/FloatingTabBar";
 import { Photo } from "@/components/ui/Photo";
 import { Icon } from "@/components/ui/Icon";
 import { getProgram, getEnrollment, listEnrollmentCompletions } from "@/lib/data/queries";
+import { getSavedKindRefs } from "@/lib/data/saved-queries";
 import { getUser } from "@/lib/auth";
 import { enrollAction, completeSessionAction, leaveAction } from "@/lib/program-actions";
 import { materializeAutoCompletions } from "@/lib/program-completion";
 import { getRoutine } from "@/lib/data/routines";
+import { SaveButton } from "@/components/site/SaveButton";
 import type { ProgramSession } from "@/lib/data/types";
 
 export default async function ProgramDetail({
@@ -31,6 +33,8 @@ export default async function ProgramDetail({
   const enrollment = user ? await getEnrollment(user.id, program.id) : null;
   const completions = enrollment ? await listEnrollmentCompletions(enrollment.id) : [];
   const completedIds = new Set(completions.map(c => c.session_id));
+  const savedProgramIds = user ? await getSavedKindRefs(user.id, "program") : new Set<string>();
+  const isSaved = savedProgramIds.has(program.id);
 
   const isAuthed = !!user;
   const isActive = enrollment?.status === "active";
@@ -50,10 +54,21 @@ export default async function ProgramDetail({
         {program.hero_image && <Photo src={program.hero_image} alt="" className="zoom-on-hover" style={{ position: "absolute", inset: 0, opacity: 0.6 }} />}
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(10,14,20,0.55) 0%, rgba(10,14,20,0.05) 25%, rgba(10,14,20,0.95) 80%, var(--ink) 100%)" }} />
         <div style={{ position: "relative", padding: "56px 22px 48px", maxWidth: 1180, margin: "0 auto" }}>
-          <Link href="/programs" className="e-mono reveal" style={{ display: "inline-flex", alignItems: "center", gap: 8, color: "var(--sky)", letterSpacing: "0.18em" }}>
-            <span style={{ transform: "rotate(180deg)", display: "inline-flex" }}><Icon name="chevron" size={14} /></span>
-            ALL PROGRAMS
-          </Link>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+            <Link href="/programs" className="e-mono reveal" style={{ display: "inline-flex", alignItems: "center", gap: 8, color: "var(--sky)", letterSpacing: "0.18em" }}>
+              <span style={{ transform: "rotate(180deg)", display: "inline-flex" }}><Icon name="chevron" size={14} /></span>
+              ALL PROGRAMS
+            </Link>
+            <SaveButton
+              kind="program"
+              ref_id={program.id}
+              ref_slug={program.slug}
+              ref_name={program.name}
+              ref_image={program.hero_image}
+              isSaved={isSaved}
+              return_to={`/programs/${program.slug}`}
+            />
+          </div>
 
           <div className="e-mono reveal reveal-d1" style={{ color: "var(--sky)", marginTop: 24 }}>{program.duration_label}</div>
           <h1 className="e-display reveal reveal-d2" style={{ fontSize: "clamp(48px, 11vw, 104px)", marginTop: 12, lineHeight: 0.92 }}>{program.name}</h1>
@@ -400,7 +415,7 @@ function launchLabel(s: ProgramSession): string {
 
 function refKindLabel(s: ProgramSession): string {
   switch (s.ref_kind) {
-    case "routine": return "AI STUDIO";
+    case "routine": return "STUDIO";
     case "class_kind": return "GYM CLASS";
     case "trainer_1on1": return "1-ON-1";
     default: return (s.kind ?? "SESSION").toUpperCase();

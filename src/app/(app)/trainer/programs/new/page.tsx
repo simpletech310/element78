@@ -22,7 +22,7 @@ export default async function NewProgramPage({ searchParams }: { searchParams: {
           <div className="e-mono" style={{ color: "var(--sky)", letterSpacing: "0.25em", fontSize: 10 }}>NEW PROGRAM</div>
           <h1 className="e-display" style={{ fontSize: "clamp(36px, 7vw, 52px)", lineHeight: 0.92, marginTop: 8 }}>BUILD IT.</h1>
           <p style={{ marginTop: 14, fontSize: 13, color: "rgba(242,238,232,0.6)", maxWidth: 480, lineHeight: 1.6 }}>
-            Set the basics, then build the day-by-day on the next screen. You can add AI Studio routines, gym classes, and 1-on-1s to any day.
+            Set the basics, then build the day-by-day on the next screen. You can add Studio routines, gym classes, and 1-on-1s to any day.
           </p>
         </div>
 

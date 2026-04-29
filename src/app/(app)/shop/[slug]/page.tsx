@@ -6,7 +6,9 @@ import { FloatingTabBar } from "@/components/site/FloatingTabBar";
 import { Photo } from "@/components/ui/Photo";
 import { Icon } from "@/components/ui/Icon";
 import { AddToBagFull } from "@/components/shop/AddToBag";
+import { SaveButton } from "@/components/site/SaveButton";
 import { getProduct } from "@/lib/data/queries";
+import { getSavedKindRefs } from "@/lib/data/saved-queries";
 import { getUser } from "@/lib/auth";
 
 export default async function ProductDetail({ params }: { params: { slug: string } }) {
@@ -15,6 +17,8 @@ export default async function ProductDetail({ params }: { params: { slug: string
   const { product, variants } = data;
   const isAuthed = !!user;
   const gallery = product.gallery.length ? product.gallery : product.hero_image ? [product.hero_image] : [];
+  const savedProductIds = user ? await getSavedKindRefs(user.id, "product") : new Set<string>();
+  const isSaved = savedProductIds.has(product.id);
 
   const specs = [
     { l: "CAPACITY", v: product.subtitle?.split(" · ")[0] ?? "—" },
@@ -30,7 +34,17 @@ export default async function ProductDetail({ params }: { params: { slug: string
             <span style={{ transform: "rotate(180deg)", display: "inline-flex" }}><Icon name="chevron" size={14} /></span>
             BACK TO SHOP
           </Link>
-          <button style={{ width: 40, height: 40, borderRadius: 999, background: "rgba(10,14,20,0.06)", border: "none", display: "flex", alignItems: "center", justifyContent: "center" }} aria-label="Save"><Icon name="heart" size={18} /></button>
+          <SaveButton
+            kind="product"
+            ref_id={product.id}
+            ref_slug={product.slug}
+            ref_name={product.name}
+            ref_image={product.hero_image}
+            isSaved={isSaved}
+            return_to={`/shop/${product.slug}`}
+            variant="light"
+            size={40}
+          />
         </div>
 
         <div style={{ position: "relative", height: "min(620px, 75vh)", background: "var(--bone-2)" }}>

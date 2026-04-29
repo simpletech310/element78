@@ -30,7 +30,7 @@ export default async function MembershipPage() {
       perks: [
         "24-hour floor + studio access",
         "Unlimited classes, including signature flows",
-        "AI Studio (in-app + in-gym AI booths)",
+        "Studio (in-app + in-gym booths)",
         "Private 1:1 trainer hour each month",
         "+1 guest pass / mo",
         "Founder events + member-only drops",
@@ -42,7 +42,7 @@ export default async function MembershipPage() {
       price: "19",
       best: false,
       perks: [
-        "Full AI Studio + program library",
+        "Full Studio + program library",
         "The Wall (community + trainer drops)",
         "Member pricing in the store",
         "10-class pack add-on available",
@@ -51,8 +51,8 @@ export default async function MembershipPage() {
   ];
 
   const pillars: { icon: IconName; t: string; sub: string }[] = [
-    { icon: "spark", t: "AI TRAINERS", sub: "Form-check, BPM-matched playlists, real-time cues. Available in-app and at our gym AI stations." },
-    { icon: "user", t: "HUMAN TRAINERS", sub: "Six certified coaches at the flagship — book privates, take classes, work with the same coach every week." },
+    { icon: "spark", t: "STUDIO COACHES", sub: "Form-check, BPM-matched playlists, real-time cues. Available in-app and at our gym studio stations." },
+    { icon: "user", t: "COACHES", sub: "Six certified coaches at the flagship — book privates, take classes, work with the same coach every week." },
     { icon: "cal", t: "CLASSES", sub: "14 a day at the flagship. Reformer, mat, HIIT, yoga, mobility. Every level, every body." },
     { icon: "crew", t: "EVENTS", sub: "Member-only sunrise runs, rooftop classes, founder dinners, content nights." },
     { icon: "heart", t: "COMMUNITY", sub: "1,408 women in. Real friendships in the locker room. The Wall keeps the connection going." },
@@ -83,7 +83,7 @@ export default async function MembershipPage() {
             Three tiers. Month-to-month. The streak goes with you.
           </p>
           <p className="reveal reveal-d3" style={{ marginTop: 14, fontSize: 15, color: "rgba(242,238,232,0.7)", maxWidth: 480, lineHeight: 1.6 }}>
-            Every package includes the AI Studio, The Wall, and the in-my-element line. Choose the door that fits how you train.
+            Every package includes the Studio, The Wall, and the in-my-element line. Choose the door that fits how you train.
           </p>
         </div>
       </section>

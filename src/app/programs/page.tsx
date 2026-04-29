@@ -167,7 +167,7 @@ export default async function ProgramsPage() {
           <h2 className="e-display glow" style={{ fontSize: "clamp(40px, 8vw, 64px)", marginTop: 14, lineHeight: 0.95 }}>PICK A PATH.<br/>START THE STREAK.</h2>
           <div style={{ marginTop: 24, display: "flex", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
             {!user && <Link href="/join" className="btn btn-sky" style={{ minWidth: 200 }}>JOIN ELEMENT</Link>}
-            <Link href="/ai-sessions" className="btn btn-ghost" style={{ color: "var(--bone)", borderColor: "rgba(242,238,232,0.3)" }}>HOW THE AI WORKS</Link>
+            <Link href="/ai-sessions" className="btn btn-ghost" style={{ color: "var(--bone)", borderColor: "rgba(242,238,232,0.3)" }}>HOW STUDIO WORKS</Link>
             {user && <Link href="/account/history" className="btn btn-sky" style={{ minWidth: 200 }}>YOUR HISTORY</Link>}
           </div>
         </div>

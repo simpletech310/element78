@@ -18,18 +18,18 @@ export default async function TrainersPage() {
   const isAuthed = !!user;
   const featured = trainers[0];
   const rest = trainers.slice(1);
-  const filters = [{ l: "ALL", a: true }, { l: "PILATES" }, { l: "STRENGTH" }, { l: "YOGA" }, { l: "HIIT" }, { l: "1-ON-1" }, { l: "AI AVATARS" }];
+  const filters = [{ l: "ALL", a: true }, { l: "PILATES" }, { l: "STRENGTH" }, { l: "YOGA" }, { l: "HIIT" }, { l: "1-ON-1" }, { l: "STUDIO" }];
 
   const body = (
     <>
       {/* HERO */}
       <section style={{ position: "relative", padding: "60px 22px 28px", maxWidth: 1180, margin: "0 auto" }}>
-        <div className="e-mono reveal" style={{ color: "var(--sky)" }}>FAMILY · {trainers.length + aiAvatars.length} COACHES · HUMAN + AI</div>
+        <div className="e-mono reveal" style={{ color: "var(--sky)" }}>FAMILY · {trainers.length + aiAvatars.length} COACHES</div>
         <h1 className="e-display reveal reveal-d1" style={{ fontSize: "clamp(48px, 11vw, 104px)", marginTop: 14, lineHeight: 0.92 }}>
           THE TEAM.
         </h1>
         <p className="reveal reveal-d2" style={{ marginTop: 18, fontSize: 16, color: "rgba(242,238,232,0.7)", maxWidth: 540, lineHeight: 1.6 }}>
-          Six certified trainers on the Atlanta floor. Three AI avatars in your phone. Same standard, same cues, all available to every member.
+          Certified coaches on the Atlanta floor. Studio coaches in your phone. Same standard, same cues, all available to every member.
         </p>
       </section>
 
@@ -51,7 +51,7 @@ export default async function TrainersPage() {
       {/* HUMAN — featured */}
       {featured && (
         <section style={{ padding: "24px 22px 0", maxWidth: 1180, margin: "0 auto" }}>
-          <div className="e-mono" style={{ color: "rgba(242,238,232,0.55)", marginBottom: 12, letterSpacing: "0.2em" }}>★ FEATURED · HUMAN</div>
+          <div className="e-mono" style={{ color: "rgba(242,238,232,0.55)", marginBottom: 12, letterSpacing: "0.2em" }}>★ FEATURED COACH</div>
           <Link href={`/trainers/${featured.slug}`} className="lift" style={{ position: "relative", borderRadius: 22, overflow: "hidden", minHeight: 360, display: "block", color: "var(--bone)", textDecoration: "none", border: "1px solid rgba(143,184,214,0.12)" }}>
             <Photo src={featured.hero_image ?? ""} alt={featured.name} className="zoom-on-hover" style={{ position: "absolute", inset: 0 }} />
             <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, transparent 30%, rgba(10,14,20,0.95) 100%)" }} />
@@ -70,7 +70,7 @@ export default async function TrainersPage() {
 
       {/* HUMAN trainers list */}
       <section style={{ padding: "32px 22px 4px", maxWidth: 1180, margin: "0 auto" }}>
-        <div className="e-mono" style={{ color: "rgba(242,238,232,0.55)", marginBottom: 12, letterSpacing: "0.2em" }}>HUMAN TRAINERS · ATLANTA</div>
+        <div className="e-mono" style={{ color: "rgba(242,238,232,0.55)", marginBottom: 12, letterSpacing: "0.2em" }}>COACHES · ATLANTA</div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 14 }}>
           {rest.map(t => (
             <Link key={t.id} href={`/trainers/${t.slug}`} className="lift" style={{ display: "flex", gap: 14, padding: 14, borderRadius: 16, background: "rgba(143,184,214,0.05)", border: "1px solid rgba(143,184,214,0.18)", color: "var(--bone)", textDecoration: "none" }}>
@@ -93,9 +93,9 @@ export default async function TrainersPage() {
       {/* AI AVATARS */}
       <section style={{ padding: "44px 22px 80px", maxWidth: 1180, margin: "0 auto" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 8 }}>
-          <div className="e-mono" style={{ color: "rgba(242,238,232,0.55)", letterSpacing: "0.2em" }}>AI AVATARS · IN-APP + IN-GYM</div>
+          <div className="e-mono" style={{ color: "rgba(242,238,232,0.55)", letterSpacing: "0.2em" }}>STUDIO · IN-APP + IN-GYM</div>
           <Link href="/ai-sessions" className="e-mono" style={{ color: "var(--sky)", display: "inline-flex", alignItems: "center", gap: 6 }}>
-            HOW THE AI WORKS <Icon name="arrowUpRight" size={14} />
+            HOW STUDIO WORKS <Icon name="arrowUpRight" size={14} />
           </Link>
         </div>
         <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 14 }}>
@@ -106,7 +106,7 @@ export default async function TrainersPage() {
                 <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, transparent 45%, rgba(10,14,20,0.95) 100%)" }} />
                 <div style={{ position: "absolute", top: 14, left: 14, display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 11px", borderRadius: 999, background: "rgba(10,14,20,0.7)", backdropFilter: "blur(10px)" }}>
                   <span style={{ width: 5, height: 5, borderRadius: "50%", background: "var(--sky)" }} />
-                  <span className="e-mono" style={{ fontSize: 9, color: "var(--sky)", letterSpacing: "0.2em" }}>AI AVATAR</span>
+                  <span className="e-mono" style={{ fontSize: 9, color: "var(--sky)", letterSpacing: "0.2em" }}>STUDIO COACH</span>
                 </div>
                 <div style={{ position: "absolute", left: 18, right: 18, bottom: 18 }}>
                   <div className="e-display" style={{ fontSize: 28, lineHeight: 0.95, letterSpacing: "0.02em" }}>{a.name}</div>

@@ -15,7 +15,7 @@ type Props = {
 
 function refKindLabel(kind: ProgramSession['ref_kind']): string {
   switch (kind) {
-    case 'routine': return 'AI STUDIO';
+    case 'routine': return 'STUDIO';
     case 'class_kind': return 'GYM CLASS';
     case 'trainer_1on1': return '1-ON-1';
     default: return 'CUSTOM';

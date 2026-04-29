@@ -191,7 +191,7 @@ export function RoutinePlayer({ routine, programContext }: { routine: Routine; p
           <span style={{ transform: "rotate(180deg)", display: "inline-flex" }}><Icon name="chevron" size={16} /></span>
         </Link>
         <div style={{ textAlign: "center", flex: 1 }}>
-          <div className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.25em" }}>AI STUDIO · {routine.trainer_name}</div>
+          <div className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.25em" }}>STUDIO · {routine.trainer_name}</div>
           <div style={{ fontFamily: "var(--font-display)", fontSize: 18, lineHeight: 1, marginTop: 4, letterSpacing: "0.02em" }}>{routine.name}</div>
         </div>
         <div style={{ width: 42 }} aria-hidden />
