@@ -3,7 +3,7 @@ import { redirect, notFound } from "next/navigation";
 import { Navbar } from "@/components/site/Navbar";
 import { Icon } from "@/components/ui/Icon";
 import { getTrainerForCurrentUser } from "@/lib/trainer-auth";
-import { getProgramById, listClassKinds, listTrainers } from "@/lib/data/queries";
+import { getProgramById, listClassKinds, listTrainers, listEnrollmentsByProgram } from "@/lib/data/queries";
 import { routines } from "@/lib/data/routines";
 import {
   updateProgramAction,
@@ -30,9 +30,10 @@ export default async function EditProgramPage({
   const owns = program.author_trainer_id === trainer.id || program.trainer_id === trainer.id;
   if (!owns) redirect("/trainer/programs?error=unauthorized");
 
-  const [classKinds, allTrainers] = await Promise.all([
+  const [classKinds, allTrainers, enrollments] = await Promise.all([
     listClassKinds(),
     listTrainers(),
+    listEnrollmentsByProgram(program.id),
   ]);
   const humanTrainers = allTrainers.filter(t => !t.is_ai);
 
@@ -172,6 +173,53 @@ export default async function EditProgramPage({
               );
             })}
           </div>
+        </section>
+
+        {/* SECTION 3 — ENROLLED CLIENTS */}
+        <section style={{ marginTop: 32 }}>
+          <div className="e-mono" style={{ color: "var(--sky)", letterSpacing: "0.2em", fontSize: 10 }}>
+            03 / ENROLLED CLIENTS · {enrollments.length}
+          </div>
+          {enrollments.length === 0 ? (
+            <div style={{ marginTop: 14, padding: "18px 22px", borderRadius: 14, border: "1px dashed rgba(143,184,214,0.25)", color: "rgba(242,238,232,0.55)", fontSize: 13 }}>
+              No one's enrolled yet.
+            </div>
+          ) : (
+            <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 8 }}>
+              {enrollments.map(({ enrollment, profile, completionCount, lastCompletionAt }) => {
+                const pct = program.total_sessions > 0 ? Math.min(100, Math.round((completionCount / program.total_sessions) * 100)) : 0;
+                return (
+                  <Link
+                    key={enrollment.id}
+                    href={`/trainer/clients/${enrollment.user_id}`}
+                    className="lift"
+                    style={{
+                      display: "block", padding: 12, borderRadius: 12,
+                      background: "var(--haze)", border: "1px solid rgba(143,184,214,0.18)",
+                      color: "var(--bone)", textDecoration: "none",
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 6 }}>
+                      <div style={{ fontFamily: "var(--font-display)", fontSize: 16 }}>
+                        {(profile.display_name ?? "Member").toUpperCase()}
+                      </div>
+                      <div className="e-mono" style={{ color: "var(--sky)", fontSize: 10, letterSpacing: "0.2em" }}>
+                        {enrollment.status.toUpperCase()} · DAY {enrollment.current_day}/{program.total_sessions}
+                      </div>
+                    </div>
+                    <div style={{ marginTop: 8, height: 4, borderRadius: 999, background: "rgba(255,255,255,0.06)", overflow: "hidden" }}>
+                      <div style={{ width: `${pct}%`, height: "100%", background: "var(--sky)" }} />
+                    </div>
+                    <div className="e-mono" style={{ marginTop: 6, color: "rgba(242,238,232,0.55)", fontSize: 9, letterSpacing: "0.18em" }}>
+                      {completionCount}/{program.total_sessions} DONE
+                      {lastCompletionAt ? ` · LAST ${new Date(lastCompletionAt).toLocaleDateString("en-US", { month: "short", day: "2-digit" }).toUpperCase()}` : ""}
+                      {` · STARTED ${new Date(enrollment.started_at).toLocaleDateString("en-US", { month: "short", day: "2-digit" }).toUpperCase()}`}
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
         </section>
       </div>
 

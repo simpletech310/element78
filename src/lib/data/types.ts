@@ -54,6 +54,10 @@ export type ClassRow = {
   /** With `has_equipment`, render the picker as two mirrored halves with a
    *  center aisle — matches a reformer studio layout. */
   mirrored_layout: boolean;
+  /** Class lifecycle. Default 'scheduled'. */
+  status?: "scheduled" | "cancelled" | "completed";
+  cancelled_at?: string | null;
+  completed_at?: string | null;
 };
 
 export type Booking = {

@@ -252,3 +252,76 @@ export async function joinGroupSessionAction(formData: FormData) {
   });
   redirect(checkoutUrl);
 }
+
+/**
+ * Trainer marks a group session complete. Flips parent session + every
+ * attendee booking to completed, bridges program progress for any 1-on-1
+ * program-session links, and tears down the Daily room.
+ */
+export async function completeGroupSessionAction(formData: FormData) {
+  const trainer = await getTrainerForCurrentUser();
+  if (!trainer) redirect("/login?next=/trainer/dashboard");
+
+  const sessionId = String(formData.get("session_id") ?? "");
+  if (!sessionId) redirect("/trainer/dashboard?error=missing_id");
+
+  const session = await getTrainerSessionRow(sessionId);
+  if (!session || session.trainer_id !== trainer.id) {
+    redirect("/trainer/dashboard?error=unauthorized");
+  }
+
+  const sb = createClient();
+  const admin = createAdminClient();
+
+  await sb
+    .from("trainer_sessions")
+    .update({ status: "completed", updated_at: new Date().toISOString() })
+    .eq("id", sessionId);
+
+  const { data: bookings } = await sb
+    .from("trainer_bookings")
+    .select("*")
+    .eq("session_id", sessionId)
+    .in("status", ["confirmed", "pending_trainer"]);
+
+  for (const b of (bookings as Array<{ id: string; user_id: string; trainer_id: string; program_session_id: string | null }>) ?? []) {
+    await sb
+      .from("trainer_bookings")
+      .update({ status: "completed", updated_at: new Date().toISOString() })
+      .eq("id", b.id);
+
+    // Bridge to program completions (mirrors completeTrainerBookingAction).
+    if (b.program_session_id) {
+      const { data: ps } = await admin.from("program_sessions").select("program_id").eq("id", b.program_session_id).maybeSingle();
+      const programId = (ps as { program_id?: string } | null)?.program_id;
+      if (programId) {
+        const { data: en } = await admin
+          .from("program_enrollments")
+          .select("id")
+          .eq("user_id", b.user_id)
+          .eq("program_id", programId)
+          .eq("status", "active")
+          .maybeSingle();
+        if (en) {
+          await admin.from("program_completions").upsert({
+            enrollment_id: (en as { id: string }).id,
+            session_id: b.program_session_id,
+            source: "trainer_1on1",
+            surface: "gym",
+            trainer_booking_id: b.id,
+          }, { onConflict: "enrollment_id,session_id" });
+        }
+      }
+    }
+  }
+
+  if (session.video_room_name) {
+    await getVideoProvider().destroyRoom(session.video_room_name);
+  }
+
+  revalidatePath("/trainer/dashboard");
+  revalidatePath(`/trainer/sessions/${sessionId}`);
+  revalidatePath("/account/sessions");
+  revalidatePath("/account/history");
+  redirect(`/trainer/dashboard?completed=${sessionId}`);
+}

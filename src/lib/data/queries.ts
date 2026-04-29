@@ -506,3 +506,217 @@ export async function listPosts(): Promise<Post[]> {
   const { data } = await sb.from("posts").select("*").order("created_at", { ascending: false }).limit(20);
   return (data as Post[]) ?? fallbackPosts;
 }
+
+/* -------------------------------------------------------------------------- */
+/*  Coach-management aggregates                                               */
+/* -------------------------------------------------------------------------- */
+
+/** Every class taught by `trainerId`, both past and future. */
+export async function listAllClassesByTrainer(trainerId: string): Promise<ClassRow[]> {
+  if (!isConfigured()) {
+    return fallbackClasses
+      .filter(c => c.trainer_id === trainerId)
+      .sort((a, b) => new Date(b.starts_at).getTime() - new Date(a.starts_at).getTime());
+  }
+  const sb = createClient();
+  const { data } = await sb.from("classes").select("*").eq("trainer_id", trainerId).order("starts_at", { ascending: false });
+  return (data as ClassRow[]) ?? [];
+}
+
+export type ClassRosterEntry = {
+  booking: Booking;
+  profile: { display_name: string | null; avatar_url: string | null; handle: string | null };
+  email: string | null;
+};
+
+export async function listClassRoster(classId: string): Promise<ClassRosterEntry[]> {
+  if (!isConfigured()) return [];
+  const sb = createClient();
+  const { data: bookings } = await sb
+    .from("bookings")
+    .select("*")
+    .eq("class_id", classId)
+    .in("status", ["confirmed", "pending"])
+    .order("created_at", { ascending: true });
+  const rows = (bookings as Booking[]) ?? [];
+  if (rows.length === 0) return [];
+  const ids = Array.from(new Set(rows.map(r => r.user_id)));
+  const profiles = await listProfilesByIds(ids);
+  return rows.map(b => ({
+    booking: b,
+    profile: profiles[b.user_id] ?? { display_name: null, avatar_url: null, handle: null },
+    email: null,
+  }));
+}
+
+export type EnrolledClient = {
+  enrollment: ProgramEnrollment;
+  profile: { display_name: string | null; avatar_url: string | null; handle: string | null };
+  completionCount: number;
+  lastCompletionAt: string | null;
+};
+
+export async function listEnrollmentsByProgram(programId: string): Promise<EnrolledClient[]> {
+  if (!isConfigured()) return [];
+  const sb = createClient();
+  const { data: enrollments } = await sb
+    .from("program_enrollments")
+    .select("*")
+    .eq("program_id", programId)
+    .order("started_at", { ascending: false });
+  const rows = (enrollments as ProgramEnrollment[]) ?? [];
+  if (rows.length === 0) return [];
+  const ids = Array.from(new Set(rows.map(r => r.user_id)));
+  const profiles = await listProfilesByIds(ids);
+  // Count completions + last completion per enrollment.
+  const enrollmentIds = rows.map(r => r.id);
+  const { data: comps } = await sb
+    .from("program_completions")
+    .select("enrollment_id, completed_at")
+    .in("enrollment_id", enrollmentIds);
+  const counts = new Map<string, { count: number; last: string | null }>();
+  for (const c of (comps as Array<{ enrollment_id: string; completed_at: string }>) ?? []) {
+    const cur = counts.get(c.enrollment_id) ?? { count: 0, last: null };
+    cur.count += 1;
+    if (!cur.last || new Date(c.completed_at) > new Date(cur.last)) cur.last = c.completed_at;
+    counts.set(c.enrollment_id, cur);
+  }
+  return rows.map(e => ({
+    enrollment: e,
+    profile: profiles[e.user_id] ?? { display_name: null, avatar_url: null, handle: null },
+    completionCount: counts.get(e.id)?.count ?? 0,
+    lastCompletionAt: counts.get(e.id)?.last ?? null,
+  }));
+}
+
+export type TrainerClientRow = {
+  user_id: string;
+  profile: { display_name: string | null; avatar_url: string | null; handle: string | null };
+  lastInteractionAt: string | null;
+  oneOnOneCount: number;
+  programCount: number;
+  classCount: number;
+};
+
+/**
+ * Aggregate every member who's interacted with this trainer, across all
+ * surfaces (1-on-1s, programs they author, classes they teach).
+ */
+export async function listTrainerClientsAggregate(trainerId: string): Promise<TrainerClientRow[]> {
+  if (!isConfigured()) return [];
+  const sb = createClient();
+  const map = new Map<string, TrainerClientRow>();
+  const bump = (uid: string, ts: string | null, key: "oneOnOneCount" | "programCount" | "classCount") => {
+    let row = map.get(uid);
+    if (!row) {
+      row = { user_id: uid, profile: { display_name: null, avatar_url: null, handle: null }, lastInteractionAt: null, oneOnOneCount: 0, programCount: 0, classCount: 0 };
+      map.set(uid, row);
+    }
+    row[key] += 1;
+    if (ts && (!row.lastInteractionAt || new Date(ts) > new Date(row.lastInteractionAt))) {
+      row.lastInteractionAt = ts;
+    }
+  };
+  // 1-on-1 bookings.
+  const { data: tb } = await sb.from("trainer_bookings").select("user_id, starts_at").eq("trainer_id", trainerId);
+  for (const r of (tb as Array<{ user_id: string; starts_at: string }>) ?? []) bump(r.user_id, r.starts_at, "oneOnOneCount");
+  // Program enrollments — find programs authored or owned by this trainer.
+  const { data: progs } = await sb.from("programs").select("id").or(`author_trainer_id.eq.${trainerId},trainer_id.eq.${trainerId}`);
+  const progIds = ((progs as Array<{ id: string }>) ?? []).map(p => p.id);
+  if (progIds.length > 0) {
+    const { data: ens } = await sb.from("program_enrollments").select("user_id, started_at").in("program_id", progIds);
+    for (const r of (ens as Array<{ user_id: string; started_at: string }>) ?? []) bump(r.user_id, r.started_at, "programCount");
+  }
+  // Class bookings — through classes taught by this trainer.
+  const { data: cls } = await sb.from("classes").select("id").eq("trainer_id", trainerId);
+  const classIds = ((cls as Array<{ id: string }>) ?? []).map(c => c.id);
+  if (classIds.length > 0) {
+    const { data: cb } = await sb.from("bookings").select("user_id, created_at").in("class_id", classIds);
+    for (const r of (cb as Array<{ user_id: string; created_at: string }>) ?? []) bump(r.user_id, r.created_at, "classCount");
+  }
+  // Hydrate profiles.
+  const ids = Array.from(map.keys());
+  if (ids.length === 0) return [];
+  const profiles = await listProfilesByIds(ids);
+  for (const id of ids) {
+    const row = map.get(id)!;
+    row.profile = profiles[id] ?? row.profile;
+  }
+  return Array.from(map.values()).sort((a, b) => {
+    if (!a.lastInteractionAt) return 1;
+    if (!b.lastInteractionAt) return -1;
+    return new Date(b.lastInteractionAt).getTime() - new Date(a.lastInteractionAt).getTime();
+  });
+}
+
+export type TrainerClientHistory = {
+  enrollments: Array<{ enrollment: ProgramEnrollment; program: Program; completionCount: number }>;
+  bookings: TrainerBooking[];
+  classBookings: Array<{ booking: Booking; class: ClassRow }>;
+  totalSpentCents: number;
+};
+
+export async function listTrainerClientHistory(trainerId: string, userId: string): Promise<TrainerClientHistory> {
+  if (!isConfigured()) {
+    return { enrollments: [], bookings: [], classBookings: [], totalSpentCents: 0 };
+  }
+  const sb = createClient();
+  // 1-on-1 bookings
+  const { data: tb } = await sb.from("trainer_bookings").select("*").eq("trainer_id", trainerId).eq("user_id", userId).order("starts_at", { ascending: false });
+  const bookings = (tb as TrainerBooking[]) ?? [];
+
+  // Programs by this trainer + this user's enrollments in them.
+  const { data: progs } = await sb.from("programs").select("*").or(`author_trainer_id.eq.${trainerId},trainer_id.eq.${trainerId}`);
+  const allPrograms = (progs as Program[]) ?? [];
+  const progIds = allPrograms.map(p => p.id);
+  let enrollments: TrainerClientHistory["enrollments"] = [];
+  if (progIds.length > 0) {
+    const { data: ens } = await sb.from("program_enrollments").select("*").eq("user_id", userId).in("program_id", progIds);
+    const enRows = (ens as ProgramEnrollment[]) ?? [];
+    if (enRows.length > 0) {
+      const enIds = enRows.map(e => e.id);
+      const { data: comps } = await sb.from("program_completions").select("enrollment_id").in("enrollment_id", enIds);
+      const counts = new Map<string, number>();
+      for (const c of (comps as Array<{ enrollment_id: string }>) ?? []) {
+        counts.set(c.enrollment_id, (counts.get(c.enrollment_id) ?? 0) + 1);
+      }
+      enrollments = enRows.map(e => ({
+        enrollment: e,
+        program: allPrograms.find(p => p.id === e.program_id)!,
+        completionCount: counts.get(e.id) ?? 0,
+      })).filter(r => r.program); // drop any FK miss
+    }
+  }
+
+  // Class bookings.
+  const { data: cls } = await sb.from("classes").select("*").eq("trainer_id", trainerId);
+  const classes = (cls as ClassRow[]) ?? [];
+  const classIds = classes.map(c => c.id);
+  let classBookings: TrainerClientHistory["classBookings"] = [];
+  if (classIds.length > 0) {
+    const { data: cb } = await sb.from("bookings").select("*").eq("user_id", userId).in("class_id", classIds).order("created_at", { ascending: false });
+    classBookings = ((cb as Booking[]) ?? []).map(b => ({ booking: b, class: classes.find(c => c.id === b.class_id)! })).filter(r => r.class);
+  }
+
+  // Total spent — sum from purchases that ref any of these surfaces.
+  const totalCents = bookings.reduce((s, b) => s + (b.paid_status === "paid" ? b.price_cents : 0), 0)
+    + classBookings.reduce((s, r) => s + (r.booking.paid_status === "paid" ? r.booking.price_cents_paid : 0), 0);
+
+  return { enrollments, bookings, classBookings, totalSpentCents: totalCents };
+}
+
+/** Roster of attendees for a single trainer_sessions row (group session). */
+export async function listGroupSessionRoster(sessionId: string): Promise<Array<{ booking: TrainerBooking; profile: { display_name: string | null; avatar_url: string | null; handle: string | null } }>> {
+  if (!isConfigured()) return [];
+  const sb = createClient();
+  const { data: bs } = await sb
+    .from("trainer_bookings")
+    .select("*")
+    .eq("session_id", sessionId)
+    .in("status", ["pending_trainer", "confirmed", "completed"])
+    .order("created_at", { ascending: true });
+  const rows = (bs as TrainerBooking[]) ?? [];
+  if (rows.length === 0) return [];
+  const profiles = await listProfilesByIds(Array.from(new Set(rows.map(r => r.user_id))));
+  return rows.map(b => ({ booking: b, profile: profiles[b.user_id] ?? { display_name: null, avatar_url: null, handle: null } }));
+}

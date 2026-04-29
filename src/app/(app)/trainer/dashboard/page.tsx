@@ -9,8 +9,8 @@ import {
   acceptTrainerBookingAction,
   rejectTrainerBookingAction,
   cancelTrainerBookingAction,
+  completeTrainerBookingAction,
 } from "@/lib/trainer-booking-actions";
-import { cancelGroupSessionAction } from "@/lib/trainer-session-actions";
 import { testVideoRoomAction } from "@/lib/video/test-action";
 import { routines } from "@/lib/data/routines";
 import type { TrainerBooking, TrainerSessionRow } from "@/lib/data/types";
@@ -51,6 +51,12 @@ export default async function TrainerDashboard({ searchParams }: { searchParams:
             </Link>
             <Link href="/trainer/sessions/new" className="e-mono" style={{ color: "var(--sky)", textDecoration: "none", letterSpacing: "0.2em", fontSize: 11 }}>
               + NEW GROUP SESSION
+            </Link>
+            <Link href="/trainer/clients" className="e-mono" style={{ color: "var(--sky)", textDecoration: "none", letterSpacing: "0.2em", fontSize: 11 }}>
+              YOUR CLIENTS →
+            </Link>
+            <Link href="/trainer/classes" className="e-mono" style={{ color: "var(--sky)", textDecoration: "none", letterSpacing: "0.2em", fontSize: 11 }}>
+              YOUR CLASSES →
             </Link>
             <Link href="/trainer/programs" className="e-mono" style={{ color: "var(--sky)", textDecoration: "none", letterSpacing: "0.2em", fontSize: 11 }}>
               YOUR PROGRAMS →
@@ -204,6 +210,9 @@ function UpcomingRow({ booking, clientName }: { booking: TrainerBooking; clientN
   const timeStr = dt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
   const joinable = isSessionJoinable(booking.starts_at, booking.ends_at);
   const routine = booking.routine_slug ? routines.find(r => r.slug === booking.routine_slug) : null;
+  // Show MARK COMPLETE within 5 min of end and beyond, so trainers can log
+  // completion from the dashboard without re-entering the room.
+  const canMarkComplete = Date.now() > new Date(booking.ends_at).getTime() - 5 * 60_000;
 
   return (
     <div style={{ padding: 14, borderRadius: 14, background: "var(--haze)", border: "1px solid rgba(143,184,214,0.18)", display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
@@ -227,6 +236,12 @@ function UpcomingRow({ booking, clientName }: { booking: TrainerBooking; clientN
           <Link href={`/train/session/${booking.id}`} className="e-mono" style={{ color: "var(--sky)", fontSize: 10, letterSpacing: "0.18em", textDecoration: "none" }}>
             DETAIL →
           </Link>
+        )}
+        {canMarkComplete && (
+          <form action={completeTrainerBookingAction}>
+            <input type="hidden" name="booking_id" value={booking.id} />
+            <button type="submit" className="btn btn-sky" style={{ padding: "8px 12px", fontSize: 10 }}>MARK COMPLETE</button>
+          </form>
         )}
         <form action={cancelTrainerBookingAction}>
           <input type="hidden" name="booking_id" value={booking.id} />
@@ -265,11 +280,12 @@ function GroupSessionRow({ session, attendees }: { session: TrainerSessionRow; a
   const timeStr = dt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
   const full = attendees >= session.capacity;
   return (
-    <div style={{
+    <Link href={`/trainer/sessions/${session.id}`} className="lift" style={{
       padding: 14, borderRadius: 14,
       background: "linear-gradient(135deg, rgba(143,184,214,0.16), rgba(46,127,176,0.04))",
       border: "1px solid rgba(143,184,214,0.32)",
       display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap",
+      color: "var(--bone)", textDecoration: "none",
     }}>
       <div style={{ minWidth: 96, paddingRight: 14, borderRight: "1px solid rgba(143,184,214,0.18)" }}>
         <div className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.2em" }}>{dateStr}</div>
@@ -284,11 +300,8 @@ function GroupSessionRow({ session, attendees }: { session: TrainerSessionRow; a
           {full ? " · FULL" : ""}
         </div>
       </div>
-      <form action={cancelGroupSessionAction}>
-        <input type="hidden" name="session_id" value={session.id} />
-        <button type="submit" className="btn" style={{ padding: "8px 12px", fontSize: 10, background: "transparent", color: "rgba(242,238,232,0.55)", border: "1px solid rgba(143,184,214,0.2)" }}>CANCEL</button>
-      </form>
-    </div>
+      <span className="e-mono" style={{ color: "var(--sky)", fontSize: 10, letterSpacing: "0.2em" }}>MANAGE →</span>
+    </Link>
   );
 }
 
