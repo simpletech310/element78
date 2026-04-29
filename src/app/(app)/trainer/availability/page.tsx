@@ -1,7 +1,5 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Navbar } from "@/components/site/Navbar";
-import { Icon } from "@/components/ui/Icon";
+import { CoachShell, CoachSection } from "@/components/site/CoachShell";
 import { getTrainerForCurrentUser } from "@/lib/trainer-auth";
 import {
   getTrainerSessionSettings,
@@ -17,26 +15,23 @@ import {
   deleteAvailabilityBlockAction,
 } from "@/lib/trainer-booking-actions";
 import type { TrainerAvailabilityRule } from "@/lib/data/types";
+import { fmtMinutes12 } from "@/lib/format";
 
 const WEEKDAYS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 
-function fmtMinutes(m: number): string {
-  const hh = Math.floor(m / 60).toString().padStart(2, "0");
-  const mm = (m % 60).toString().padStart(2, "0");
-  return `${hh}:${mm}`;
-}
+export const dynamic = "force-dynamic";
 
-export default async function TrainerAvailabilityPage({ searchParams }: { searchParams: { saved?: string; deleted?: string; settings_saved?: string; error?: string } }) {
-  const trainer = await getTrainerForCurrentUser();
-  if (!trainer) redirect("/login?next=/trainer/availability");
+export default async function CoachAvailabilityPage({ searchParams }: { searchParams: { saved?: string; deleted?: string; settings_saved?: string; error?: string } }) {
+  const coach = await getTrainerForCurrentUser();
+  if (!coach) redirect("/login?next=/trainer/availability");
 
   const now = new Date();
   const yearAhead = new Date(now.getTime() + 365 * 24 * 60 * 60_000);
   const [settings, rules, locations, blocks] = await Promise.all([
-    getTrainerSessionSettings(trainer.id),
-    listAllAvailabilityRules(trainer.id),
+    getTrainerSessionSettings(coach.id),
+    listAllAvailabilityRules(coach.id),
     listLocations(),
-    listAvailabilityBlocks(trainer.id, now.toISOString(), yearAhead.toISOString()),
+    listAvailabilityBlocks(coach.id, now.toISOString(), yearAhead.toISOString()),
   ]);
 
   const grouped = new Map<number, TrainerAvailabilityRule[]>();
@@ -54,31 +49,24 @@ export default async function TrainerAvailabilityPage({ searchParams }: { search
               : null;
 
   return (
-    <div style={{ background: "var(--ink)", color: "var(--bone)", fontFamily: "var(--font-body)", minHeight: "100dvh" }}>
-      <Navbar authed={true} />
-      <div style={{ maxWidth: 880, margin: "0 auto", padding: "20px 22px 80px" }}>
-        <Link href="/trainer/dashboard" aria-label="Back" style={{ color: "var(--bone)", display: "inline-flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
-          <span style={{ transform: "rotate(180deg)", display: "inline-flex" }}><Icon name="chevron" size={18} /></span>
-          <span className="e-mono" style={{ fontSize: 11, letterSpacing: "0.2em" }}>DASHBOARD</span>
-        </Link>
+    <CoachShell coach={coach} pathname="/trainer/availability">
+      <h1 className="e-display" style={{ fontSize: "clamp(36px, 7vw, 56px)", lineHeight: 0.92 }}>AVAILABILITY.</h1>
+      <p style={{ marginTop: 12, fontSize: 14, color: "rgba(242,238,232,0.65)", maxWidth: 560, lineHeight: 1.6 }}>
+        Recurring weekly hours members can book against, plus one-off blocks for vacation, training weeks, or anything else.
+      </p>
 
-        <div style={{ marginTop: 18 }}>
-          <div className="e-mono" style={{ color: "var(--sky)", letterSpacing: "0.25em", fontSize: 10 }}>TRAINER · {trainer.name.toUpperCase()}</div>
-          <h1 className="e-display" style={{ fontSize: "clamp(36px, 7vw, 56px)", lineHeight: 0.92, marginTop: 8 }}>AVAILABILITY.</h1>
+      {flash && (
+        <div className="e-mono" style={{ marginTop: 18, padding: "12px 14px", borderRadius: 12, background: "rgba(143,184,214,0.1)", border: "1px solid var(--sky)", color: "var(--sky)", fontSize: 11, letterSpacing: "0.18em" }}>
+          {flash}
         </div>
-
-        {flash && (
-          <div className="e-mono" style={{ marginTop: 14, padding: "12px 14px", borderRadius: 12, background: "rgba(143,184,214,0.1)", border: "1px solid var(--sky)", color: "var(--sky)", fontSize: 11, letterSpacing: "0.18em" }}>
-            {flash}
-          </div>
-        )}
+      )}
 
         {/* SESSION SETTINGS */}
         <section style={{ marginTop: 32 }}>
           <div className="e-mono" style={{ color: "var(--sky)", letterSpacing: "0.2em", fontSize: 10 }}>01 / SESSION SETTINGS</div>
           <form action={upsertSessionSettingsAction} style={{ marginTop: 12, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, padding: 16, borderRadius: 14, background: "var(--haze)", border: "1px solid rgba(143,184,214,0.18)" }}>
-            <Field label="PRICE (CENTS)">
-              <input type="number" name="price_cents" min={0} defaultValue={settings?.price_cents ?? 7500} className="ta-input" />
+            <Field label="PRICE · USD (1-ON-1 SESSION)">
+              <input type="number" name="price_dollars" min={0} step="0.01" defaultValue={(settings?.price_cents ?? 7500) / 100} className="ta-input" placeholder="75.00" />
             </Field>
             <Field label="DURATION (MIN)">
               <input type="number" name="duration_min" min={15} max={180} defaultValue={settings?.duration_min ?? 45} className="ta-input" />
@@ -132,7 +120,7 @@ export default async function TrainerAvailabilityPage({ searchParams }: { search
                       {dayRules.map(r => (
                         <div key={r.id} style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                           <span className="e-mono" style={{ fontSize: 12, color: r.is_active ? "var(--bone)" : "rgba(242,238,232,0.4)", letterSpacing: "0.12em" }}>
-                            {fmtMinutes(r.start_minute)} – {fmtMinutes(r.end_minute)} · {r.mode.toUpperCase()}
+                            {fmtMinutes12(r.start_minute)} – {fmtMinutes12(r.end_minute)} · {r.mode.toUpperCase()}
                             {!r.is_active ? " · DISABLED" : ""}
                           </span>
                           <form action={deleteAvailabilityRuleAction}>
@@ -212,21 +200,12 @@ export default async function TrainerAvailabilityPage({ searchParams }: { search
             </div>
           )}
         </section>
-      </div>
 
-      {/* Local styles for inputs: keeps the file self-contained without bringing in CSS modules. */}
       <style>{`
-        .ta-input {
-          padding: 8px 12px;
-          border-radius: 8px;
-          background: rgba(10,14,20,0.4);
-          border: 1px solid rgba(143,184,214,0.25);
-          color: var(--bone);
-          font-family: var(--font-body);
-          font-size: 13px;
-        }
+        .ta-input { padding: 11px 13px; border-radius: 10px; background: rgba(10,14,20,0.4); border: 1px solid rgba(143,184,214,0.25); color: var(--bone); font-family: var(--font-body); font-size: 14px; }
+        .ta-input:focus { outline: none; border-color: var(--sky); }
       `}</style>
-    </div>
+    </CoachShell>
   );
 }
 

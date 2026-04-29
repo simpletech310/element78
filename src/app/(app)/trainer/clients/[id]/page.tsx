@@ -1,22 +1,26 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Navbar } from "@/components/site/Navbar";
 import { Icon } from "@/components/ui/Icon";
 import { Photo } from "@/components/ui/Photo";
+import { CoachShell } from "@/components/site/CoachShell";
+import { Time } from "@/components/site/Time";
 import { getTrainerForCurrentUser } from "@/lib/trainer-auth";
 import { listTrainerClientHistory, listProfilesByIds } from "@/lib/data/queries";
 import { startThreadAction } from "@/lib/messaging-actions";
 import { getActiveCoachClientNote } from "@/lib/coach-notes";
 import { saveCoachClientNoteAction } from "@/lib/coach-notes-actions";
+import { fmtDollars } from "@/lib/format";
 
-export default async function TrainerClientDetailPage({ params }: { params: { id: string } }) {
-  const trainer = await getTrainerForCurrentUser();
-  if (!trainer) redirect(`/login?next=/trainer/clients/${params.id}`);
+export const dynamic = "force-dynamic";
+
+export default async function CoachClientDetailPage({ params }: { params: { id: string } }) {
+  const coach = await getTrainerForCurrentUser();
+  if (!coach) redirect(`/login?next=/trainer/clients/${params.id}`);
 
   const [history, profiles, note] = await Promise.all([
-    listTrainerClientHistory(trainer.id, params.id),
+    listTrainerClientHistory(coach.id, params.id),
     listProfilesByIds([params.id]),
-    getActiveCoachClientNote(trainer.id, params.id),
+    getActiveCoachClientNote(coach.id, params.id),
   ]);
   const profile = profiles[params.id] ?? { display_name: "Member", avatar_url: null, handle: null };
 
@@ -26,38 +30,31 @@ export default async function TrainerClientDetailPage({ params }: { params: { id
   }
 
   return (
-    <div style={{ background: "var(--ink)", color: "var(--bone)", fontFamily: "var(--font-body)", minHeight: "100dvh" }}>
-      <Navbar authed={true} />
-      <div style={{ maxWidth: 880, margin: "0 auto", padding: "20px 22px 80px" }}>
-        <Link href="/trainer/clients" aria-label="Back" style={{ color: "var(--bone)", display: "inline-flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
-          <span style={{ transform: "rotate(180deg)", display: "inline-flex" }}><Icon name="chevron" size={18} /></span>
-          <span className="e-mono" style={{ fontSize: 11, letterSpacing: "0.2em" }}>YOUR CLIENTS</span>
-        </Link>
-
-        <div style={{ marginTop: 18, display: "flex", gap: 18, alignItems: "center" }}>
-          <div style={{ width: 88, height: 88, borderRadius: "50%", overflow: "hidden", border: "2px solid var(--sky)", flexShrink: 0 }}>
-            {profile.avatar_url ? (
-              <Photo src={profile.avatar_url} alt={profile.display_name ?? "Client"} style={{ width: "100%", height: "100%" }} />
-            ) : (
-              <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(242,238,232,0.45)" }}>
-                <Icon name="user" size={32} />
-              </div>
-            )}
-          </div>
-          <div style={{ flex: 1 }}>
-            <div className="e-mono" style={{ color: "var(--sky)", letterSpacing: "0.25em", fontSize: 10 }}>CLIENT</div>
-            <h1 className="e-display" style={{ fontSize: "clamp(28px, 5vw, 44px)", lineHeight: 0.95, marginTop: 6 }}>
-              {(profile.display_name ?? "Member").toUpperCase()}
-            </h1>
-            <div className="e-mono" style={{ marginTop: 8, color: "rgba(242,238,232,0.55)", fontSize: 10, letterSpacing: "0.2em" }}>
-              TOTAL · ${(history.totalSpentCents / 100).toFixed(0)} SPENT
+    <CoachShell coach={coach} pathname="/trainer/clients">
+      <div style={{ display: "flex", gap: 18, alignItems: "center", flexWrap: "wrap" }}>
+        <div style={{ width: 96, height: 96, borderRadius: "50%", overflow: "hidden", border: "2px solid var(--sky)", flexShrink: 0 }}>
+          {profile.avatar_url ? (
+            <Photo src={profile.avatar_url} alt={profile.display_name ?? "Client"} style={{ width: "100%", height: "100%" }} />
+          ) : (
+            <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(242,238,232,0.45)" }}>
+              <Icon name="user" size={32} />
             </div>
-          </div>
-          <form action={startThreadAction}>
-            <input type="hidden" name="other_user_id" value={params.id} />
-            <button type="submit" className="btn btn-sky" style={{ padding: "10px 18px" }}>MESSAGE →</button>
-          </form>
+          )}
         </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="e-mono" style={{ color: "var(--sky)", letterSpacing: "0.25em", fontSize: 10 }}>CLIENT</div>
+          <h1 className="e-display" style={{ fontSize: "clamp(32px, 5vw, 44px)", lineHeight: 0.95, marginTop: 8 }}>
+            {(profile.display_name ?? "Member").toUpperCase()}
+          </h1>
+          <div className="e-mono" style={{ marginTop: 8, color: "rgba(242,238,232,0.6)", fontSize: 10, letterSpacing: "0.2em" }}>
+            TOTAL · {fmtDollars(history.totalSpentCents)} SPENT
+          </div>
+        </div>
+        <form action={startThreadAction}>
+          <input type="hidden" name="other_user_id" value={params.id} />
+          <button type="submit" className="btn btn-sky" style={{ padding: "12px 22px" }}>MESSAGE →</button>
+        </form>
+      </div>
 
         {/* COACH NOTES (private) */}
         <Section title="PRIVATE NOTES · COACH ONLY">
@@ -120,8 +117,7 @@ export default async function TrainerClientDetailPage({ params }: { params: { id
                 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 6 }}>
                     <div className="e-mono" style={{ color: "var(--sky)", fontSize: 10, letterSpacing: "0.2em" }}>
-                      {dt.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "2-digit" }).toUpperCase()} · {dt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
-                      · {b.mode.replace("_", " ").toUpperCase()}
+                      <Time iso={b.starts_at} format="datetime" /> · {b.mode.replace("_", " ").toUpperCase()}
                     </div>
                     <div className="e-mono" style={{ color: "rgba(242,238,232,0.55)", fontSize: 10, letterSpacing: "0.2em" }}>
                       {b.status.replace(/_/g, " ").toUpperCase()} · {b.paid_status.toUpperCase()}
@@ -155,7 +151,7 @@ export default async function TrainerClientDetailPage({ params }: { params: { id
                   <div>
                     <div style={{ fontFamily: "var(--font-display)", fontSize: 16 }}>{cls.name.toUpperCase()}</div>
                     <div className="e-mono" style={{ color: "rgba(242,238,232,0.55)", fontSize: 9, letterSpacing: "0.18em", marginTop: 4 }}>
-                      {dt.toLocaleDateString("en-US", { month: "short", day: "2-digit" }).toUpperCase()} · {dt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+                      <Time iso={cls.starts_at} format="datetime" />
                     </div>
                   </div>
                   <div className="e-mono" style={{ color: "var(--sky)", fontSize: 10, letterSpacing: "0.2em" }}>
@@ -166,8 +162,7 @@ export default async function TrainerClientDetailPage({ params }: { params: { id
             })
           )}
         </Section>
-      </div>
-    </div>
+    </CoachShell>
   );
 }
 

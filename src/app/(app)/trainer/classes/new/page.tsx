@@ -1,9 +1,9 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Navbar } from "@/components/site/Navbar";
-import { Icon } from "@/components/ui/Icon";
+import { CoachShell } from "@/components/site/CoachShell";
 import { getTrainerForCurrentUser } from "@/lib/trainer-auth";
 import { createClassAction } from "@/lib/class-create-actions";
+
+export const dynamic = "force-dynamic";
 
 const ERR_MESSAGES: Record<string, string> = {
   name_required: "Class name is required.",
@@ -14,37 +14,29 @@ const ERR_MESSAGES: Record<string, string> = {
 };
 
 export default async function NewClassPage({ searchParams }: { searchParams: { error?: string } }) {
-  const trainer = await getTrainerForCurrentUser();
-  if (!trainer) redirect("/login?next=/trainer/classes/new");
+  const coach = await getTrainerForCurrentUser();
+  if (!coach) redirect("/login?next=/trainer/classes/new");
 
   const errMsg = searchParams.error
     ? ERR_MESSAGES[searchParams.error] ?? decodeURIComponent(searchParams.error)
     : null;
 
   return (
-    <div style={{ background: "var(--ink)", color: "var(--bone)", fontFamily: "var(--font-body)", minHeight: "100dvh" }}>
-      <Navbar authed={true} />
-      <div style={{ maxWidth: 720, margin: "0 auto", padding: "20px 22px 80px" }}>
-        <Link href="/trainer/dashboard" aria-label="Back" style={{ color: "var(--bone)", display: "inline-flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
-          <span style={{ transform: "rotate(180deg)", display: "inline-flex" }}><Icon name="chevron" size={18} /></span>
-          <span className="e-mono" style={{ fontSize: 11, letterSpacing: "0.2em" }}>DASHBOARD</span>
-        </Link>
-
-        <div style={{ marginTop: 18 }}>
-          <div className="e-mono" style={{ color: "var(--sky)", letterSpacing: "0.25em", fontSize: 10 }}>NEW CLASS</div>
-          <h1 className="e-display" style={{ fontSize: "clamp(36px, 7vw, 52px)", lineHeight: 0.92, marginTop: 8 }}>PUT IT ON THE SCHEDULE.</h1>
-          <p style={{ marginTop: 14, fontSize: 13, color: "rgba(242,238,232,0.6)", maxWidth: 520, lineHeight: 1.6 }}>
-            Equipment classes (reformers) get a mirrored studio map — 5 spots per side facing the mirror, max 10. Open-floor classes (HIIT, mobility, etc.) are first-come capacity-only.
-          </p>
-        </div>
+    <CoachShell coach={coach} pathname="/trainer/classes/new">
+      <div style={{ maxWidth: 720 }}>
+        <div className="e-mono" style={{ color: "var(--sky)", letterSpacing: "0.25em", fontSize: 10 }}>NEW CLASS</div>
+        <h1 className="e-display" style={{ fontSize: "clamp(36px, 7vw, 52px)", lineHeight: 0.92, marginTop: 8 }}>PUT IT ON THE SCHEDULE.</h1>
+        <p style={{ marginTop: 14, fontSize: 14, color: "rgba(242,238,232,0.65)", maxWidth: 560, lineHeight: 1.6 }}>
+          Equipment classes (reformers) get a mirrored studio map — 5 spots per side facing the mirror, max 10. Open-floor classes (HIIT, mobility, etc.) are first-come capacity-only.
+        </p>
 
         {errMsg && (
-          <div className="e-mono" style={{ marginTop: 14, padding: "12px 14px", borderRadius: 12, background: "rgba(232,181,168,0.12)", border: "1px solid rgba(232,181,168,0.4)", color: "var(--rose)", fontSize: 11, letterSpacing: "0.16em" }}>
+          <div className="e-mono" style={{ marginTop: 18, padding: "12px 14px", borderRadius: 12, background: "rgba(232,181,168,0.12)", border: "1px solid rgba(232,181,168,0.4)", color: "var(--rose)", fontSize: 11, letterSpacing: "0.16em" }}>
             {errMsg}
           </div>
         )}
 
-        <form action={createClassAction} style={{ marginTop: 28, display: "flex", flexDirection: "column", gap: 14, padding: 18, borderRadius: 14, background: "var(--haze)", border: "1px solid rgba(143,184,214,0.18)" }}>
+        <form action={createClassAction} encType="multipart/form-data" style={{ marginTop: 26, display: "flex", flexDirection: "column", gap: 14, padding: 22, borderRadius: 16, background: "var(--haze)", border: "1px solid rgba(143,184,214,0.2)" }}>
           <Field label="CLASS NAME *">
             <input name="name" required placeholder="POWER PILATES" className="ta-input" />
           </Field>
@@ -98,11 +90,11 @@ export default async function NewClassPage({ searchParams }: { searchParams: { e
             <Field label="ROOM">
               <input name="room" placeholder="STUDIO B" className="ta-input" />
             </Field>
-            <Field label="PRICE (CENTS · 0 = FREE)">
-              <input name="price_cents" type="number" min={0} defaultValue={0} className="ta-input" />
+            <Field label="PRICE PER PERSON · USD (0 = FREE)">
+              <input name="price_dollars" type="number" min={0} step="0.01" defaultValue={0} className="ta-input" placeholder="0.00" />
             </Field>
-            <Field label="HERO IMAGE URL">
-              <input name="hero_image_url" placeholder="/assets/blue-set-rooftop.jpg" className="ta-input" />
+            <Field label="HERO IMAGE · UPLOAD (OPTIONAL)">
+              <input type="file" name="hero_image_file" accept="image/*" className="ta-input" />
             </Field>
           </div>
 
@@ -120,18 +112,10 @@ export default async function NewClassPage({ searchParams }: { searchParams: { e
       </div>
 
       <style>{`
-        .ta-input {
-          padding: 10px 12px;
-          border-radius: 8px;
-          background: rgba(10,14,20,0.4);
-          border: 1px solid rgba(143,184,214,0.25);
-          color: var(--bone);
-          font-family: var(--font-body);
-          font-size: 13px;
-          width: 100%;
-        }
+        .ta-input { padding: 11px 13px; border-radius: 10px; background: rgba(10,14,20,0.4); border: 1px solid rgba(143,184,214,0.25); color: var(--bone); font-family: var(--font-body); font-size: 14px; width: 100%; }
+        .ta-input:focus { outline: none; border-color: var(--sky); }
       `}</style>
-    </div>
+    </CoachShell>
   );
 }
 

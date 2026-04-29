@@ -598,7 +598,10 @@ export async function upsertSessionSettingsAction(formData: FormData) {
   const trainer = await getTrainerForCurrentUser();
   if (!trainer) redirect("/login");
 
-  const priceCents = Number(formData.get("price_cents") ?? 0);
+  const priceDollarsRaw = formData.get("price_dollars");
+  const priceCents = priceDollarsRaw != null
+    ? Math.max(0, Math.round(Number(priceDollarsRaw) * 100))
+    : Number(formData.get("price_cents") ?? 0);
   const durationMin = Number(formData.get("duration_min") ?? 45);
   const bufferMin = Number(formData.get("buffer_min") ?? 15);
   const modesRaw = formData.getAll("modes").map(String);

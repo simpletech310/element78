@@ -8,6 +8,7 @@ import { Wordmark } from "@/components/brand/Wordmark";
 import { getUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { signOutAction } from "@/lib/auth-actions";
+import { getTrainerForCurrentUser } from "@/lib/trainer-auth";
 
 export default async function AccountPage({ searchParams }: { searchParams?: { updated?: string } }) {
   const user = await getUser();
@@ -35,7 +36,12 @@ export default async function AccountPage({ searchParams }: { searchParams?: { u
     ?? (user.user_metadata?.avatar_url as string | undefined)
     ?? "/assets/blue-hair-selfie.jpg";
 
+  // If the user is a coach, surface the coach dashboard at the top of the
+  // account menu so they can hop into their working surface fast.
+  const coach = await getTrainerForCurrentUser();
+
   const links: { label: string; href: string; icon: "cal" | "bag" | "heart" | "settings" | "fire" }[] = [
+    ...(coach ? [{ label: "COACH DASHBOARD", href: "/trainer/dashboard", icon: "fire" as const }] : []),
     { label: "MESSAGES", href: "/messages", icon: "settings" },
     { label: "MEMBERSHIP", href: "/account/membership", icon: "settings" },
     { label: "ORDER HISTORY", href: "/account/purchases", icon: "bag" },
@@ -43,7 +49,7 @@ export default async function AccountPage({ searchParams }: { searchParams?: { u
     { label: "1-ON-1 SESSIONS", href: "/account/sessions", icon: "cal" },
     { label: "MY BOOKINGS", href: "/gym", icon: "cal" },
     { label: "SAVED", href: "/account/saved", icon: "heart" },
-    { label: "BECOME A COACH", href: "/coach/apply", icon: "fire" },
+    ...(coach ? [] : [{ label: "BECOME A COACH", href: "/coach/apply", icon: "fire" as const }]),
     { label: "NOTIFICATIONS", href: "/account/notifications", icon: "settings" },
     { label: "SECURITY", href: "/account/security", icon: "settings" },
     { label: "WAIVER · WELLNESS", href: "/account/waiver", icon: "heart" },

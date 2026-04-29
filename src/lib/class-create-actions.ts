@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getTrainerForCurrentUser } from "@/lib/trainer-auth";
+import { uploadImageToBucket } from "@/lib/supabase/storage";
+import { dollarsToCents } from "@/lib/format";
 
 function slugify(s: string): string {
   return s
@@ -49,8 +51,18 @@ export async function createClassAction(formData: FormData) {
   const intensity = String(formData.get("intensity") ?? "MD").trim();
   const summary = String(formData.get("summary") ?? "").trim() || null;
   const whatToBring = String(formData.get("what_to_bring") ?? "").trim() || null;
-  const heroImage = String(formData.get("hero_image_url") ?? "").trim() || null;
-  const priceCents = Math.max(0, Number(formData.get("price_cents") ?? 0));
+  // Image is uploaded; URL fields removed everywhere on the coach side.
+  let heroImage: string | null = null;
+  const heroFile = formData.get("hero_image_file") as File | null;
+  if (heroFile && heroFile.size > 0) {
+    try {
+      const { url } = await uploadImageToBucket("trainer-uploads", heroFile, trainer.id);
+      heroImage = url;
+    } catch (err) {
+      redirect(`/trainer/classes/new?error=${encodeURIComponent((err as Error).message)}`);
+    }
+  }
+  const priceCents = dollarsToCents(formData.get("price_dollars") ?? formData.get("price_cents"));
 
   const hasEquipment = formData.get("has_equipment") === "on";
   const mirroredLayout = hasEquipment && formData.get("mirrored_layout") === "on";

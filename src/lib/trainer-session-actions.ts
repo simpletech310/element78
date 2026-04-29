@@ -23,7 +23,11 @@ export async function createGroupSessionAction(formData: FormData) {
   const endsAtRaw = String(formData.get("ends_at") ?? "").trim();
   const mode = String(formData.get("mode") ?? "video") as TrainerSessionMode;
   const capacity = Math.max(2, Number(formData.get("capacity") ?? 2));
-  const priceCents = Math.max(0, Number(formData.get("price_cents") ?? 0));
+  // Accept dollar input (preferred), fall back to cents for back-compat.
+  const priceDollarsRaw = formData.get("price_dollars");
+  const priceCents = priceDollarsRaw != null
+    ? Math.max(0, Math.round(Number(priceDollarsRaw) * 100))
+    : Math.max(0, Number(formData.get("price_cents") ?? 0));
   const title = String(formData.get("title") ?? "").trim() || null;
   const description = String(formData.get("description") ?? "").trim() || null;
   const routineSlug = String(formData.get("routine_slug") ?? "").trim() || null;

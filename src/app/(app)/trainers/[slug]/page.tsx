@@ -21,6 +21,10 @@ function fmtPrice(cents: number) {
   return `$${(cents / 100).toFixed(0)}`;
 }
 
+// Profile edits should reflect on the public page immediately, so don't let
+// Next bake this route at build time.
+export const dynamic = "force-dynamic";
+
 export default async function TrainerProfile({ params }: { params: { slug: string } }) {
   const [t, user] = await Promise.all([getTrainer(params.slug), getUser()]);
   if (!t) notFound();

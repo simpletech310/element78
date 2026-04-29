@@ -1,39 +1,31 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Navbar } from "@/components/site/Navbar";
-import { Icon } from "@/components/ui/Icon";
+import { CoachShell } from "@/components/site/CoachShell";
 import { getTrainerForCurrentUser } from "@/lib/trainer-auth";
 import { createGroupSessionAction } from "@/lib/trainer-session-actions";
 import { routines } from "@/lib/data/routines";
 
+export const dynamic = "force-dynamic";
+
 export default async function NewGroupSessionPage({ searchParams }: { searchParams: { error?: string } }) {
-  const trainer = await getTrainerForCurrentUser();
-  if (!trainer) redirect("/login?next=/trainer/sessions/new");
+  const coach = await getTrainerForCurrentUser();
+  if (!coach) redirect("/login?next=/trainer/sessions/new");
 
   return (
-    <div style={{ background: "var(--ink)", color: "var(--bone)", fontFamily: "var(--font-body)", minHeight: "100dvh" }}>
-      <Navbar authed={true} />
-      <div style={{ maxWidth: 720, margin: "0 auto", padding: "20px 22px 80px" }}>
-        <Link href="/trainer/dashboard" aria-label="Back" style={{ color: "var(--bone)", display: "inline-flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
-          <span style={{ transform: "rotate(180deg)", display: "inline-flex" }}><Icon name="chevron" size={18} /></span>
-          <span className="e-mono" style={{ fontSize: 11, letterSpacing: "0.2em" }}>DASHBOARD</span>
-        </Link>
-
-        <div style={{ marginTop: 18 }}>
-          <div className="e-mono" style={{ color: "var(--sky)", letterSpacing: "0.25em", fontSize: 10 }}>NEW GROUP SESSION</div>
-          <h1 className="e-display" style={{ fontSize: "clamp(36px, 7vw, 52px)", lineHeight: 0.92, marginTop: 8 }}>RUN A GROUP.</h1>
-          <p style={{ marginTop: 14, fontSize: 13, color: "rgba(242,238,232,0.6)", maxWidth: 480, lineHeight: 1.6 }}>
-            Multiple attendees share one Daily room. Per-person pricing — each member checks out separately. Auto-confirm: no per-attendee accept loop.
-          </p>
-        </div>
+    <CoachShell coach={coach} pathname="/trainer/sessions/new">
+      <div style={{ maxWidth: 720 }}>
+        <div className="e-mono" style={{ color: "var(--sky)", letterSpacing: "0.25em", fontSize: 10 }}>NEW GROUP SESSION</div>
+        <h1 className="e-display" style={{ fontSize: "clamp(36px, 7vw, 52px)", lineHeight: 0.92, marginTop: 8 }}>RUN A GROUP.</h1>
+        <p style={{ marginTop: 14, fontSize: 14, color: "rgba(242,238,232,0.65)", maxWidth: 560, lineHeight: 1.6 }}>
+          Multiple attendees share one Daily room. Per-person pricing — each member checks out separately. Auto-confirm: no per-attendee accept loop.
+        </p>
 
         {searchParams.error && (
-          <div className="e-mono" style={{ marginTop: 14, padding: "12px 14px", borderRadius: 12, background: "rgba(232,181,168,0.12)", border: "1px solid rgba(232,181,168,0.4)", color: "var(--rose)", fontSize: 11, letterSpacing: "0.16em" }}>
+          <div className="e-mono" style={{ marginTop: 18, padding: "12px 14px", borderRadius: 12, background: "rgba(232,181,168,0.12)", border: "1px solid rgba(232,181,168,0.4)", color: "var(--rose)", fontSize: 11, letterSpacing: "0.16em" }}>
             {searchParams.error}
           </div>
         )}
 
-        <form action={createGroupSessionAction} style={{ marginTop: 28, display: "flex", flexDirection: "column", gap: 14, padding: 18, borderRadius: 14, background: "var(--haze)", border: "1px solid rgba(143,184,214,0.18)" }}>
+        <form action={createGroupSessionAction} style={{ marginTop: 26, display: "flex", flexDirection: "column", gap: 14, padding: 22, borderRadius: 16, background: "var(--haze)", border: "1px solid rgba(143,184,214,0.2)" }}>
           <Field label="TITLE">
             <input name="title" placeholder="MORNING POWER · GROUP" className="ta-input" />
           </Field>
@@ -55,8 +47,8 @@ export default async function NewGroupSessionPage({ searchParams }: { searchPara
           <Field label="CAPACITY · MIN 2 *">
             <input name="capacity" type="number" min={2} max={50} defaultValue={6} required className="ta-input" />
           </Field>
-          <Field label="PRICE PER PERSON (CENTS · 0 = FREE) *">
-            <input name="price_cents" type="number" min={0} defaultValue={2500} required className="ta-input" />
+          <Field label="PRICE PER PERSON · USD (0 = FREE) *">
+            <input name="price_dollars" type="number" min={0} step="0.01" defaultValue={25} required className="ta-input" placeholder="25.00" />
           </Field>
           <Field label="ROUTINE (OPTIONAL)">
             <select name="routine_slug" defaultValue="" className="ta-input">
@@ -76,18 +68,10 @@ export default async function NewGroupSessionPage({ searchParams }: { searchPara
       </div>
 
       <style>{`
-        .ta-input {
-          padding: 10px 12px;
-          border-radius: 8px;
-          background: rgba(10,14,20,0.4);
-          border: 1px solid rgba(143,184,214,0.25);
-          color: var(--bone);
-          font-family: var(--font-body);
-          font-size: 13px;
-          width: 100%;
-        }
+        .ta-input { padding: 11px 13px; border-radius: 10px; background: rgba(10,14,20,0.4); border: 1px solid rgba(143,184,214,0.25); color: var(--bone); font-family: var(--font-body); font-size: 14px; width: 100%; }
+        .ta-input:focus { outline: none; border-color: var(--sky); }
       `}</style>
-    </div>
+    </CoachShell>
   );
 }
 

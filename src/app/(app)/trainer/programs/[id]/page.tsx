@@ -84,9 +84,6 @@ export default async function EditProgramPage({
             <Field label="HERO IMAGE · UPLOAD (LEAVE BLANK TO KEEP CURRENT)" full>
               <input type="file" name="hero_image_file" accept="image/*" className="ta-input" />
             </Field>
-            <Field label="OR HERO IMAGE URL" full>
-              <input name="hero_image_url" defaultValue={program.hero_image ?? ""} placeholder="https://… or /assets/..." className="ta-input" />
-            </Field>
             <Field label="DESCRIPTION" full><textarea name="description" rows={3} defaultValue={program.description ?? ""} className="ta-input" style={{ resize: "vertical" }} /></Field>
             <Field label="DURATION LABEL"><input name="duration_label" defaultValue={program.duration_label ?? ""} className="ta-input" /></Field>
             <Field label="TOTAL SESSIONS *"><input name="total_sessions" type="number" min={1} max={365} defaultValue={program.total_sessions} required className="ta-input" /></Field>
@@ -114,7 +111,7 @@ export default async function EditProgramPage({
                 <option value="archived">Archived</option>
               </select>
             </Field>
-            <Field label="PRICE (CENTS)"><input name="price_cents" type="number" min={0} defaultValue={program.price_cents} className="ta-input" /></Field>
+            <Field label="PRICE · USD (0 = FREE)"><input name="price_dollars" type="number" min={0} step="0.01" defaultValue={program.price_cents / 100} className="ta-input" placeholder="0.00" /></Field>
             <Field label="SURFACES" full>
               <div style={{ display: "flex", gap: 14, paddingTop: 6 }}>
                 {(["app", "gym", "class"] as const).map(s => (
@@ -349,8 +346,8 @@ function AddSessionForm({
       <Field label="HERO IMAGE · UPLOAD (OPTIONAL)">
         <input type="file" name="hero_image_file" accept="image/*" className="ta-input" />
       </Field>
-      <Field label="OR HERO IMAGE URL">
-        <input name="hero_image_url" placeholder="https://… or /assets/..." className="ta-input" />
+      <Field label="VIDEO · UPLOAD (OPTIONAL)">
+        <input type="file" name="video_file" accept="video/*" className="ta-input" />
       </Field>
 
       <button type="submit" className="btn btn-sky" style={{ padding: "8px 14px", fontSize: 11, alignSelf: "flex-start" }}>

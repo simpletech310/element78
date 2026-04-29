@@ -81,7 +81,10 @@ export async function createProgramAction(formData: FormData) {
   const kind = String(formData.get("kind") ?? "both") as "in_app" | "in_person" | "both";
   const surfacesRaw = formData.getAll("surfaces").map(String).filter(Boolean);
   const surfaces = surfacesRaw.length > 0 ? surfacesRaw : ["app"];
-  const priceCents = Math.max(0, Number(formData.get("price_cents") ?? 0));
+  const priceDollarsRaw = formData.get("price_dollars");
+  const priceCents = priceDollarsRaw != null
+    ? Math.max(0, Math.round(Number(priceDollarsRaw) * 100))
+    : Math.max(0, Number(formData.get("price_cents") ?? 0));
   const requiresPayment = priceCents > 0;
 
   const sb = createClient();
@@ -130,8 +133,16 @@ export async function updateProgramAction(formData: FormData) {
     intensity: String(formData.get("intensity") ?? "").trim(),
     kind: String(formData.get("kind") ?? "both"),
     surfaces: formData.getAll("surfaces").map(String).filter(Boolean),
-    price_cents: Math.max(0, Number(formData.get("price_cents") ?? 0)),
-    requires_payment: Number(formData.get("price_cents") ?? 0) > 0,
+    price_cents: (() => {
+      const d = formData.get("price_dollars");
+      if (d != null) return Math.max(0, Math.round(Number(d) * 100));
+      return Math.max(0, Number(formData.get("price_cents") ?? 0));
+    })(),
+    requires_payment: (() => {
+      const d = formData.get("price_dollars");
+      if (d != null) return Number(d) > 0;
+      return Number(formData.get("price_cents") ?? 0) > 0;
+    })(),
     status: String(formData.get("status") ?? "published"),
   };
 
@@ -180,6 +191,19 @@ export async function addProgramSessionAction(formData: FormData) {
   const resolvedHero = await resolveHeroImage(formData, "program-images", user.id);
   const heroImage = resolvedHero ?? null;
 
+  // Optional video upload — bucket accepts any mime type.
+  let videoUrl: string | null = null;
+  const videoFile = formData.get("video_file");
+  if (videoFile instanceof File && videoFile.size > 0) {
+    try {
+      const { url } = await uploadImageToBucket("trainer-uploads", videoFile, user.id);
+      videoUrl = url;
+    } catch (err) {
+      // Don't block session creation on a video upload failure; surface in URL.
+      console.warn("[program-builder] video upload failed", err);
+    }
+  }
+
   const sb = createClient();
 
   // Cache trainer slug so the program detail page can deep-link to /trainers/<slug>/book
@@ -209,6 +233,7 @@ export async function addProgramSessionAction(formData: FormData) {
     description,
     kind: refKindToLegacyKind(refKind),
     hero_image: heroImage,
+    video_url: videoUrl,
     ref_kind: refKind,
     routine_slug: routineSlug,
     class_slug: classSlug,

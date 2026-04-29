@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Navbar } from "@/components/site/Navbar";
-import { Icon } from "@/components/ui/Icon";
+import { CoachShell, CoachSection, CoachEmpty } from "@/components/site/CoachShell";
+import { Time } from "@/components/site/Time";
 import { getTrainerForCurrentUser } from "@/lib/trainer-auth";
-import { listTrainerInbox, listProfilesByIds, listTrainerOwnedSessions } from "@/lib/data/queries";
+import { listTrainerInbox, listProfilesByIds, listTrainerOwnedSessions, getTrainerEarnings } from "@/lib/data/queries";
 import { isSessionJoinable } from "@/lib/video/provider";
 import {
   acceptTrainerBookingAction,
@@ -11,23 +11,28 @@ import {
   cancelTrainerBookingAction,
   completeTrainerBookingAction,
 } from "@/lib/trainer-booking-actions";
-import { testVideoRoomAction } from "@/lib/video/test-action";
 import { routines } from "@/lib/data/routines";
+import { fmtDollars, fmtDurationMin } from "@/lib/format";
 import type { TrainerBooking, TrainerSessionRow } from "@/lib/data/types";
 
-export default async function TrainerDashboard({ searchParams }: { searchParams: { accepted?: string; rejected?: string; completed?: string; test_room?: string; group_created?: string; group_cancelled?: string } }) {
-  const trainer = await getTrainerForCurrentUser();
-  if (!trainer) redirect("/login?next=/trainer/dashboard");
+export const dynamic = "force-dynamic";
 
-  const all = await listTrainerInbox(trainer.id);
+export default async function CoachDashboardPage({ searchParams }: { searchParams: { accepted?: string; rejected?: string; completed?: string; group_created?: string; group_cancelled?: string } }) {
+  const coach = await getTrainerForCurrentUser();
+  if (!coach) redirect("/login?next=/trainer/dashboard");
+
+  const [all, groupSessions, earnings] = await Promise.all([
+    listTrainerInbox(coach.id),
+    listTrainerOwnedSessions(coach.id),
+    getTrainerEarnings(coach.id),
+  ]);
   const userIds = Array.from(new Set(all.map(b => b.user_id)));
   const profiles = await listProfilesByIds(userIds);
-  const groupSessions = await listTrainerOwnedSessions(trainer.id);
 
   const now = Date.now();
   const pending = all.filter(b => b.status === "pending_trainer");
   const upcoming = all.filter(b => b.status === "confirmed" && new Date(b.starts_at).getTime() >= now - 30 * 60_000);
-  const recent = all.filter(b => b.status === "completed" || b.status === "rejected" || b.status === "cancelled" || b.status === "no_show").slice(0, 8);
+  const recent = all.filter(b => b.status === "completed" || b.status === "rejected" || b.status === "cancelled" || b.status === "no_show").slice(0, 6);
 
   const flash = searchParams.accepted ? "BOOKING ACCEPTED · CLIENT NOTIFIED"
               : searchParams.rejected ? "BOOKING DECLINED · PAYMENT REFUNDED IF APPLICABLE"
@@ -37,143 +42,99 @@ export default async function TrainerDashboard({ searchParams }: { searchParams:
               : null;
 
   return (
-    <div style={{ background: "var(--ink)", color: "var(--bone)", fontFamily: "var(--font-body)", minHeight: "100dvh" }}>
-      <Navbar authed={true} />
-      <div style={{ maxWidth: 1080, margin: "0 auto", paddingBottom: 80 }}>
-        <div style={{ padding: "20px 22px 0", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
-          <div>
-            <div className="e-mono" style={{ color: "var(--sky)", letterSpacing: "0.25em", fontSize: 10 }}>TRAINER · {trainer.name.toUpperCase()}</div>
-            <h1 className="e-display" style={{ fontSize: "clamp(36px, 7vw, 56px)", lineHeight: 0.92, marginTop: 8 }}>DASHBOARD.</h1>
-          </div>
-          <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
-            <Link href="/trainer/classes/new" className="e-mono" style={{ color: "var(--sky)", textDecoration: "none", letterSpacing: "0.2em", fontSize: 11 }}>
-              + NEW CLASS
-            </Link>
-            <Link href="/trainer/sessions/new" className="e-mono" style={{ color: "var(--sky)", textDecoration: "none", letterSpacing: "0.2em", fontSize: 11 }}>
-              + NEW GROUP SESSION
-            </Link>
-            <Link href="/trainer/clients" className="e-mono" style={{ color: "var(--sky)", textDecoration: "none", letterSpacing: "0.2em", fontSize: 11 }}>
-              YOUR CLIENTS →
-            </Link>
-            <Link href="/trainer/earnings" className="e-mono" style={{ color: "var(--sky)", textDecoration: "none", letterSpacing: "0.2em", fontSize: 11 }}>
-              EARNINGS →
-            </Link>
-            <Link href="/trainer/classes" className="e-mono" style={{ color: "var(--sky)", textDecoration: "none", letterSpacing: "0.2em", fontSize: 11 }}>
-              YOUR CLASSES →
-            </Link>
-            <Link href="/trainer/programs" className="e-mono" style={{ color: "var(--sky)", textDecoration: "none", letterSpacing: "0.2em", fontSize: 11 }}>
-              YOUR PROGRAMS →
-            </Link>
-            <Link href="/trainer/availability" className="e-mono" style={{ color: "var(--sky)", textDecoration: "none", letterSpacing: "0.2em", fontSize: 11 }}>
-              EDIT AVAILABILITY →
-            </Link>
-            <Link href="/trainer/profile" className="e-mono" style={{ color: "var(--sky)", textDecoration: "none", letterSpacing: "0.2em", fontSize: 11 }}>
-              EDIT PROFILE →
-            </Link>
-          </div>
+    <CoachShell coach={coach} pathname="/trainer/dashboard">
+      {flash && (
+        <div className="e-mono" style={{ marginBottom: 24, padding: "12px 14px", borderRadius: 12, background: "rgba(143,184,214,0.1)", border: "1px solid var(--sky)", color: "var(--sky)", fontSize: 11, letterSpacing: "0.18em" }}>
+          ✓ {flash}
         </div>
+      )}
 
-        {flash && (
-          <section style={{ padding: "14px 22px 0" }}>
-            <div className="e-mono" style={{ padding: "12px 14px", borderRadius: 12, background: "rgba(143,184,214,0.1)", border: "1px solid var(--sky)", color: "var(--sky)", fontSize: 11, letterSpacing: "0.18em" }}>
-              ✓ {flash}
-            </div>
-          </section>
-        )}
+      {/* HERO STATS */}
+      <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14 }}>
+        <Stat label="THIS MONTH · YOUR CUT" value={fmtDollars(earnings.thisMonthCents, true)} sub={`${earnings.thisMonthCount} ${earnings.thisMonthCount === 1 ? "payout" : "payouts"}`} />
+        <Stat label="UPCOMING SESSIONS" value={upcoming.length.toString()} sub={pending.length > 0 ? `${pending.length} pending request${pending.length === 1 ? "" : "s"}` : "All clear"} />
+        <Stat label="GROUP SESSIONS" value={groupSessions.length.toString()} sub={groupSessions.length > 0 ? "On the books" : "None scheduled"} />
+        <Stat label="LIFETIME · YOUR CUT" value={fmtDollars(earnings.lifetimeCents)} sub={`${earnings.lifetimeCount} payout${earnings.lifetimeCount === 1 ? "" : "s"}`} />
+      </section>
 
-        {trainer.payout_status !== "active" && (
-          <section style={{ padding: "14px 22px 0" }}>
-            <Link href="/trainer/onboarding/connect" className="e-mono" style={{
-              display: "block", padding: "14px 16px", borderRadius: 12,
-              background: "rgba(243,200,99,0.1)", border: "1px solid rgba(243,200,99,0.5)",
-              color: "rgb(243,200,99)", fontSize: 11, letterSpacing: "0.18em", textDecoration: "none",
-            }}>
-              ⚠ SET UP PAYOUTS SO YOU CAN GET PAID — 80/20 SPLIT VIA STRIPE →
-            </Link>
-          </section>
-        )}
+      {/* QUICK ACTIONS */}
+      <section style={{ marginTop: 26, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
+        <ActionTile href="/trainer/classes/new" label="+ NEW CLASS" hint="Schedule a class slot" />
+        <ActionTile href="/trainer/sessions/new" label="+ NEW GROUP SESSION" hint="Run a small-group call" />
+        <ActionTile href="/messages" label="MESSAGES →" hint="Reply to clients" />
+        <ActionTile href="/trainer/earnings" label="EARNINGS →" hint="Payout breakdown + log" />
+      </section>
 
-        {searchParams.test_room && (
-          <section style={{ padding: "14px 22px 0" }}>
-            <div className="e-mono" style={{ padding: "12px 14px", borderRadius: 12, background: "rgba(143,184,214,0.1)", border: "1px solid var(--sky)", color: "var(--sky)", fontSize: 11, letterSpacing: "0.18em", display: "flex", flexDirection: "column", gap: 6 }}>
-              <div>✓ TEST ROOM CREATED</div>
-              <a href={searchParams.test_room} target="_blank" rel="noreferrer" style={{ color: "var(--bone)", wordBreak: "break-all", textDecoration: "underline" }}>
-                {searchParams.test_room}
-              </a>
-            </div>
-          </section>
-        )}
-
-        <section style={{ padding: "14px 22px 0" }}>
-          <form action={testVideoRoomAction}>
-            <button type="submit" className="btn" style={{ padding: "10px 16px", fontSize: 11, background: "transparent", color: "var(--sky)", border: "1px solid rgba(143,184,214,0.4)", letterSpacing: "0.18em" }}>
-              TEST VIDEO ROOM
-            </button>
-          </form>
-        </section>
-
-        {/* INBOX */}
-        <section style={{ padding: "32px 22px 0" }}>
-          <div className="e-mono" style={{ color: "var(--sky)", letterSpacing: "0.2em", fontSize: 10 }}>
-            01 / INBOX · {pending.length} PENDING
+      {/* INBOX */}
+      <CoachSection index="01" title={`REQUESTS · ${pending.length} PENDING`} hint="Members asking for a 1-on-1. Accept to lock in the slot.">
+        {pending.length === 0 ? (
+          <CoachEmpty body="No new requests." />
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {pending.map(b => <PendingRow key={b.id} booking={b} clientName={profiles[b.user_id]?.display_name ?? "Member"} />)}
           </div>
-          {pending.length === 0 ? (
-            <Empty body="No new requests." />
-          ) : (
-            <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 10 }}>
-              {pending.map(b => <PendingRow key={b.id} booking={b} clientName={profiles[b.user_id]?.display_name ?? "Member"} />)}
-            </div>
-          )}
-        </section>
-
-        {/* UPCOMING */}
-        <section style={{ padding: "32px 22px 0" }}>
-          <div className="e-mono" style={{ color: "var(--sky)", letterSpacing: "0.2em", fontSize: 10 }}>
-            02 / UPCOMING · {upcoming.length}
-          </div>
-          {upcoming.length === 0 ? (
-            <Empty body="No confirmed sessions on the books." />
-          ) : (
-            <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 10 }}>
-              {upcoming.map(b => <UpcomingRow key={b.id} booking={b} clientName={profiles[b.user_id]?.display_name ?? "Member"} />)}
-            </div>
-          )}
-        </section>
-
-        {/* GROUP SESSIONS · YOUR UPCOMING */}
-        <section style={{ padding: "32px 22px 0" }}>
-          <div className="e-mono" style={{ color: "var(--sky)", letterSpacing: "0.2em", fontSize: 10 }}>
-            GROUP SESSIONS · YOUR UPCOMING · {groupSessions.length}
-          </div>
-          {groupSessions.length === 0 ? (
-            <Empty body="No group sessions on the books. Create one with + NEW GROUP SESSION above." />
-          ) : (
-            <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 10 }}>
-              {groupSessions.map(({ session, attendees }) => <GroupSessionRow key={session.id} session={session} attendees={attendees} />)}
-            </div>
-          )}
-        </section>
-
-        {/* RECENT */}
-        {recent.length > 0 && (
-          <section style={{ padding: "32px 22px 0" }}>
-            <div className="e-mono" style={{ color: "rgba(242,238,232,0.55)", letterSpacing: "0.2em", fontSize: 10 }}>
-              03 / RECENT
-            </div>
-            <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 8 }}>
-              {recent.map(b => <RecentRow key={b.id} booking={b} clientName={profiles[b.user_id]?.display_name ?? "Member"} />)}
-            </div>
-          </section>
         )}
-      </div>
+      </CoachSection>
+
+      {/* UPCOMING */}
+      <CoachSection index="02" title={`UPCOMING · ${upcoming.length}`} hint="Confirmed 1-on-1 sessions on the books.">
+        {upcoming.length === 0 ? (
+          <CoachEmpty body="No confirmed sessions on the books." />
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {upcoming.map(b => <UpcomingRow key={b.id} booking={b} clientName={profiles[b.user_id]?.display_name ?? "Member"} />)}
+          </div>
+        )}
+      </CoachSection>
+
+      {/* GROUP SESSIONS */}
+      <CoachSection title={`GROUP SESSIONS · ${groupSessions.length}`} hint="Open group calls. Click to manage roster, mark complete, or cancel.">
+        {groupSessions.length === 0 ? (
+          <CoachEmpty body="No group sessions scheduled. Tap + NEW GROUP SESSION to add one." />
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {groupSessions.map(({ session, attendees }) => <GroupSessionRow key={session.id} session={session} attendees={attendees} />)}
+          </div>
+        )}
+      </CoachSection>
+
+      {/* RECENT */}
+      {recent.length > 0 && (
+        <CoachSection index="03" title="RECENT">
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {recent.map(b => <RecentRow key={b.id} booking={b} clientName={profiles[b.user_id]?.display_name ?? "Member"} />)}
+          </div>
+        </CoachSection>
+      )}
+    </CoachShell>
+  );
+}
+
+function Stat({ label, value, sub }: { label: string; value: string; sub: string }) {
+  return (
+    <div style={{ padding: 18, borderRadius: 14, background: "var(--haze)", border: "1px solid rgba(143,184,214,0.18)" }}>
+      <div className="e-mono" style={{ color: "rgba(242,238,232,0.55)", fontSize: 9, letterSpacing: "0.2em" }}>{label}</div>
+      <div style={{ marginTop: 8, fontFamily: "var(--font-display)", fontSize: 32, lineHeight: 1 }}>{value}</div>
+      <div className="e-mono" style={{ marginTop: 8, color: "rgba(242,238,232,0.55)", fontSize: 10, letterSpacing: "0.16em" }}>{sub}</div>
     </div>
   );
 }
 
+function ActionTile({ href, label, hint }: { href: string; label: string; hint: string }) {
+  return (
+    <Link href={href} className="lift" style={{
+      display: "block", padding: 16, borderRadius: 14,
+      background: "linear-gradient(135deg, rgba(143,184,214,0.14), rgba(46,127,176,0.04))",
+      border: "1px solid rgba(143,184,214,0.32)",
+      color: "var(--bone)", textDecoration: "none",
+    }}>
+      <div className="e-mono" style={{ color: "var(--sky)", fontSize: 11, letterSpacing: "0.2em" }}>{label}</div>
+      <div className="e-mono" style={{ marginTop: 6, color: "rgba(242,238,232,0.55)", fontSize: 10, letterSpacing: "0.14em" }}>{hint}</div>
+    </Link>
+  );
+}
+
 function PendingRow({ booking, clientName }: { booking: TrainerBooking; clientName: string }) {
-  const dt = new Date(booking.starts_at);
-  const dateStr = dt.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "2-digit" }).toUpperCase();
-  const timeStr = dt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
   const routine = booking.routine_slug ? routines.find(r => r.slug === booking.routine_slug) : null;
   return (
     <div style={{
@@ -184,12 +145,12 @@ function PendingRow({ booking, clientName }: { booking: TrainerBooking; clientNa
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 6 }}>
         <div>
           <div className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.2em" }}>
-            {dateStr} · {timeStr} · {booking.mode === "video" ? "VIDEO" : "IN PERSON"}
+            <Time iso={booking.starts_at} format="datetime" /> · {booking.mode === "video" ? "VIDEO" : "IN PERSON"}
           </div>
           <div style={{ fontFamily: "var(--font-display)", fontSize: 22, marginTop: 6 }}>{clientName.toUpperCase()}</div>
         </div>
         <div className="e-mono" style={{ color: booking.paid_status === "paid" ? "var(--sky)" : "rgba(242,238,232,0.55)", fontSize: 10, letterSpacing: "0.2em" }}>
-          {booking.paid_status.toUpperCase()} · ${(booking.price_cents / 100).toFixed(0)}
+          {booking.paid_status.toUpperCase()} · {fmtDollars(booking.price_cents)}
         </div>
       </div>
       {routine && (
@@ -223,29 +184,29 @@ function PendingRow({ booking, clientName }: { booking: TrainerBooking; clientNa
 }
 
 function UpcomingRow({ booking, clientName }: { booking: TrainerBooking; clientName: string }) {
-  const dt = new Date(booking.starts_at);
-  const dateStr = dt.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "2-digit" }).toUpperCase();
-  const timeStr = dt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
   const joinable = isSessionJoinable(booking.starts_at, booking.ends_at);
   const routine = booking.routine_slug ? routines.find(r => r.slug === booking.routine_slug) : null;
-  // Show MARK COMPLETE within 5 min of end and beyond, so trainers can log
-  // completion from the dashboard without re-entering the room.
   const canMarkComplete = Date.now() > new Date(booking.ends_at).getTime() - 5 * 60_000;
+  const durationMin = Math.round((new Date(booking.ends_at).getTime() - new Date(booking.starts_at).getTime()) / 60000);
 
   return (
     <div style={{ padding: 14, borderRadius: 14, background: "var(--haze)", border: "1px solid rgba(143,184,214,0.18)", display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
-      <div style={{ minWidth: 80, paddingRight: 14, borderRight: "1px solid rgba(143,184,214,0.18)" }}>
-        <div className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.2em" }}>{dateStr}</div>
-        <div style={{ fontFamily: "var(--font-display)", fontSize: 22, lineHeight: 1, marginTop: 4 }}>{timeStr}</div>
+      <div style={{ minWidth: 110, paddingRight: 14, borderRight: "1px solid rgba(143,184,214,0.18)" }}>
+        <div className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.2em" }}>
+          <Time iso={booking.starts_at} format="date" />
+        </div>
+        <div style={{ fontFamily: "var(--font-display)", fontSize: 20, lineHeight: 1, marginTop: 6 }}>
+          <Time iso={booking.starts_at} format="time" />
+        </div>
       </div>
       <div style={{ flex: 1, minWidth: 180 }}>
         <div style={{ fontFamily: "var(--font-display)", fontSize: 18 }}>{clientName.toUpperCase()}</div>
         <div className="e-mono" style={{ color: "rgba(242,238,232,0.55)", fontSize: 9, letterSpacing: "0.18em", marginTop: 6 }}>
-          {booking.mode === "video" ? "VIDEO" : "IN PERSON"} · {Math.round((new Date(booking.ends_at).getTime() - new Date(booking.starts_at).getTime()) / 60000)}M
+          {booking.mode === "video" ? "VIDEO" : "IN PERSON"} · {fmtDurationMin(durationMin)}
           {routine ? ` · ${routine.name}` : ""}
         </div>
       </div>
-      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
         {joinable ? (
           <Link href={`/train/session/${booking.id}`} className="btn btn-sky" style={{ padding: "8px 14px", fontSize: 11 }}>
             JOIN →
@@ -272,15 +233,15 @@ function UpcomingRow({ booking, clientName }: { booking: TrainerBooking; clientN
 }
 
 function RecentRow({ booking, clientName }: { booking: TrainerBooking; clientName: string }) {
-  const dt = new Date(booking.starts_at);
-  const dateStr = dt.toLocaleDateString("en-US", { month: "short", day: "2-digit" }).toUpperCase();
   return (
     <div style={{
       display: "flex", gap: 12, padding: 12, borderRadius: 12,
       background: "var(--haze)", border: "1px solid rgba(255,255,255,0.04)",
       opacity: booking.status === "completed" ? 1 : 0.6,
     }}>
-      <div className="e-mono" style={{ color: "rgba(242,238,232,0.5)", fontSize: 10, letterSpacing: "0.18em", minWidth: 60 }}>{dateStr}</div>
+      <div className="e-mono" style={{ color: "rgba(242,238,232,0.5)", fontSize: 10, letterSpacing: "0.18em", minWidth: 70 }}>
+        <Time iso={booking.starts_at} format="date" />
+      </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontFamily: "var(--font-display)", fontSize: 14 }}>{clientName.toUpperCase()}</div>
         <div className="e-mono" style={{ color: "rgba(242,238,232,0.45)", fontSize: 9, letterSpacing: "0.18em", marginTop: 3 }}>
@@ -293,9 +254,6 @@ function RecentRow({ booking, clientName }: { booking: TrainerBooking; clientNam
 }
 
 function GroupSessionRow({ session, attendees }: { session: TrainerSessionRow; attendees: number }) {
-  const dt = new Date(session.starts_at);
-  const dateStr = dt.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "2-digit" }).toUpperCase();
-  const timeStr = dt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
   const full = attendees >= session.capacity;
   return (
     <Link href={`/trainer/sessions/${session.id}`} className="lift" style={{
@@ -305,28 +263,24 @@ function GroupSessionRow({ session, attendees }: { session: TrainerSessionRow; a
       display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap",
       color: "var(--bone)", textDecoration: "none",
     }}>
-      <div style={{ minWidth: 96, paddingRight: 14, borderRight: "1px solid rgba(143,184,214,0.18)" }}>
-        <div className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.2em" }}>{dateStr}</div>
-        <div style={{ fontFamily: "var(--font-display)", fontSize: 22, lineHeight: 1, marginTop: 4 }}>{timeStr}</div>
+      <div style={{ minWidth: 110, paddingRight: 14, borderRight: "1px solid rgba(143,184,214,0.18)" }}>
+        <div className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.2em" }}>
+          <Time iso={session.starts_at} format="date" />
+        </div>
+        <div style={{ fontFamily: "var(--font-display)", fontSize: 20, lineHeight: 1, marginTop: 6 }}>
+          <Time iso={session.starts_at} format="time" />
+        </div>
       </div>
       <div style={{ flex: 1, minWidth: 180 }}>
         <div style={{ fontFamily: "var(--font-display)", fontSize: 18 }}>
           {(session.title ?? "GROUP SESSION").toUpperCase()}
         </div>
         <div className="e-mono" style={{ color: "rgba(242,238,232,0.7)", fontSize: 9, letterSpacing: "0.18em", marginTop: 6 }}>
-          {session.mode === "video" ? "VIDEO" : "IN PERSON"} · ({attendees}/{session.capacity}) · ${(session.price_cents / 100).toFixed(0)}/PERSON
+          {session.mode === "video" ? "VIDEO" : "IN PERSON"} · ({attendees}/{session.capacity}) · {fmtDollars(session.price_cents)}/PERSON
           {full ? " · FULL" : ""}
         </div>
       </div>
       <span className="e-mono" style={{ color: "var(--sky)", fontSize: 10, letterSpacing: "0.2em" }}>MANAGE →</span>
     </Link>
-  );
-}
-
-function Empty({ body }: { body: string }) {
-  return (
-    <div style={{ marginTop: 14, padding: "18px 22px", borderRadius: 14, border: "1px dashed rgba(143,184,214,0.25)", color: "rgba(242,238,232,0.55)", fontSize: 13 }}>
-      {body}
-    </div>
   );
 }
