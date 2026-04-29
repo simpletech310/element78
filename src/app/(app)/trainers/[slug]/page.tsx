@@ -297,7 +297,7 @@ export default async function TrainerProfile({ params }: { params: { slug: strin
               <Link href={gated("/train")} className="btn btn-sky">START A SESSION</Link>
             ) : (
               <>
-                <Link href={isAuthed ? "/gym" : "/join"} className="btn btn-sky">{isAuthed ? "BOOK 1-ON-1" : "JOIN ELEMENT"}</Link>
+                <Link href={isAuthed ? `/trainers/${t.slug}/book` : `/login?next=${encodeURIComponent(`/trainers/${t.slug}/book`)}`} className="btn btn-sky">{isAuthed ? "BOOK 1-ON-1" : "JOIN ELEMENT"}</Link>
                 <Link href="/contact" className="btn btn-ghost" style={{ color: "var(--bone)", borderColor: "rgba(242,238,232,0.3)" }}>MESSAGE {firstName.toUpperCase()}</Link>
               </>
             )}

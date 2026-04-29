@@ -18,6 +18,7 @@ export default async function AccountPage() {
 
   const links: { label: string; href: string; icon: "cal" | "bag" | "heart" | "settings" | "fire" }[] = [
     { label: "PROGRAM HISTORY", href: "/account/history", icon: "fire" },
+    { label: "1-ON-1 SESSIONS", href: "/account/sessions", icon: "cal" },
     { label: "MY BOOKINGS", href: "/gym", icon: "cal" },
     { label: "ORDER HISTORY", href: "/shop", icon: "bag" },
     { label: "SAVED", href: "/shop", icon: "heart" },

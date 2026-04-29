@@ -1,5 +1,22 @@
 import { createClient } from "@/lib/supabase/server";
-import type { ClassRow, Flow, Location, Post, Product, ProductVariant, Trainer, Program, ProgramSession, ProgramEnrollment, ProgramCompletion, Booking } from "./types";
+import type {
+  ClassRow,
+  Flow,
+  Location,
+  Post,
+  Product,
+  ProductVariant,
+  Trainer,
+  Program,
+  ProgramSession,
+  ProgramEnrollment,
+  ProgramCompletion,
+  Booking,
+  TrainerSessionSettings,
+  TrainerAvailabilityRule,
+  TrainerAvailabilityBlock,
+  TrainerBooking,
+} from "./types";
 import { fallbackProducts, fallbackClasses, fallbackTrainers, fallbackLocations, fallbackPosts, fallbackPrograms, fallbackProgramSessions, fallbackFlows } from "./fallback";
 
 function isConfigured() {
@@ -199,6 +216,184 @@ export async function listClassesByTrainer(trainerId: string, limit = 6): Promis
   const sb = createClient();
   const { data } = await sb.from("classes").select("*").eq("trainer_id", trainerId).gte("starts_at", new Date().toISOString()).order("starts_at").limit(limit);
   return (data as ClassRow[]) ?? [];
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Program builder (trainer-authored programs)                               */
+/* -------------------------------------------------------------------------- */
+
+export async function listProgramsAuthoredBy(trainerId: string): Promise<Program[]> {
+  if (!isConfigured()) return [];
+  const sb = createClient();
+  const { data } = await sb
+    .from("programs")
+    .select("*")
+    .or(`author_trainer_id.eq.${trainerId},trainer_id.eq.${trainerId}`)
+    .order("sort_order");
+  return (data as Program[]) ?? [];
+}
+
+export async function getProgramById(id: string): Promise<{ program: Program; sessions: ProgramSession[] } | null> {
+  if (!isConfigured()) return null;
+  const sb = createClient();
+  const { data: program } = await sb.from("programs").select("*").eq("id", id).maybeSingle();
+  if (!program) return null;
+  const { data: sessions } = await sb
+    .from("program_sessions")
+    .select("*")
+    .eq("program_id", id)
+    .order("day_index")
+    .order("session_index");
+  return { program: program as Program, sessions: (sessions as ProgramSession[]) ?? [] };
+}
+
+/**
+ * Look up unique class slugs (the "class kind" series) so the program builder
+ * can let trainers pick which type of class fulfills a day. Pulls from the
+ * `classes` table — distinct slug + a representative name.
+ */
+export async function listClassKinds(): Promise<Array<{ slug: string; name: string; kind: string | null }>> {
+  if (!isConfigured()) return [];
+  const sb = createClient();
+  const { data } = await sb.from("classes").select("slug, name, kind").order("slug");
+  if (!data) return [];
+  const seen = new Map<string, { slug: string; name: string; kind: string | null }>();
+  for (const r of data as Array<{ slug: string; name: string; kind: string | null }>) {
+    if (!seen.has(r.slug)) seen.set(r.slug, r);
+  }
+  return Array.from(seen.values()).sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/* -------------------------------------------------------------------------- */
+/*  1-on-1 trainer bookings                                                   */
+/* -------------------------------------------------------------------------- */
+
+export async function getTrainerSessionSettings(trainerId: string): Promise<TrainerSessionSettings | null> {
+  if (!isConfigured()) return null;
+  const sb = createClient();
+  const { data } = await sb.from("trainer_session_settings").select("*").eq("trainer_id", trainerId).maybeSingle();
+  return (data as TrainerSessionSettings) ?? null;
+}
+
+export async function listAvailabilityRules(trainerId: string): Promise<TrainerAvailabilityRule[]> {
+  if (!isConfigured()) return [];
+  const sb = createClient();
+  const { data } = await sb
+    .from("trainer_availability_rules")
+    .select("*")
+    .eq("trainer_id", trainerId)
+    .eq("is_active", true)
+    .order("weekday")
+    .order("start_minute");
+  return (data as TrainerAvailabilityRule[]) ?? [];
+}
+
+export async function listAllAvailabilityRules(trainerId: string): Promise<TrainerAvailabilityRule[]> {
+  if (!isConfigured()) return [];
+  const sb = createClient();
+  const { data } = await sb
+    .from("trainer_availability_rules")
+    .select("*")
+    .eq("trainer_id", trainerId)
+    .order("weekday")
+    .order("start_minute");
+  return (data as TrainerAvailabilityRule[]) ?? [];
+}
+
+export async function listAvailabilityBlocks(
+  trainerId: string,
+  fromIso: string,
+  toIso: string,
+): Promise<TrainerAvailabilityBlock[]> {
+  if (!isConfigured()) return [];
+  const sb = createClient();
+  const { data } = await sb
+    .from("trainer_availability_blocks")
+    .select("*")
+    .eq("trainer_id", trainerId)
+    .lte("starts_at", toIso)
+    .gte("ends_at", fromIso);
+  return (data as TrainerAvailabilityBlock[]) ?? [];
+}
+
+/**
+ * Active bookings (pending or confirmed) for a trainer in a window. Used by
+ * the slot generator to subtract already-taken time.
+ */
+export async function listActiveTrainerBookingsInWindow(
+  trainerId: string,
+  fromIso: string,
+  toIso: string,
+): Promise<TrainerBooking[]> {
+  if (!isConfigured()) return [];
+  const sb = createClient();
+  const { data } = await sb
+    .from("trainer_bookings")
+    .select("*")
+    .eq("trainer_id", trainerId)
+    .in("status", ["pending_trainer", "confirmed"])
+    .gte("starts_at", fromIso)
+    .lte("starts_at", toIso)
+    .order("starts_at");
+  return (data as TrainerBooking[]) ?? [];
+}
+
+export async function getTrainerBooking(id: string): Promise<TrainerBooking | null> {
+  if (!isConfigured()) return null;
+  const sb = createClient();
+  const { data } = await sb.from("trainer_bookings").select("*").eq("id", id).maybeSingle();
+  return (data as TrainerBooking) ?? null;
+}
+
+/**
+ * Client-facing list of their own 1-on-1 bookings (any status), trainer joined.
+ */
+export async function listClientTrainerBookings(
+  userId: string,
+): Promise<Array<{ booking: TrainerBooking; trainer: Trainer }>> {
+  if (!isConfigured()) return [];
+  const sb = createClient();
+  const { data } = await sb
+    .from("trainer_bookings")
+    .select("*, trainer:trainers(*)")
+    .eq("user_id", userId)
+    .order("starts_at", { ascending: false });
+  if (!data) return [];
+  return (data as Array<TrainerBooking & { trainer: Trainer }>).map(row => {
+    const { trainer, ...booking } = row;
+    return { booking: booking as TrainerBooking, trainer };
+  });
+}
+
+/**
+ * Trainer-facing inbox of bookings on them. Optional status filter.
+ */
+export async function listTrainerInbox(
+  trainerId: string,
+  statuses?: TrainerBooking["status"][],
+): Promise<TrainerBooking[]> {
+  if (!isConfigured()) return [];
+  const sb = createClient();
+  let q = sb.from("trainer_bookings").select("*").eq("trainer_id", trainerId);
+  if (statuses && statuses.length > 0) q = q.in("status", statuses);
+  const { data } = await q.order("starts_at", { ascending: true });
+  return (data as TrainerBooking[]) ?? [];
+}
+
+/**
+ * Lightweight profile lookup so the trainer dashboard can show client names
+ * next to bookings. Service-role wouldn't be needed if we relied on the
+ * profiles RLS policy ("public read profiles") which is already in place.
+ */
+export async function listProfilesByIds(ids: string[]): Promise<Record<string, { display_name: string | null; handle: string | null; avatar_url: string | null }>> {
+  if (!isConfigured() || ids.length === 0) return {};
+  const sb = createClient();
+  const { data } = await sb.from("profiles").select("id, display_name, handle, avatar_url").in("id", ids);
+  const out: Record<string, { display_name: string | null; handle: string | null; avatar_url: string | null }> = {};
+  for (const row of (data as Array<{ id: string; display_name: string | null; handle: string | null; avatar_url: string | null }>) ?? []) {
+    out[row.id] = { display_name: row.display_name, handle: row.handle, avatar_url: row.avatar_url };
+  }
+  return out;
 }
 
 export async function listPosts(): Promise<Post[]> {

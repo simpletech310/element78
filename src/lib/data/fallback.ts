@@ -160,16 +160,22 @@ export const fallbackFlows: Flow[] = [
 
 export const fallbackProgramSessions: ProgramSession[] = (() => {
   const out: ProgramSession[] = [];
-  for (let d = 1; d <= 21; d++) out.push({ id: `s-ime-${d}`, program_id: "prog-1", day_index: d, name: `IN MY ELEMENT · Day ${d}`, duration_min: 35, description: "Daily Pilates flow + breath work.", kind: "flow", video_url: d === 1 ? "https://xiimrgdfbucpwugxmkrm.supabase.co/storage/v1/object/public/media/flow.mp4" : null, hero_image: "/assets/floor-mockup.png" });
-  for (let d = 1; d <= 14; d++) out.push({ id: `s-coa-${d}`, program_id: "prog-2", day_index: d, name: `CITY OF ANGELS · Day ${d}`, duration_min: 45, description: "Heavy basics, quick rounds.", kind: "strength", video_url: null, hero_image: "/assets/IMG_3461.jpg" });
-  for (let d = 1; d <= 8; d++) out.push({ id: `s-lrl-${d}`, program_id: "prog-3", day_index: d, name: `LIVING ROOM LUXURY · Day ${d}`, duration_min: 25, description: "Mat-only Pilates and mobility.", kind: "flow", video_url: null, hero_image: "/assets/IMG_3467.jpg" });
-  for (let d = 1; d <= 12; d++) out.push({ id: `s-hb-${d}`, program_id: "prog-4", day_index: d, name: `HEAVY BASICS · Session ${d}`, duration_min: 50, description: "Squat / hinge / push / pull / carry.", kind: "strength", video_url: null, hero_image: "/assets/IMG_3469.jpg" });
-  for (let d = 1; d <= 30; d++) out.push({ id: `s-sr-${d}`, program_id: "prog-5", day_index: d, name: `SUNRISE 30 · Day ${d}`, duration_min: 12, description: "Pre-coffee mobility flow.", kind: "mobility", video_url: null, hero_image: "/assets/IMG_3467.jpg" });
-  for (let d = 1; d <= 18; d++) out.push({ id: `s-eb-${d}`, program_id: "prog-6", day_index: d, name: `ENGINE BUILDER · Session ${d}`, duration_min: 28, description: "Threshold intervals, scaled by HRV.", kind: "conditioning", video_url: null, hero_image: "/assets/IMG_3465.jpg" });
-  for (let d = 1; d <= 24; d++) out.push({ id: `s-rl-${d}`, program_id: "prog-7", day_index: d, name: `REFORMER LADDER · Session ${d}`, duration_min: 50, description: "Power Pilates ladder protocol.", kind: "reformer", video_url: null, hero_image: "/assets/blue-set-rooftop.jpg" });
-  for (let d = 1; d <= 24; d++) out.push({ id: `s-rtr-${d}`, program_id: "prog-8", day_index: d, name: `RETURN TO RUN · Session ${d}`, duration_min: 35, description: "Run intervals + strength + mobility.", kind: "run", video_url: null, hero_image: "/assets/dumbbell-street.jpg" });
-  for (let d = 1; d <= 14; d++) out.push({ id: `s-br-${d}`, program_id: "prog-9", day_index: d, name: `BREATH RESET · Day ${d}`, duration_min: 10, description: "Breathwork reset session.", kind: "breath", video_url: null, hero_image: "/assets/pilates-pink.jpg" });
-  for (let d = 1; d <= 24; d++) out.push({ id: `s-pn-${d}`, program_id: "prog-10", day_index: d, name: `POST-NATAL FOUNDATION · Session ${d}`, duration_min: 35, description: "Core reconnection + pelvic floor.", kind: "pilates", video_url: null, hero_image: "/assets/editorial-1.jpg" });
+  // Legacy fallback rows: one session per day, free-form (ref_kind='custom').
+  // Real programs use the program_builder schema (migration 0006).
+  const make = (id: string, program_id: string, day_index: number, name: string, duration_min: number, description: string, kind: string, hero_image: string, video_url: string | null = null): ProgramSession => ({
+    id, program_id, day_index, session_index: 0, name, duration_min, description, kind, video_url, hero_image,
+    ref_kind: "custom", routine_slug: null, class_slug: null, trainer_id_for_1on1: null, trainer_slug_for_1on1: null,
+  });
+  for (let d = 1; d <= 21; d++) out.push(make(`s-ime-${d}`, "prog-1", d, `IN MY ELEMENT · Day ${d}`, 35, "Daily Pilates flow + breath work.", "flow", "/assets/floor-mockup.png", d === 1 ? "https://xiimrgdfbucpwugxmkrm.supabase.co/storage/v1/object/public/media/flow.mp4" : null));
+  for (let d = 1; d <= 14; d++) out.push(make(`s-coa-${d}`, "prog-2", d, `CITY OF ANGELS · Day ${d}`, 45, "Heavy basics, quick rounds.", "strength", "/assets/IMG_3461.jpg"));
+  for (let d = 1; d <= 8; d++)  out.push(make(`s-lrl-${d}`, "prog-3", d, `LIVING ROOM LUXURY · Day ${d}`, 25, "Mat-only Pilates and mobility.", "flow", "/assets/IMG_3467.jpg"));
+  for (let d = 1; d <= 12; d++) out.push(make(`s-hb-${d}`,  "prog-4", d, `HEAVY BASICS · Session ${d}`, 50, "Squat / hinge / push / pull / carry.", "strength", "/assets/IMG_3469.jpg"));
+  for (let d = 1; d <= 30; d++) out.push(make(`s-sr-${d}`,  "prog-5", d, `SUNRISE 30 · Day ${d}`, 12, "Pre-coffee mobility flow.", "mobility", "/assets/IMG_3467.jpg"));
+  for (let d = 1; d <= 18; d++) out.push(make(`s-eb-${d}`,  "prog-6", d, `ENGINE BUILDER · Session ${d}`, 28, "Threshold intervals, scaled by HRV.", "conditioning", "/assets/IMG_3465.jpg"));
+  for (let d = 1; d <= 24; d++) out.push(make(`s-rl-${d}`,  "prog-7", d, `REFORMER LADDER · Session ${d}`, 50, "Power Pilates ladder protocol.", "reformer", "/assets/blue-set-rooftop.jpg"));
+  for (let d = 1; d <= 24; d++) out.push(make(`s-rtr-${d}`, "prog-8", d, `RETURN TO RUN · Session ${d}`, 35, "Run intervals + strength + mobility.", "run", "/assets/dumbbell-street.jpg"));
+  for (let d = 1; d <= 14; d++) out.push(make(`s-br-${d}`,  "prog-9", d, `BREATH RESET · Day ${d}`, 10, "Breathwork reset session.", "breath", "/assets/pilates-pink.jpg"));
+  for (let d = 1; d <= 24; d++) out.push(make(`s-pn-${d}`,  "prog-10", d, `POST-NATAL FOUNDATION · Session ${d}`, 35, "Core reconnection + pelvic floor.", "pilates", "/assets/editorial-1.jpg"));
   return out;
 })();
 

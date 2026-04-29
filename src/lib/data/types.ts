@@ -101,7 +101,12 @@ export type Program = {
   price_cents: number;
   requires_payment: boolean;
   trainer_id?: string | null;
+  /** Trainer-builder fields (migration 0006). */
+  status?: "draft" | "published" | "archived";
+  author_trainer_id?: string | null;
 };
+
+export type ProgramSessionRefKind = "routine" | "class_kind" | "trainer_1on1" | "custom";
 
 /**
  * Flows — short solo videos (AI Studio sessions). Curated per trainer for now;
@@ -123,12 +128,26 @@ export type ProgramSession = {
   id: string;
   program_id: string;
   day_index: number;
+  /** 0-based ordering of multiple sessions within a single day. Default 0. */
+  session_index: number;
   name: string;
   duration_min: number;
   description: string | null;
   kind: string;
   video_url: string | null;
   hero_image: string | null;
+  /** What kind of work this session points to. Legacy rows = "custom". */
+  ref_kind: ProgramSessionRefKind;
+  /** AI Studio routine slug when ref_kind = "routine". */
+  routine_slug: string | null;
+  /** Class slug (e.g. "power-pilates") when ref_kind = "class_kind". User
+   *  fulfills by attending any instance of that class type. */
+  class_slug: string | null;
+  /** Trainer to book a 1-on-1 with when ref_kind = "trainer_1on1". */
+  trainer_id_for_1on1: string | null;
+  /** Cached trainer slug — lets the program page deep-link straight to
+   *  /trainers/<slug>/book without an extra DB lookup. */
+  trainer_slug_for_1on1: string | null;
 };
 
 export type ProgramEnrollment = {
@@ -148,6 +167,88 @@ export type ProgramCompletion = {
   completed_at: string;
   duration_actual_min: number | null;
   surface: "app" | "gym" | "class";
+  /** How the completion was registered. "manual" is the legacy/default. */
+  source: "routine" | "class" | "trainer_1on1" | "manual";
+  class_booking_id: string | null;
+  trainer_booking_id: string | null;
+};
+
+/**
+ * 1-on-1 trainer booking.
+ */
+export type TrainerSessionMode = "video" | "in_person";
+export type TrainerSessionRuleMode = TrainerSessionMode | "both";
+
+export type TrainerSessionSettings = {
+  trainer_id: string;
+  price_cents: number;
+  duration_min: number;
+  modes: TrainerSessionMode[];
+  buffer_min: number;
+  booking_window_days: number;
+  in_person_location_id: string | null;
+  bio_for_1on1: string | null;
+};
+
+export type TrainerAvailabilityRule = {
+  id: string;
+  trainer_id: string;
+  weekday: number;            // 0=Sun … 6=Sat
+  start_minute: number;       // mins from midnight
+  end_minute: number;
+  mode: TrainerSessionRuleMode;
+  is_active: boolean;
+};
+
+export type TrainerAvailabilityBlock = {
+  id: string;
+  trainer_id: string;
+  starts_at: string;
+  ends_at: string;
+  reason: string | null;
+};
+
+export type TrainerBookingStatus =
+  | "pending_trainer"
+  | "confirmed"
+  | "rejected"
+  | "cancelled"
+  | "completed"
+  | "no_show";
+
+export type TrainerBookingPaidStatus = "free" | "pending" | "paid" | "refunded";
+
+export type TrainerBooking = {
+  id: string;
+  trainer_id: string;
+  user_id: string;
+  starts_at: string;
+  ends_at: string;
+  mode: TrainerSessionMode;
+  location_id: string | null;
+  status: TrainerBookingStatus;
+  paid_status: TrainerBookingPaidStatus;
+  price_cents: number;
+  client_goals: string | null;
+  trainer_notes: string | null;
+  routine_slug: string | null;
+  video_provider: string | null;
+  video_room_url: string | null;
+  video_room_name: string | null;
+  duration_actual_min: number | null;
+  rejected_reason: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+/**
+ * A bookable slot generated from rules + blocks + existing bookings. Ephemeral
+ * — never stored in the DB; computed at query time.
+ */
+export type GeneratedSlot = {
+  starts_at: string;          // ISO
+  ends_at: string;
+  mode: TrainerSessionMode;
 };
 
 export type Post = {

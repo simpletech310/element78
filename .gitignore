@@ -6,6 +6,7 @@ out
 *.tsbuildinfo
 next-env.d.ts
 .vercel
+supabase/.temp
 
 
 # Source assets — copied into public/ via scripts/copy-assets.mjs.

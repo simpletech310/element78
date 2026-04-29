@@ -9,9 +9,14 @@ import { getUser } from "@/lib/auth";
 
 const dayKey = (d: Date) => d.toISOString().slice(0, 10);
 
-export default async function ClassesPage() {
-  const [classes, trainers, user] = await Promise.all([listClasses(), listTrainers(), getUser()]);
+export default async function ClassesPage({ searchParams }: { searchParams: { type?: string } }) {
+  const [allClasses, trainers, user] = await Promise.all([listClasses(), listTrainers(), getUser()]);
   const trainerMap = new Map(trainers.map(t => [t.id, t]));
+
+  // Optional ?type=<slug> filter — used by program day deep-links.
+  const filterSlug = (searchParams.type ?? "").trim() || null;
+  const classes = filterSlug ? allClasses.filter(c => c.slug === filterSlug) : allClasses;
+  const filterName = filterSlug ? (classes[0]?.name ?? filterSlug.replace(/-/g, " ").toUpperCase()) : null;
 
   // Group classes by day for the next 7 days.
   const today = new Date();
@@ -56,6 +61,20 @@ export default async function ClassesPage() {
           </p>
         </div>
       </section>
+
+      {/* ACTIVE FILTER BANNER (when ?type=<slug> is set) */}
+      {filterSlug && (
+        <section style={{ padding: "20px 22px 0", maxWidth: 1180, margin: "0 auto" }}>
+          <div style={{
+            display: "inline-flex", gap: 12, alignItems: "center",
+            padding: "10px 14px", borderRadius: 999,
+            background: "rgba(143,184,214,0.18)", border: "1px solid var(--sky)",
+          }}>
+            <span className="e-mono" style={{ color: "var(--sky)", fontSize: 10, letterSpacing: "0.2em" }}>FILTER · {filterName?.toUpperCase()}</span>
+            <Link href="/classes" className="e-mono" style={{ color: "var(--bone)", fontSize: 10, letterSpacing: "0.2em", textDecoration: "underline" }}>CLEAR</Link>
+          </div>
+        </section>
+      )}
 
       {/* FILTERS */}
       <section style={{ padding: "32px 22px 8px", maxWidth: 1180, margin: "0 auto" }}>

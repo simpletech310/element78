@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ui/Icon";
 import type { Routine } from "@/lib/data/routines";
+import { markRoutineSessionCompleteAction } from "@/lib/program-actions";
 
 type Phase = "ready" | "working" | "rest" | "done";
 type LoadState = "idle" | "loading" | "ready" | "error";
@@ -15,7 +16,12 @@ function fmtTime(s: number) {
   return `${m}:${ss}`;
 }
 
-export function RoutinePlayer({ routine }: { routine: Routine }) {
+export type RoutinePlayerProgramContext = {
+  programSessionId: string;
+  programSlug: string;
+};
+
+export function RoutinePlayer({ routine, programContext }: { routine: Routine; programContext?: RoutinePlayerProgramContext }) {
   const totalSets = useMemo(() => routine.exercises.reduce((n, e) => n + e.sets, 0), [routine]);
   const [exerciseIdx, setExerciseIdx] = useState(0);
   const [setIdx, setSetIdx] = useState(0); // 0-based; setIdx === sets means done with this exercise
@@ -23,8 +29,26 @@ export function RoutinePlayer({ routine }: { routine: Routine }) {
   const [restRemaining, setRestRemaining] = useState(0);
   const [loadState, setLoadState] = useState<LoadState>("idle");
   const [playing, setPlaying] = useState(false);
+  const [completionFired, setCompletionFired] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  // When the routine reaches "done" while running inside a program, fire the
+  // server action exactly once to write a program_completions row.
+  useEffect(() => {
+    if (phase !== "done") return;
+    if (!programContext) return;
+    if (completionFired) return;
+    setCompletionFired(true);
+    const fd = new FormData();
+    fd.set("program_session_id", programContext.programSessionId);
+    fd.set("program_slug", programContext.programSlug);
+    fd.set("duration_actual_min", String(routine.duration_min));
+    // Server action ignores its return value — fire and forget.
+    markRoutineSessionCompleteAction(fd).catch(() => {
+      // Swallow errors; user-facing UI already shows DONE.
+    });
+  }, [phase, programContext, completionFired, routine.duration_min]);
 
   const current = routine.exercises[exerciseIdx];
   const isLastExercise = exerciseIdx >= routine.exercises.length - 1;
@@ -248,8 +272,12 @@ export function RoutinePlayer({ routine }: { routine: Routine }) {
             </button>
           )}
           {phase === "done" && (
-            <Link href="/train" className="btn btn-sky" style={{ flex: 1, padding: "16px 22px", fontSize: 12, textAlign: "center" }}>
-              ROUTINE COMPLETE → TRAIN
+            <Link
+              href={programContext ? `/programs/${programContext.programSlug}` : "/train"}
+              className="btn btn-sky"
+              style={{ flex: 1, padding: "16px 22px", fontSize: 12, textAlign: "center" }}
+            >
+              {programContext ? "✓ COMPLETE → BACK TO PROGRAM" : "ROUTINE COMPLETE → TRAIN"}
             </Link>
           )}
 

@@ -8,12 +8,19 @@ import { Icon } from "@/components/ui/Icon";
 import { getProgram, getEnrollment, listEnrollmentCompletions } from "@/lib/data/queries";
 import { getUser } from "@/lib/auth";
 import { enrollAction, completeSessionAction, leaveAction } from "@/lib/program-actions";
+import { materializeAutoCompletions } from "@/lib/program-completion";
+import { getRoutine } from "@/lib/data/routines";
+import type { ProgramSession } from "@/lib/data/types";
 
 export default async function ProgramDetail({ params }: { params: { slug: string } }) {
   const user = await getUser();
   const data = await getProgram(params.slug);
   if (!data) notFound();
   const { program, sessions } = data;
+
+  // Auto-mark class & 1-on-1 sessions as completed if the underlying booking
+  // has happened. Cheap and idempotent.
+  if (user) await materializeAutoCompletions(user.id);
 
   const enrollment = user ? await getEnrollment(user.id, program.id) : null;
   const completions = enrollment ? await listEnrollmentCompletions(enrollment.id) : [];
@@ -144,47 +151,61 @@ export default async function ProgramDetail({ params }: { params: { slug: string
         <div className="e-mono" style={{ color: "var(--sky)" }}>01 / DAY BY DAY</div>
         <h2 className="e-display" style={{ fontSize: "clamp(36px, 6vw, 56px)", marginTop: 14, lineHeight: 0.95 }}>THE SCHEDULE.</h2>
 
-        <div style={{ marginTop: 28, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
-          {sessions.map(s => {
-            const done = completedIds.has(s.id);
-            const isCurrent = isAuthed && isActive && s.day_index === currentDay;
-            return (
-              <div key={s.id} style={{
-                padding: 18, borderRadius: 16,
-                background: isCurrent ? "linear-gradient(135deg, rgba(143,184,214,0.18), rgba(46,127,176,0.06))"
-                          : done ? "rgba(143,184,214,0.06)" : "rgba(143,184,214,0.04)",
-                border: isCurrent ? "1px solid var(--sky)"
-                       : done ? "1px solid rgba(143,184,214,0.3)"
-                       : "1px dashed rgba(143,184,214,0.2)",
-                opacity: done && !isCurrent ? 0.75 : 1,
-              }}>
-                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
-                  <div className="e-mono" style={{ color: done ? "var(--sky)" : "rgba(242,238,232,0.5)", fontSize: 10, letterSpacing: "0.25em" }}>
-                    DAY {s.day_index.toString().padStart(2, "0")}
+        {(() => {
+          // Group by day_index, then render each day as a card with one or
+          // more session items inside.
+          const days = new Map<number, ProgramSession[]>();
+          for (const s of sessions) {
+            if (!days.has(s.day_index)) days.set(s.day_index, []);
+            days.get(s.day_index)!.push(s);
+          }
+          const dayKeys = Array.from(days.keys()).sort((a, b) => a - b);
+          return (
+            <div style={{ marginTop: 28, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 12 }}>
+              {dayKeys.map(day => {
+                const dayItems = (days.get(day) ?? []).sort((a, b) => a.session_index - b.session_index);
+                const dayDone = dayItems.every(s => completedIds.has(s.id));
+                const dayCurrent = isAuthed && isActive && day === currentDay;
+                return (
+                  <div key={day} style={{
+                    padding: 18, borderRadius: 16,
+                    background: dayCurrent ? "linear-gradient(135deg, rgba(143,184,214,0.18), rgba(46,127,176,0.06))"
+                              : dayDone ? "rgba(143,184,214,0.06)" : "rgba(143,184,214,0.04)",
+                    border: dayCurrent ? "1px solid var(--sky)"
+                           : dayDone ? "1px solid rgba(143,184,214,0.3)"
+                           : "1px dashed rgba(143,184,214,0.2)",
+                  }}>
+                    <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
+                      <div className="e-mono" style={{ color: dayDone ? "var(--sky)" : "rgba(242,238,232,0.5)", fontSize: 10, letterSpacing: "0.25em" }}>
+                        DAY {day.toString().padStart(2, "0")} · {dayItems.length} {dayItems.length === 1 ? "SESSION" : "SESSIONS"}
+                      </div>
+                      {dayDone && <span className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.2em" }}>✓ DONE</span>}
+                      {dayCurrent && !dayDone && <span className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.2em" }}>↑ TODAY</span>}
+                    </div>
+
+                    <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+                      {dayItems.map(s => {
+                        const done = completedIds.has(s.id);
+                        return (
+                          <SessionItem
+                            key={s.id}
+                            session={s}
+                            done={done}
+                            programSlug={program.slug}
+                            isAuthed={isAuthed}
+                            isActive={isActive}
+                            enrollmentId={enrollment?.id ?? null}
+                            totalSessions={program.total_sessions}
+                          />
+                        );
+                      })}
+                    </div>
                   </div>
-                  {done && <span className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.2em" }}>✓ DONE</span>}
-                  {isCurrent && !done && <span className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.2em" }}>↑ TODAY</span>}
-                </div>
-                <div style={{ fontFamily: "var(--font-display)", fontSize: 18, marginTop: 8, letterSpacing: "0.02em" }}>{s.name}</div>
-                <div className="e-mono" style={{ fontSize: 9, color: "rgba(242,238,232,0.55)", marginTop: 6, letterSpacing: "0.18em" }}>{s.duration_min} MIN · {s.kind?.toUpperCase()}</div>
-                {isCurrent && (
-                  <div style={{ marginTop: 14, display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    <Link href="/train/player" className="btn btn-sky" style={{ padding: "8px 14px", fontSize: 10 }}>START</Link>
-                    <form action={completeSessionAction} style={{ display: "inline-block" }}>
-                      <input type="hidden" name="enrollment_id" value={enrollment!.id} />
-                      <input type="hidden" name="session_id" value={s.id} />
-                      <input type="hidden" name="program_slug" value={program.slug} />
-                      <input type="hidden" name="day_index" value={s.day_index} />
-                      <input type="hidden" name="total_sessions" value={program.total_sessions} />
-                      <input type="hidden" name="surface" value="app" />
-                      <button type="submit" className="btn btn-ghost" style={{ padding: "8px 14px", fontSize: 10, color: "var(--bone)", borderColor: "rgba(242,238,232,0.3)" }}>DONE IT</button>
-                    </form>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+                );
+              })}
+            </div>
+          );
+        })()}
       </section>
 
       {/* LEAVE button at the bottom for active enrollments */}
@@ -225,6 +246,112 @@ export default async function ProgramDetail({ params }: { params: { slug: string
       {user && <FloatingTabBar />}
     </div>
   );
+}
+
+function SessionItem({
+  session,
+  done,
+  programSlug,
+  isAuthed,
+  isActive,
+  enrollmentId,
+  totalSessions,
+}: {
+  session: ProgramSession;
+  done: boolean;
+  programSlug: string;
+  isAuthed: boolean;
+  isActive: boolean;
+  enrollmentId: string | null;
+  totalSessions: number;
+}) {
+  const launchHref = launchHrefFor(session, programSlug);
+  const refLabel = refKindLabel(session);
+
+  return (
+    <div style={{
+      padding: 12, borderRadius: 10,
+      background: done ? "rgba(143,184,214,0.08)" : "rgba(143,184,214,0.04)",
+      border: done ? "1px solid rgba(143,184,214,0.3)" : "1px solid rgba(143,184,214,0.18)",
+    }}>
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
+        <div className="e-mono" style={{ color: done ? "var(--sky)" : "rgba(242,238,232,0.55)", fontSize: 9, letterSpacing: "0.2em" }}>
+          {refLabel} · {session.duration_min}M
+        </div>
+        {done && <span className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.18em" }}>✓</span>}
+      </div>
+      <div style={{ fontFamily: "var(--font-display)", fontSize: 16, marginTop: 4, letterSpacing: "0.02em" }}>
+        {session.name}
+      </div>
+      {session.description && (
+        <div style={{ fontSize: 12, color: "rgba(242,238,232,0.55)", marginTop: 4, lineHeight: 1.5 }}>
+          {session.description}
+        </div>
+      )}
+      {isAuthed && isActive && !done && launchHref && (
+        <div style={{ marginTop: 10, display: "flex", gap: 6, flexWrap: "wrap" }}>
+          <Link href={launchHref} className="btn btn-sky" style={{ padding: "6px 12px", fontSize: 10 }}>
+            {launchLabel(session)}
+          </Link>
+          {/* Manual override stays available for class/1-on-1 in case auto-tracking lags. */}
+          {enrollmentId && (
+            <form action={completeSessionAction}>
+              <input type="hidden" name="enrollment_id" value={enrollmentId} />
+              <input type="hidden" name="session_id" value={session.id} />
+              <input type="hidden" name="program_slug" value={programSlug} />
+              <input type="hidden" name="day_index" value={session.day_index} />
+              <input type="hidden" name="total_sessions" value={totalSessions} />
+              <input type="hidden" name="surface" value="app" />
+              <button type="submit" className="btn btn-ghost" style={{ padding: "6px 10px", fontSize: 9, color: "rgba(242,238,232,0.6)", borderColor: "rgba(143,184,214,0.2)" }}>
+                MARK DONE
+              </button>
+            </form>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function launchHrefFor(s: ProgramSession, programSlug: string): string | null {
+  if (s.ref_kind === "routine" && s.routine_slug) {
+    const routine = getRoutine(s.routine_slug);
+    if (routine) return `/train/routine/${s.routine_slug}?program_session=${s.id}&program_slug=${programSlug}`;
+    return null;
+  }
+  if (s.ref_kind === "class_kind" && s.class_slug) {
+    // Filter the catalog to just this class type.
+    return `/classes?type=${encodeURIComponent(s.class_slug)}`;
+  }
+  if (s.ref_kind === "trainer_1on1" && s.trainer_slug_for_1on1) {
+    // Deep-link straight to the trainer's booking page; the program_session
+    // param flows through so completing the booking auto-checks the day off.
+    return `/trainers/${s.trainer_slug_for_1on1}/book?program_session=${s.id}`;
+  }
+  if (s.ref_kind === "trainer_1on1") {
+    // Legacy row without cached slug — fallback.
+    return `/trainers`;
+  }
+  // Custom / legacy: no specific launch.
+  return "/train";
+}
+
+function launchLabel(s: ProgramSession): string {
+  switch (s.ref_kind) {
+    case "routine": return "▶ START ROUTINE";
+    case "class_kind": return "FIND CLASS →";
+    case "trainer_1on1": return "BOOK 1-ON-1 →";
+    default: return "START";
+  }
+}
+
+function refKindLabel(s: ProgramSession): string {
+  switch (s.ref_kind) {
+    case "routine": return "AI STUDIO";
+    case "class_kind": return "GYM CLASS";
+    case "trainer_1on1": return "1-ON-1";
+    default: return (s.kind ?? "SESSION").toUpperCase();
+  }
 }
 
 function Stat({ label, v, accent }: { label: string; v: string; accent?: boolean }) {

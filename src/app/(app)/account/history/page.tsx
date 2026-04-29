@@ -5,16 +5,27 @@ import { TabBar } from "@/components/chrome/TabBar";
 import { Photo } from "@/components/ui/Photo";
 import { Icon } from "@/components/ui/Icon";
 import { getUser } from "@/lib/auth";
-import { listUserEnrollments, listEnrollmentCompletions, listUserBookings } from "@/lib/data/queries";
+import { listUserEnrollments, listEnrollmentCompletions, listUserBookings, listClientTrainerBookings } from "@/lib/data/queries";
+import { materializeAutoCompletions } from "@/lib/program-completion";
 
 export default async function HistoryPage() {
   const user = await getUser();
   if (!user) redirect("/login?next=/account/history");
 
-  const [enrollments, bookings] = await Promise.all([
+  // Pull in any auto-completions before we fetch the data we'll render.
+  await materializeAutoCompletions(user.id);
+
+  const [enrollments, bookings, trainerBookings] = await Promise.all([
     listUserEnrollments(user.id),
     listUserBookings(user.id),
+    listClientTrainerBookings(user.id),
   ]);
+  const upcomingTrainer = trainerBookings.filter(({ booking }) =>
+    new Date(booking.starts_at).getTime() >= Date.now() &&
+    booking.status !== "cancelled" &&
+    booking.status !== "rejected"
+  );
+  const completedTrainer = trainerBookings.filter(({ booking }) => booking.status === "completed");
   const active = enrollments.filter(e => e.enrollment.status === "active");
   const done = enrollments.filter(e => e.enrollment.status === "completed");
   const paused = enrollments.filter(e => e.enrollment.status === "paused" || e.enrollment.status === "left");
@@ -30,7 +41,8 @@ export default async function HistoryPage() {
     completionCounts.set(enrollment.id, cs.length);
   }));
 
-  const totalSessionsCompleted = Array.from(completionCounts.values()).reduce((n, x) => n + x, 0);
+  const totalSessionsCompleted =
+    Array.from(completionCounts.values()).reduce((n, x) => n + x, 0) + completedTrainer.length;
 
   return (
     <div className="app app-dark" style={{ height: "100dvh", background: "var(--ink)", color: "var(--bone)" }}>
@@ -59,6 +71,43 @@ export default async function HistoryPage() {
             <RollUp label="UPCOMING" v={String(upcoming.length)} />
           </div>
         </section>
+
+        {/* UPCOMING 1-ON-1 SESSIONS */}
+        {upcomingTrainer.length > 0 && (
+          <section style={{ padding: "28px 22px 0" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+              <div className="e-mono" style={{ color: "var(--sky)", letterSpacing: "0.2em", fontSize: 10 }}>1-ON-1 SESSIONS</div>
+              <Link href="/account/sessions" className="e-mono" style={{ color: "var(--sky)", fontSize: 10, letterSpacing: "0.2em", textDecoration: "none" }}>ALL →</Link>
+            </div>
+            <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+              {upcomingTrainer.slice(0, 3).map(({ booking, trainer }) => {
+                const dt = new Date(booking.starts_at);
+                const dateStr = dt.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "2-digit" }).toUpperCase();
+                const timeStr = dt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+                return (
+                  <Link key={booking.id} href={`/account/sessions`} className="lift" style={{
+                    display: "flex", gap: 14, padding: 14, borderRadius: 14,
+                    background: "linear-gradient(135deg, rgba(143,184,214,0.15), rgba(46,127,176,0.04))",
+                    border: "1px solid rgba(143,184,214,0.28)",
+                    color: "var(--bone)", textDecoration: "none",
+                  }}>
+                    <div style={{ minWidth: 64, paddingRight: 14, borderRight: "1px solid rgba(143,184,214,0.2)" }}>
+                      <div className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.18em" }}>{dateStr}</div>
+                      <div style={{ fontFamily: "var(--font-display)", fontSize: 22, lineHeight: 1, marginTop: 4 }}>{timeStr}</div>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontFamily: "var(--font-display)", fontSize: 18 }}>{trainer.name.toUpperCase()}</div>
+                      <div className="e-mono" style={{ color: "rgba(242,238,232,0.55)", fontSize: 9, letterSpacing: "0.18em", marginTop: 6 }}>
+                        1-ON-1 · {booking.mode === "video" ? "VIDEO" : "IN PERSON"} · {booking.status.replace(/_/g, " ").toUpperCase()}
+                      </div>
+                    </div>
+                    <Icon name="chevron" size={18} />
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
         {/* UPCOMING CLASS RESERVATIONS */}
         {upcoming.length > 0 && (
@@ -193,6 +242,35 @@ export default async function HistoryPage() {
                       </div>
                     </div>
                   </Link>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* COMPLETED 1-ON-1 SESSIONS */}
+        {completedTrainer.length > 0 && (
+          <section style={{ padding: "28px 22px 0" }}>
+            <div className="e-mono" style={{ color: "rgba(242,238,232,0.5)", letterSpacing: "0.2em", fontSize: 10 }}>1-ON-1 · COMPLETED</div>
+            <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 8 }}>
+              {completedTrainer.slice(0, 8).map(({ booking, trainer }) => {
+                const dt = new Date(booking.starts_at);
+                const dateStr = dt.toLocaleDateString("en-US", { month: "short", day: "2-digit" }).toUpperCase();
+                return (
+                  <div key={booking.id} style={{
+                    display: "flex", gap: 12, padding: 12, borderRadius: 12,
+                    background: "var(--haze)", border: "1px solid rgba(255,255,255,0.04)",
+                  }}>
+                    <div className="e-mono" style={{ color: "rgba(242,238,232,0.5)", fontSize: 10, letterSpacing: "0.18em", minWidth: 50 }}>{dateStr}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontFamily: "var(--font-display)", fontSize: 14 }}>{trainer.name.toUpperCase()} · 1-ON-1</div>
+                      <div className="e-mono" style={{ color: "rgba(242,238,232,0.45)", fontSize: 9, letterSpacing: "0.18em", marginTop: 3 }}>
+                        {booking.mode === "video" ? "VIDEO" : "IN PERSON"}
+                        {booking.duration_actual_min ? ` · ${booking.duration_actual_min}M` : ""}
+                        {booking.routine_slug ? ` · ${booking.routine_slug.replace(/-/g, " ").toUpperCase()}` : ""}
+                      </div>
+                    </div>
+                  </div>
                 );
               })}
             </div>

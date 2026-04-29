@@ -78,6 +78,54 @@ export async function completeSessionAction(formData: FormData) {
   revalidatePath("/account/history");
 }
 
+/**
+ * Called by the RoutinePlayer when it reaches phase=done while running in a
+ * program context. Writes a program_completion row with source='routine'.
+ * Idempotent — re-completing the same session is a no-op.
+ */
+export async function markRoutineSessionCompleteAction(formData: FormData) {
+  const programSessionId = String(formData.get("program_session_id") ?? "");
+  const programSlug = String(formData.get("program_slug") ?? "");
+  const durationActual = formData.get("duration_actual_min");
+
+  const user = await getUser();
+  if (!user) return;
+  if (!programSessionId) return;
+
+  const sb = createClient();
+
+  // Look up the program for this session, find user's active enrollment.
+  const { data: session } = await sb
+    .from("program_sessions")
+    .select("id, program_id")
+    .eq("id", programSessionId)
+    .maybeSingle();
+  if (!session) return;
+
+  const { data: enrollment } = await sb
+    .from("program_enrollments")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("program_id", (session as { program_id: string }).program_id)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!enrollment) return;
+
+  await sb.from("program_completions").upsert(
+    {
+      enrollment_id: (enrollment as { id: string }).id,
+      session_id: programSessionId,
+      source: "routine",
+      surface: "app",
+      duration_actual_min: durationActual ? Number(durationActual) : null,
+    },
+    { onConflict: "enrollment_id,session_id" },
+  );
+
+  if (programSlug) revalidatePath(`/programs/${programSlug}`);
+  revalidatePath("/account/history");
+}
+
 export async function leaveAction(formData: FormData) {
   const enrollmentId = String(formData.get("enrollment_id") ?? "");
   const slug = String(formData.get("program_slug") ?? "");
