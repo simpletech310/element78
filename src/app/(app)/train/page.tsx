@@ -5,6 +5,7 @@ import { TabBar } from "@/components/chrome/TabBar";
 import { Photo } from "@/components/ui/Photo";
 import { Icon } from "@/components/ui/Icon";
 import { listPrograms, listUserEnrollments, listEnrollmentCompletions } from "@/lib/data/queries";
+import { routines } from "@/lib/data/routines";
 import { getUser } from "@/lib/auth";
 
 export default async function TrainScreen() {
@@ -28,13 +29,6 @@ export default async function TrainScreen() {
   const enrolledIds = new Set(enrollments.map(e => e.program.id));
   const discoverPrograms = allPrograms.filter(p => !enrolledIds.has(p.id));
 
-  // AI Studio rail — moved from /home. Curated short-form sessions you can
-  // tap into right now.
-  const studio = [
-    { t: "GLUTE BRIDGE FLOW", mins: 18, lvl: "LO", img: "/assets/IMG_3467.jpg", tag: "PILATES" },
-    { t: "STREET HIIT", mins: 24, lvl: "HI", img: "/assets/IMG_3465.jpg", tag: "HIIT" },
-    { t: "CORE 78", mins: 30, lvl: "MD", img: "/assets/floor-mockup.png", tag: "CORE" },
-  ];
 
   return (
     <div className="app" style={{ height: "100dvh" }}>
@@ -53,7 +47,7 @@ export default async function TrainScreen() {
         </div>
 
         <div style={{ padding: "14px 22px" }}>
-          <Link href="/train/player" style={{ position: "relative", borderRadius: 22, overflow: "hidden", height: 460, background: "#000", display: "block", color: "var(--bone)" }}>
+          <Link href={`/train/routine/${routines[0]?.slug ?? "lower-body-foundation"}`} style={{ position: "relative", borderRadius: 22, overflow: "hidden", height: 460, background: "#000", display: "block", color: "var(--bone)" }}>
             <Photo src="/assets/IMG_3465.jpg" alt="featured AI session" style={{ position: "absolute", inset: 0 }} />
             <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(10,14,20,0.5) 0%, rgba(10,14,20,0) 30%, rgba(10,14,20,0) 50%, rgba(10,14,20,0.95) 100%)" }} />
             <div style={{ position: "absolute", top: 16, left: 16, right: 16, display: "flex", justifyContent: "space-between" }}>
@@ -96,26 +90,60 @@ export default async function TrainScreen() {
           ))}
         </div>
 
-        {/* AI STUDIO — short-form sessions. Moved here from /home. */}
+        {/* AI STUDIO — full routines. Each card opens a multi-exercise player
+            that auto-advances through sets and rests. */}
         <div style={{ padding: "16px 22px 8px", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-          <div className="e-display" style={{ fontSize: 22 }}>AI STUDIO</div>
-          <Link href="/train/player" className="e-mono" style={{ color: "var(--electric-deep)" }}>SEE ALL →</Link>
+          <div>
+            <div className="e-display" style={{ fontSize: 22 }}>AI STUDIO</div>
+            <div className="e-mono" style={{ color: "rgba(10,14,20,0.5)", fontSize: 9, marginTop: 2, letterSpacing: "0.18em" }}>{routines.length} ROUTINES · GUIDED SETS + REPS</div>
+          </div>
         </div>
+
+        {/* Featured routine — first card gets a wider, taller hero */}
+        {routines[0] && (
+          <div style={{ padding: "0 22px 8px" }}>
+            <Link href={`/train/routine/${routines[0].slug}`} className="lift" style={{
+              position: "relative", display: "block", borderRadius: 18, overflow: "hidden",
+              height: 220, color: "var(--bone)", textDecoration: "none",
+            }}>
+              <Photo src={routines[0].hero_image} alt={routines[0].name} style={{ position: "absolute", inset: 0 }} />
+              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(10,14,20,0) 30%, rgba(10,14,20,0.95) 100%)" }} />
+              <div style={{ position: "absolute", top: 12, left: 12, display: "flex", gap: 6 }}>
+                <span className="e-tag" style={{ background: "var(--sky)", color: "var(--ink)", padding: "4px 9px", borderRadius: 4, fontSize: 9, letterSpacing: "0.22em" }}>{routines[0].category}</span>
+                <span className="e-tag" style={{ background: "rgba(10,14,20,0.7)", backdropFilter: "blur(6px)", color: "var(--sky)", padding: "4px 9px", borderRadius: 4, fontSize: 9, letterSpacing: "0.22em" }}>{routines[0].duration_min} MIN</span>
+              </div>
+              <div style={{ position: "absolute", left: 16, right: 16, bottom: 14 }}>
+                <div className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.25em" }}>★ FEATURED · {routines[0].trainer_name}</div>
+                <div style={{ fontFamily: "var(--font-display)", fontSize: 28, lineHeight: 0.95, marginTop: 6 }}>{routines[0].name}</div>
+                <div className="e-mono" style={{ color: "rgba(242,238,232,0.7)", fontSize: 9, marginTop: 6, letterSpacing: "0.18em" }}>
+                  {routines[0].exercises.length} EXERCISES · {routines[0].intensity} INTENSITY
+                </div>
+              </div>
+            </Link>
+          </div>
+        )}
+
+        {/* Rest of the routines — horizontal rail */}
         <div className="no-scrollbar" style={{ display: "flex", gap: 12, padding: "0 22px 4px", overflowX: "auto" }}>
-          {studio.map((c, i) => (
-            <Link href="/train/player" key={i} className="lift" style={{ minWidth: 200, borderRadius: 16, overflow: "hidden", background: "var(--haze)", flexShrink: 0, color: "var(--bone)", textDecoration: "none" }}>
-              <div style={{ position: "relative", height: 220 }}>
-                <Photo src={c.img} alt={c.t} style={{ position: "absolute", inset: 0 }} />
-                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0) 50%, rgba(0,0,0,0.85) 100%)" }} />
-                <div style={{ position: "absolute", top: 10, left: 10 }}>
-                  <span className="e-tag" style={{ background: "rgba(10,14,20,0.65)", backdropFilter: "blur(8px)", padding: "4px 8px", borderRadius: 4, color: "var(--sky)" }}>{c.tag}</span>
+          {routines.slice(1).map((r) => (
+            <Link href={`/train/routine/${r.slug}`} key={r.slug} className="lift" style={{ minWidth: 220, borderRadius: 16, overflow: "hidden", background: "var(--haze)", flexShrink: 0, color: "var(--bone)", textDecoration: "none" }}>
+              <div style={{ position: "relative", height: 240 }}>
+                <Photo src={r.hero_image} alt={r.name} style={{ position: "absolute", inset: 0 }} />
+                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(0,0,0,0.92) 100%)" }} />
+                <div style={{ position: "absolute", top: 10, left: 10, display: "flex", gap: 5 }}>
+                  <span className="e-tag" style={{ background: "rgba(10,14,20,0.65)", backdropFilter: "blur(8px)", padding: "4px 8px", borderRadius: 4, color: "var(--sky)", fontSize: 9, letterSpacing: "0.22em" }}>{r.category}</span>
                 </div>
                 <div style={{ position: "absolute", top: 10, right: 10, width: 28, height: 28, borderRadius: "50%", background: "var(--electric)", color: "var(--ink)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <Icon name="play" size={12} />
                 </div>
                 <div style={{ position: "absolute", left: 12, right: 12, bottom: 10 }}>
-                  <div style={{ fontFamily: "var(--font-display)", fontSize: 18, lineHeight: 0.95 }}>{c.t}</div>
-                  <div className="e-mono" style={{ color: "rgba(242,238,232,0.6)", marginTop: 4, fontSize: 9 }}>{c.mins} MIN · {c.lvl} INTENSITY</div>
+                  <div style={{ fontFamily: "var(--font-display)", fontSize: 18, lineHeight: 0.95 }}>{r.name}</div>
+                  <div className="e-mono" style={{ color: "rgba(242,238,232,0.6)", marginTop: 4, fontSize: 9, letterSpacing: "0.18em" }}>
+                    {r.duration_min} MIN · {r.exercises.length} MOVES · {r.intensity}
+                  </div>
+                  <div className="e-mono" style={{ color: "var(--sky)", marginTop: 6, fontSize: 9, letterSpacing: "0.2em" }}>
+                    WITH {r.trainer_name}
+                  </div>
                 </div>
               </div>
             </Link>

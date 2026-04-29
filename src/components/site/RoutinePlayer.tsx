@@ -1,0 +1,316 @@
+"use client";
+
+import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { Icon } from "@/components/ui/Icon";
+import type { Routine } from "@/lib/data/routines";
+
+type Phase = "ready" | "working" | "rest" | "done";
+type LoadState = "idle" | "loading" | "ready" | "error";
+
+function fmtTime(s: number) {
+  if (!isFinite(s) || s < 0) s = 0;
+  const m = Math.floor(s / 60);
+  const ss = Math.floor(s % 60).toString().padStart(2, "0");
+  return `${m}:${ss}`;
+}
+
+export function RoutinePlayer({ routine }: { routine: Routine }) {
+  const totalSets = useMemo(() => routine.exercises.reduce((n, e) => n + e.sets, 0), [routine]);
+  const [exerciseIdx, setExerciseIdx] = useState(0);
+  const [setIdx, setSetIdx] = useState(0); // 0-based; setIdx === sets means done with this exercise
+  const [phase, setPhase] = useState<Phase>("ready");
+  const [restRemaining, setRestRemaining] = useState(0);
+  const [loadState, setLoadState] = useState<LoadState>("idle");
+  const [playing, setPlaying] = useState(false);
+
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  const current = routine.exercises[exerciseIdx];
+  const isLastExercise = exerciseIdx >= routine.exercises.length - 1;
+  const completedSets = useMemo(() =>
+    routine.exercises.slice(0, exerciseIdx).reduce((n, e) => n + e.sets, 0) + setIdx,
+    [routine, exerciseIdx, setIdx],
+  );
+  const overallPct = Math.round((completedSets / Math.max(1, totalSets)) * 100);
+
+  // Whenever the active exercise changes, swap the video source and try to play.
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v || !current) return;
+    setLoadState("loading");
+    v.src = current.video_url;
+    v.load();
+    // Best-effort autoplay (muted) — most browsers allow this.
+    v.muted = true;
+    v.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
+  }, [current]);
+
+  // Rest countdown.
+  useEffect(() => {
+    if (phase !== "rest") return;
+    const id = setInterval(() => {
+      setRestRemaining(r => {
+        if (r <= 1) {
+          clearInterval(id);
+          // Rest finished — advance to the next set OR next exercise.
+          advanceAfterRest();
+          return 0;
+        }
+        return r - 1;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
+
+  function advanceAfterRest() {
+    setPhase("ready");
+    // setIdx already incremented when rest started. Check if we need to move on.
+    // Handled in completeSet().
+  }
+
+  function startSet() {
+    setPhase("working");
+    const v = videoRef.current;
+    if (v && v.paused) {
+      v.muted = false;
+      v.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
+    }
+  }
+
+  function completeSet() {
+    if (!current) return;
+    const nextSetIdx = setIdx + 1;
+    if (nextSetIdx < current.sets) {
+      // Still more sets of this exercise — go to rest.
+      setSetIdx(nextSetIdx);
+      setPhase("rest");
+      setRestRemaining(current.rest_seconds);
+      return;
+    }
+    // Finished the last set — advance to next exercise (or done).
+    if (isLastExercise) {
+      setPhase("done");
+      videoRef.current?.pause();
+      setPlaying(false);
+      return;
+    }
+    setExerciseIdx(i => i + 1);
+    setSetIdx(0);
+    setPhase("rest");
+    setRestRemaining(current.rest_seconds);
+  }
+
+  function skipRest() {
+    setPhase("ready");
+    setRestRemaining(0);
+  }
+
+  function previousExercise() {
+    if (exerciseIdx === 0) return;
+    setExerciseIdx(i => i - 1);
+    setSetIdx(0);
+    setPhase("ready");
+  }
+
+  function nextExercise() {
+    if (isLastExercise) return;
+    setExerciseIdx(i => i + 1);
+    setSetIdx(0);
+    setPhase("ready");
+  }
+
+  function togglePlay() {
+    const v = videoRef.current;
+    if (!v) return;
+    if (v.paused) {
+      v.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
+    } else {
+      v.pause();
+      setPlaying(false);
+    }
+  }
+
+  function toggleMute() {
+    const v = videoRef.current;
+    if (!v) return;
+    v.muted = !v.muted;
+  }
+
+  if (!current) return null;
+
+  return (
+    <div className="app app-dark" style={{ height: "100dvh", background: "var(--ink)", color: "var(--bone)", display: "flex", flexDirection: "column" }}>
+      {/* Top bar */}
+      <div style={{ flexShrink: 0, padding: "20px 22px 10px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <Link href="/train" aria-label="Back" style={{ width: 42, height: 42, borderRadius: 999, background: "rgba(143,184,214,0.06)", color: "var(--bone)", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid rgba(143,184,214,0.25)", textDecoration: "none" }}>
+          <span style={{ transform: "rotate(180deg)", display: "inline-flex" }}><Icon name="chevron" size={16} /></span>
+        </Link>
+        <div style={{ textAlign: "center", flex: 1 }}>
+          <div className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.25em" }}>AI STUDIO · {routine.trainer_name}</div>
+          <div style={{ fontFamily: "var(--font-display)", fontSize: 18, lineHeight: 1, marginTop: 4, letterSpacing: "0.02em" }}>{routine.name}</div>
+        </div>
+        <div style={{ width: 42 }} aria-hidden />
+      </div>
+
+      {/* Overall routine progress */}
+      <div style={{ flexShrink: 0, padding: "0 22px 12px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+          <span className="e-mono" style={{ color: "rgba(242,238,232,0.55)", fontSize: 9, letterSpacing: "0.2em" }}>
+            EXERCISE {exerciseIdx + 1} / {routine.exercises.length} · SET {setIdx + (phase === "done" ? 0 : 1)} / {current.sets}
+          </span>
+          <span className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.2em" }}>{overallPct}%</span>
+        </div>
+        <div style={{ height: 4, borderRadius: 2, background: "rgba(143,184,214,0.18)", overflow: "hidden" }}>
+          <div style={{ width: `${overallPct}%`, height: "100%", background: "var(--sky)", boxShadow: "0 0 6px rgba(143,184,214,0.55)", transition: "width .35s ease" }} />
+        </div>
+      </div>
+
+      {/* Video stage */}
+      <div style={{ flex: 1, padding: "4px 22px 0", display: "flex", flexDirection: "column", minHeight: 0 }}>
+        <div style={{ position: "relative", borderRadius: 22, overflow: "hidden", background: "#000", flex: 1, minHeight: 0 }}>
+          <video
+            ref={videoRef}
+            playsInline
+            muted
+            preload="metadata"
+            crossOrigin="anonymous"
+            poster={current.poster_url}
+            onLoadStart={() => setLoadState("loading")}
+            onCanPlay={() => setLoadState((s) => (s === "error" ? "ready" : s))}
+            onLoadedData={() => setLoadState("ready")}
+            onError={() => setLoadState("error")}
+            onClick={togglePlay}
+            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", cursor: "pointer" }}
+          />
+
+          {/* Top-right: phase pill */}
+          <div style={{ position: "absolute", top: 14, right: 14, padding: "8px 14px", borderRadius: 999, background: "rgba(10,14,20,0.7)", backdropFilter: "blur(12px)", border: "1px solid rgba(143,184,214,0.25)", color: "var(--bone)", display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ width: 6, height: 6, borderRadius: "50%", background: phase === "working" ? "var(--electric)" : phase === "rest" ? "var(--rose)" : "var(--sky)" }} />
+            <span className="e-mono" style={{ fontSize: 9, letterSpacing: "0.22em", color: "var(--sky)" }}>
+              {phase === "ready" && "READY"}
+              {phase === "working" && "WORK"}
+              {phase === "rest" && `REST · ${fmtTime(restRemaining)}`}
+              {phase === "done" && "✓ DONE"}
+            </span>
+          </div>
+
+          {/* Bottom: exercise label + cue */}
+          <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, padding: "20px 18px", background: "linear-gradient(180deg, transparent 0%, rgba(10,14,20,0.95) 70%)" }}>
+            <div className="e-mono" style={{ color: "var(--sky)", fontSize: 10, letterSpacing: "0.25em" }}>
+              MOVE {(exerciseIdx + 1).toString().padStart(2, "0")} / {routine.exercises.length}
+            </div>
+            <div style={{ fontFamily: "var(--font-display)", fontSize: 28, lineHeight: 0.95, marginTop: 6, letterSpacing: "0.02em" }}>
+              {current.name}
+            </div>
+            <div style={{ fontSize: 13, lineHeight: 1.5, color: "rgba(242,238,232,0.78)", marginTop: 10, fontStyle: "italic", fontFamily: "var(--font-serif)" }}>
+              {current.cue}
+            </div>
+          </div>
+
+          {loadState === "loading" && (
+            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(10,14,20,0.4)", backdropFilter: "blur(2px)", pointerEvents: "none" }}>
+              <span className="e-mono" style={{ color: "rgba(242,238,232,0.7)", fontSize: 9, letterSpacing: "0.25em" }}>LOADING…</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Set/rep target chips */}
+      <div style={{ flexShrink: 0, padding: "16px 22px 6px", display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+        <Stat label="SETS" value={`${setIdx}/${current.sets}`} />
+        <Stat label={current.reps ? "REPS" : "HOLD"} value={current.reps ? String(current.reps) : `${current.hold_seconds ?? 0}S`} />
+        <Stat label="REST" value={`${current.rest_seconds}S`} />
+      </div>
+
+      {/* Transport */}
+      <div style={{ flexShrink: 0, padding: "8px 22px 22px" }}>
+        {/* Primary action — phase-driven */}
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <button onClick={previousExercise} disabled={exerciseIdx === 0} style={ctrlChrome(exerciseIdx === 0)} aria-label="Previous exercise">
+            <Icon name="chevron" size={16} />
+          </button>
+
+          {phase === "ready" && (
+            <button onClick={startSet} className="btn btn-sky" style={{ flex: 1, padding: "16px 22px", fontSize: 12 }}>
+              ▶ START SET {setIdx + 1}
+            </button>
+          )}
+          {phase === "working" && (
+            <button onClick={completeSet} className="btn btn-sky" style={{ flex: 1, padding: "16px 22px", fontSize: 12 }}>
+              ✓ COMPLETE SET {setIdx + 1}
+            </button>
+          )}
+          {phase === "rest" && (
+            <button onClick={skipRest} className="btn" style={{ flex: 1, padding: "16px 22px", fontSize: 12, background: "rgba(143,184,214,0.16)", color: "var(--sky)", border: "1px solid rgba(143,184,214,0.4)" }}>
+              SKIP REST · {fmtTime(restRemaining)}
+            </button>
+          )}
+          {phase === "done" && (
+            <Link href="/train" className="btn btn-sky" style={{ flex: 1, padding: "16px 22px", fontSize: 12, textAlign: "center" }}>
+              ROUTINE COMPLETE → TRAIN
+            </Link>
+          )}
+
+          <button onClick={nextExercise} disabled={isLastExercise} style={ctrlChrome(isLastExercise)} aria-label="Next exercise">
+            <span style={{ transform: "rotate(180deg)", display: "inline-flex" }}><Icon name="chevron" size={16} /></span>
+          </button>
+        </div>
+
+        {/* Secondary controls */}
+        <div style={{ marginTop: 10, display: "flex", gap: 8, justifyContent: "center" }}>
+          <button onClick={togglePlay} style={miniCtrl} aria-label={playing ? "Pause" : "Play"}>
+            <Icon name={playing ? "pause" : "play"} size={14} />
+          </button>
+          <button onClick={toggleMute} style={miniCtrl} aria-label="Mute / unmute">
+            <Icon name="bell" size={14} />
+          </button>
+        </div>
+
+        {/* Up next preview */}
+        {!isLastExercise && (
+          <div style={{ marginTop: 14, padding: "12px 14px", borderRadius: 14, background: "rgba(143,184,214,0.06)", border: "1px solid rgba(143,184,214,0.18)", display: "flex", alignItems: "center", gap: 12 }}>
+            <span className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.25em" }}>UP NEXT</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontFamily: "var(--font-display)", fontSize: 14, letterSpacing: "0.02em" }}>
+                {routine.exercises[exerciseIdx + 1]?.name}
+              </div>
+              <div className="e-mono" style={{ color: "rgba(242,238,232,0.5)", fontSize: 9, marginTop: 2, letterSpacing: "0.18em" }}>
+                {routine.exercises[exerciseIdx + 1]?.sets} × {routine.exercises[exerciseIdx + 1]?.reps ?? `${routine.exercises[exerciseIdx + 1]?.hold_seconds}s HOLD`}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const ctrlChrome = (disabled: boolean): React.CSSProperties => ({
+  width: 44, height: 48, borderRadius: 12,
+  background: "rgba(143,184,214,0.06)",
+  color: "var(--bone)",
+  border: "1px solid rgba(143,184,214,0.25)",
+  display: "flex", alignItems: "center", justifyContent: "center",
+  opacity: disabled ? 0.35 : 1,
+  cursor: disabled ? "not-allowed" : "pointer",
+});
+
+const miniCtrl: React.CSSProperties = {
+  width: 36, height: 36, borderRadius: "50%",
+  background: "rgba(143,184,214,0.06)",
+  color: "rgba(242,238,232,0.7)",
+  border: "1px solid rgba(143,184,214,0.18)",
+  display: "flex", alignItems: "center", justifyContent: "center",
+  cursor: "pointer",
+};
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={{ padding: "10px 12px", borderRadius: 12, background: "rgba(143,184,214,0.06)", border: "1px solid rgba(143,184,214,0.2)", textAlign: "center" }}>
+      <div style={{ fontFamily: "var(--font-display)", fontSize: 22, color: "var(--sky)", lineHeight: 1 }}>{value}</div>
+      <div className="e-mono" style={{ color: "rgba(242,238,232,0.5)", fontSize: 9, marginTop: 5, letterSpacing: "0.22em" }}>{label}</div>
+    </div>
+  );
+}
