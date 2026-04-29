@@ -80,9 +80,6 @@ export default async function EditProfilePage({ searchParams }: { searchParams: 
           <Field label="NEW AVATAR · UPLOAD (LEAVE BLANK TO KEEP CURRENT)">
             <input type="file" name="avatar_file" accept="image/*" className="ta-input" />
           </Field>
-          <Field label="OR AVATAR URL">
-            <input name="avatar_url" placeholder="https://… or /assets/..." className="ta-input" />
-          </Field>
 
           <div style={{ marginTop: 6, display: "flex", gap: 10 }}>
             <button type="submit" className="btn btn-sky" style={{ padding: "12px 22px" }}>SAVE</button>

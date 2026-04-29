@@ -4,8 +4,9 @@ import { TabBar } from "@/components/chrome/TabBar";
 import { Navbar } from "@/components/site/Navbar";
 import { Photo } from "@/components/ui/Photo";
 import { Icon } from "@/components/ui/Icon";
-import { listUserEnrollments, listUserBookings, listEnrollmentCompletions, listProducts, listPrograms, listPosts } from "@/lib/data/queries";
+import { listUserEnrollments, listUserBookings, listEnrollmentCompletions, listProducts, listPosts } from "@/lib/data/queries";
 import { getUser } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
 
 function greeting(d = new Date()) {
   const h = d.getHours();
@@ -20,19 +21,39 @@ function fmtPrice(cents: number) {
 }
 
 export default async function HomeScreen() {
-  const [products, programs, posts, user] = await Promise.all([
+  const [products, posts, user] = await Promise.all([
     listProducts(),
-    listPrograms(),
     listPosts(),
     getUser(),
   ]);
   const newDrops = products.slice(0, 6);
 
+  // Pull profile (display_name + avatar_url) from public.profiles — same
+  // source the /account page reads from, so the home header reflects edits
+  // immediately.
+  let profileDisplayName: string | null = null;
+  let profileAvatarUrl: string | null = null;
+  if (user) {
+    const sb = createClient();
+    const { data: p } = await sb
+      .from("profiles")
+      .select("display_name, avatar_url")
+      .eq("id", user.id)
+      .maybeSingle();
+    const row = p as { display_name?: string; avatar_url?: string } | null;
+    profileDisplayName = row?.display_name ?? null;
+    profileAvatarUrl = row?.avatar_url ?? null;
+  }
+
   const displayName =
-    (user?.user_metadata?.display_name as string | undefined)
+    profileDisplayName
+    ?? (user?.user_metadata?.display_name as string | undefined)
     ?? (user?.email?.split("@")[0])
     ?? "MEMBER";
   const firstName = displayName.split(/\s+/)[0];
+  const avatarUrl = profileAvatarUrl
+    ?? (user?.user_metadata?.avatar_url as string | undefined)
+    ?? "/assets/blue-hair-selfie.jpg";
 
   // Pull the user's active programs + upcoming bookings — drives the
   // personalized strips below the daily ritual.
@@ -51,9 +72,17 @@ export default async function HomeScreen() {
     .filter(b => b.booking.status === "reserved" && new Date(b.class.starts_at).getTime() >= now)
     .sort((a, b) => new Date(a.class.starts_at).getTime() - new Date(b.class.starts_at).getTime());
 
-  // Programs: split between active enrollments and discoverable.
-  const activeProgramIds = new Set(activePrograms.map(e => e.program.id));
-  const explorePrograms = programs.filter(p => !activeProgramIds.has(p.id)).slice(0, 4);
+  // Personalized hero — surface the user's most recently started program so
+  // the "TODAY'S RITUAL" card picks up exactly where they left off. Falls
+  // back to the studio session featured below if there's nothing active.
+  const heroProgram = activePrograms.length > 0
+    ? [...activePrograms].sort((a, b) =>
+        new Date(b.enrollment.started_at).getTime() - new Date(a.enrollment.started_at).getTime(),
+      )[0]
+    : null;
+  const heroProgramPct = heroProgram
+    ? Math.round((completedCounts[heroProgram.enrollment.id] ?? 0) / Math.max(1, heroProgram.program.total_sessions) * 100)
+    : 0;
 
   // Wall feed — pull from real posts, fall back to curated demo content
   // when Supabase is empty so the section never looks dead.
@@ -113,33 +142,76 @@ export default async function HomeScreen() {
           </div>
           <Link href="/account" aria-label="Account" style={{ position: "relative", display: "block" }}>
             <div style={{ width: 44, height: 44, borderRadius: "50%", overflow: "hidden", border: "1.5px solid var(--sky)" }}>
-              <Photo src="/assets/blue-hair-selfie.jpg" alt="profile" style={{ width: "100%", height: "100%" }} />
+              <Photo src={avatarUrl} alt={displayName} style={{ width: "100%", height: "100%" }} />
             </div>
             <div style={{ position: "absolute", bottom: -2, right: -2, background: "var(--electric)", color: "var(--ink)", borderRadius: 999, padding: "1px 5px", fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 600, border: "2px solid var(--ink)" }}>14</div>
           </Link>
         </div>
 
-        {/* Hero — today's ritual */}
+        {/* Hero — personal "pick up where you left off" card. When the user
+            has an active program, surface its current day + progress. Falls
+            back to a generic studio prompt when nothing's active yet. */}
         <div style={{ padding: "0 22px" }}>
-          <Link href="/train/player" className="lift" style={{ position: "relative", borderRadius: 22, overflow: "hidden", height: 380, background: "#000", display: "block", color: "var(--bone)", textDecoration: "none" }}>
-            <Photo src="/assets/IMG_3467.jpg" alt="glute bridge flow" className="zoom-on-hover" style={{ position: "absolute", inset: 0, opacity: 0.85 }} />
-            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(10,14,20,0.1) 30%, rgba(10,14,20,0.95) 100%)" }} />
-            <div style={{ position: "absolute", top: 16, left: 16, right: 16, display: "flex", justifyContent: "space-between" }}>
-              <div className="e-tag" style={{ background: "rgba(10,14,20,0.7)", backdropFilter: "blur(12px)", padding: "6px 10px", borderRadius: 999, color: "var(--sky)" }}>◉ TODAY&apos;S RITUAL</div>
-              <div className="e-tag" style={{ background: "rgba(10,14,20,0.7)", backdropFilter: "blur(12px)", padding: "6px 10px", borderRadius: 999 }}>42 MIN</div>
-            </div>
-            <div style={{ position: "absolute", left: 18, right: 18, bottom: 18 }}>
-              <div className="e-mono" style={{ color: "var(--sky)", marginBottom: 4 }}>SERIES 03 · DAY 14</div>
-              <div className="e-display" style={{ fontSize: 38, lineHeight: 0.92 }}>
-                LOW-IMPACT<br/>
-                <span style={{ fontStyle: "italic", fontFamily: "var(--font-serif)", textTransform: "none", letterSpacing: 0 }}>power</span> PILATES
+          {heroProgram ? (
+            <Link href={`/programs/${heroProgram.program.slug}`} className="lift" style={{ position: "relative", borderRadius: 22, overflow: "hidden", height: 380, background: "#000", display: "block", color: "var(--bone)", textDecoration: "none" }}>
+              {heroProgram.program.hero_image && (
+                <Photo
+                  src={heroProgram.program.hero_image}
+                  alt={heroProgram.program.name}
+                  className="zoom-on-hover"
+                  style={{ position: "absolute", inset: 0, opacity: 0.85 }}
+                />
+              )}
+              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(10,14,20,0.1) 30%, rgba(10,14,20,0.95) 100%)" }} />
+              <div style={{ position: "absolute", top: 16, left: 16, right: 16, display: "flex", justifyContent: "space-between" }}>
+                <div className="e-tag" style={{ background: "rgba(10,14,20,0.7)", backdropFilter: "blur(12px)", padding: "6px 10px", borderRadius: 999, color: "var(--sky)" }}>◉ PICK UP WHERE YOU LEFT OFF</div>
+                <div className="e-tag" style={{ background: "rgba(10,14,20,0.7)", backdropFilter: "blur(12px)", padding: "6px 10px", borderRadius: 999 }}>{heroProgramPct}%</div>
               </div>
-              <div style={{ display: "flex", gap: 8, marginTop: 14, alignItems: "center" }}>
-                <span className="btn btn-sky" style={{ flex: 1 }}><Icon name="play" size={14} />BEGIN</span>
-                <span className="btn btn-ghost" style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.2)", color: "var(--bone)" }}>PREVIEW</span>
+              <div style={{ position: "absolute", left: 18, right: 18, bottom: 18 }}>
+                <div className="e-mono" style={{ color: "var(--sky)", marginBottom: 4 }}>
+                  {(heroProgram.program.duration_label ?? "").toUpperCase() || "PROGRAM"} · DAY {heroProgram.enrollment.current_day}/{heroProgram.program.total_sessions}
+                </div>
+                <div className="e-display" style={{ fontSize: 38, lineHeight: 0.92 }}>
+                  {heroProgram.program.name.toUpperCase()}
+                </div>
+                {heroProgram.program.subtitle && (
+                  <div style={{ fontFamily: "var(--font-serif)", fontStyle: "italic", fontSize: 15, color: "rgba(242,238,232,0.78)", marginTop: 8, maxWidth: 360 }}>
+                    {heroProgram.program.subtitle}
+                  </div>
+                )}
+                {/* Progress bar mirrors the one on the program detail page */}
+                <div style={{ marginTop: 12, height: 4, background: "rgba(143,184,214,0.22)", borderRadius: 2, overflow: "hidden" }}>
+                  <div style={{ width: `${heroProgramPct}%`, height: "100%", background: "var(--sky)", boxShadow: "0 0 8px rgba(143,184,214,0.6)" }} />
+                </div>
+                <div style={{ display: "flex", gap: 8, marginTop: 14, alignItems: "center" }}>
+                  <span className="btn btn-sky" style={{ flex: 1 }}><Icon name="play" size={14} />CONTINUE</span>
+                  <span className="btn btn-ghost" style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.2)", color: "var(--bone)" }}>PREVIEW</span>
+                </div>
               </div>
-            </div>
-          </Link>
+            </Link>
+          ) : (
+            <Link href="/programs" className="lift" style={{ position: "relative", borderRadius: 22, overflow: "hidden", height: 380, background: "#000", display: "block", color: "var(--bone)", textDecoration: "none" }}>
+              <Photo src="/assets/IMG_3467.jpg" alt="" className="zoom-on-hover" style={{ position: "absolute", inset: 0, opacity: 0.85 }} />
+              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(10,14,20,0.1) 30%, rgba(10,14,20,0.95) 100%)" }} />
+              <div style={{ position: "absolute", top: 16, left: 16, right: 16, display: "flex", justifyContent: "space-between" }}>
+                <div className="e-tag" style={{ background: "rgba(10,14,20,0.7)", backdropFilter: "blur(12px)", padding: "6px 10px", borderRadius: 999, color: "var(--sky)" }}>◉ START THE STREAK</div>
+                <div className="e-tag" style={{ background: "rgba(10,14,20,0.7)", backdropFilter: "blur(12px)", padding: "6px 10px", borderRadius: 999 }}>NO PROGRAM YET</div>
+              </div>
+              <div style={{ position: "absolute", left: 18, right: 18, bottom: 18 }}>
+                <div className="e-mono" style={{ color: "var(--sky)", marginBottom: 4 }}>STUDIO + PROGRAMS</div>
+                <div className="e-display" style={{ fontSize: 38, lineHeight: 0.92 }}>
+                  PICK YOUR<br/>FIRST RITUAL.
+                </div>
+                <div style={{ fontFamily: "var(--font-serif)", fontStyle: "italic", fontSize: 15, color: "rgba(242,238,232,0.78)", marginTop: 8, maxWidth: 360 }}>
+                  Browse multi-week programs or jump into a Studio session.
+                </div>
+                <div style={{ display: "flex", gap: 8, marginTop: 14, alignItems: "center" }}>
+                  <span className="btn btn-sky" style={{ flex: 1 }}><Icon name="play" size={14} />BROWSE PROGRAMS</span>
+                  <Link href="/train" className="btn btn-ghost" style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.2)", color: "var(--bone)", textDecoration: "none" }}>STUDIO</Link>
+                </div>
+              </div>
+            </Link>
+          )}
         </div>
 
         {/* Streak ribbon */}
@@ -233,46 +305,6 @@ export default async function HomeScreen() {
                   </Link>
                 );
               })}
-            </div>
-          </>
-        )}
-
-        {/* EXPLORE PROGRAMS — programs the user hasn't enrolled in yet */}
-        {explorePrograms.length > 0 && (
-          <>
-            <div style={{ padding: "28px 22px 12px", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-              <div className="e-display" style={{ fontSize: 22 }}>{activePrograms.length > 0 ? "EXPLORE PROGRAMS" : "PROGRAMS"}</div>
-              <Link href="/programs" className="e-mono" style={{ color: "var(--sky)" }}>ALL PROGRAMS →</Link>
-            </div>
-            <div className="no-scrollbar" style={{ display: "flex", gap: 12, padding: "0 22px", overflowX: "auto" }}>
-              {explorePrograms.map(p => (
-                <Link key={p.id} href={`/programs/${p.slug}`} className="lift" style={{
-                  minWidth: 220, flexShrink: 0,
-                  borderRadius: 16, overflow: "hidden",
-                  background: "var(--haze)",
-                  border: "1px solid rgba(255,255,255,0.06)",
-                  color: "var(--bone)", textDecoration: "none",
-                }}>
-                  <div style={{ position: "relative", height: 200 }}>
-                    {p.hero_image && <Photo src={p.hero_image} alt="" className="zoom-on-hover" style={{ position: "absolute", inset: 0 }} />}
-                    <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, transparent 30%, rgba(10,14,20,0.95))" }} />
-                    <div style={{ position: "absolute", top: 10, left: 10, padding: "3px 8px", borderRadius: 999, background: "rgba(10,14,20,0.7)", backdropFilter: "blur(6px)" }}>
-                      <span className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.2em" }}>{p.duration_label}</span>
-                    </div>
-                    {p.requires_payment && (
-                      <div className="e-mono" style={{ position: "absolute", top: 10, right: 10, padding: "3px 8px", borderRadius: 999, background: "var(--sky)", color: "var(--ink)", fontSize: 9, letterSpacing: "0.2em" }}>
-                        {fmtPrice(p.price_cents)}
-                      </div>
-                    )}
-                    <div style={{ position: "absolute", left: 12, right: 12, bottom: 10 }}>
-                      <div style={{ fontFamily: "var(--font-display)", fontSize: 20, lineHeight: 0.95 }}>{p.name}</div>
-                      {p.subtitle && (
-                        <div className="e-mono" style={{ color: "rgba(242,238,232,0.65)", fontSize: 9, marginTop: 4, letterSpacing: "0.18em" }}>{p.subtitle.toUpperCase()}</div>
-                      )}
-                    </div>
-                  </div>
-                </Link>
-              ))}
             </div>
           </>
         )}
