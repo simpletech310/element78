@@ -28,19 +28,28 @@ export default async function LocationsPage() {
         </p>
       </section>
 
-      {/* MAP — full-bleed real ATL map (OSM tiles, dark filter, sky pin) */}
-      <section className="reveal reveal-d3" style={{ position: "relative", margin: "12px 0 40px", height: "min(520px, 60vh)", overflow: "hidden", background: "var(--ink)", borderTop: "1px solid rgba(143,184,214,0.12)", borderBottom: "1px solid rgba(143,184,214,0.12)" }}>
-        <iframe
-          title="Atlanta map"
-          src="https://www.openstreetmap.org/export/embed.html?bbox=-84.55%2C33.65%2C-84.25%2C33.85&amp;layer=mapnik"
-          style={{
-            position: "absolute", inset: 0,
-            width: "100%", height: "100%",
-            border: "0",
-            filter: "invert(0.92) hue-rotate(190deg) saturate(0.55) brightness(1.05) contrast(0.95)",
-          }}
-          loading="lazy"
-        />
+      {/* MAP — tight on the flagship's actual coords, dark-filtered OSM tiles
+          with our sky pin overlaid at center. Uses primary's lat/lng so the
+          bbox stays in sync with the DB row. */}
+      {(() => {
+        const lat = primary?.lat ?? 33.7935;
+        const lng = primary?.lng ?? -84.4150;
+        const span = 0.018; // ~1.2 mi on each axis — close enough to read the streets
+        const bbox = `${lng - span}%2C${lat - span}%2C${lng + span}%2C${lat + span}`;
+        const marker = `&amp;marker=${lat}%2C${lng}`;
+        return (
+          <section className="reveal reveal-d3" style={{ position: "relative", margin: "12px 0 40px", height: "min(520px, 60vh)", overflow: "hidden", background: "var(--ink)", borderTop: "1px solid rgba(143,184,214,0.12)", borderBottom: "1px solid rgba(143,184,214,0.12)" }}>
+            <iframe
+              title={`${primary?.name ?? "Atlanta HQ"} · ${primary?.address ?? "Atlanta, GA"}`}
+              src={`https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&amp;layer=mapnik${marker}`}
+              style={{
+                position: "absolute", inset: 0,
+                width: "100%", height: "100%",
+                border: "0",
+                filter: "invert(0.92) hue-rotate(190deg) saturate(0.55) brightness(1.05) contrast(0.95)",
+              }}
+              loading="lazy"
+            />
 
         {/* Subtle vignette over the map */}
         <div aria-hidden="true" style={{
@@ -66,8 +75,13 @@ export default async function LocationsPage() {
               position: "relative",
             }} />
           </div>
-          <div style={{ marginTop: 12, padding: "6px 14px", borderRadius: 999, background: "rgba(10,14,20,0.75)", backdropFilter: "blur(10px)", border: "1px solid rgba(143,184,214,0.4)" }}>
-            <span className="e-mono" style={{ color: "var(--sky)", fontSize: 10, letterSpacing: "0.25em" }}>ATLANTA · FLAGSHIP</span>
+          <div style={{ marginTop: 12, padding: "6px 14px", borderRadius: 999, background: "rgba(10,14,20,0.75)", backdropFilter: "blur(10px)", border: "1px solid rgba(143,184,214,0.4)", maxWidth: 320 }}>
+            <span className="e-mono" style={{ color: "var(--sky)", fontSize: 10, letterSpacing: "0.25em", display: "block" }}>ELEMENT 78 · FLAGSHIP</span>
+            {primary?.address && (
+              <span className="e-mono" style={{ color: "rgba(242,238,232,0.85)", fontSize: 9, letterSpacing: "0.14em", marginTop: 4, display: "block" }}>
+                {primary.address.toUpperCase()}
+              </span>
+            )}
           </div>
         </div>
 
@@ -81,9 +95,13 @@ export default async function LocationsPage() {
 
         {/* Bottom coordinates label */}
         <div style={{ position: "absolute", bottom: 18, left: "50%", transform: "translateX(-50%)" }} className="e-mono" >
-          <span style={{ color: "rgba(242,238,232,0.5)", fontSize: 9, letterSpacing: "0.3em" }}>33.749° N · 84.388° W</span>
+          <span style={{ color: "rgba(242,238,232,0.5)", fontSize: 9, letterSpacing: "0.3em" }}>
+            {lat.toFixed(4)}° N · {Math.abs(lng).toFixed(4)}° W
+          </span>
         </div>
       </section>
+        );
+      })()}
 
       {/* PRIMARY */}
       {primary && (
@@ -96,6 +114,11 @@ export default async function LocationsPage() {
             <div style={{ position: "absolute", left: 24, right: 24, bottom: 24, color: "var(--bone)" }}>
               <div className="e-mono" style={{ color: "var(--sky)" }}>FLAGSHIP · ELEMENT 78</div>
               <div className="e-display" style={{ fontSize: "clamp(40px, 7vw, 60px)", lineHeight: 0.95, marginTop: 6 }}>{primary.name.toUpperCase()}</div>
+              {primary.address && (
+                <div className="e-mono" style={{ color: "rgba(242,238,232,0.85)", fontSize: 11, letterSpacing: "0.18em", marginTop: 10 }}>
+                  {primary.address.toUpperCase()}
+                </div>
+              )}
               <div style={{ display: "flex", flexWrap: "wrap", gap: 14, marginTop: 14, alignItems: "center" }}>
                 <span className="e-mono" style={{ color: "rgba(242,238,232,0.7)", fontSize: 10 }}>OPEN 24/7</span>
                 <span style={{ width: 4, height: 4, borderRadius: "50%", background: "rgba(242,238,232,0.4)" }} />

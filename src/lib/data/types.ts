@@ -9,6 +9,9 @@ export type Location = {
   lat: number | null;
   lng: number | null;
   sort_order: number;
+  /** Real street address. Only the active flagship has one today; the
+   *  waitlist cities just hold the city/state pair until they open. */
+  address: string | null;
 };
 
 export type Trainer = {

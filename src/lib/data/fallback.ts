@@ -4,11 +4,11 @@
 import type { ClassRow, Flow, Location, Post, Product, Trainer, Program, ProgramSession } from "./types";
 
 export const fallbackLocations: Location[] = [
-  { id: "loc-atl", slug: "atlanta-hq", name: "Atlanta HQ", city: "Atlanta", state: "GA", status: "active", hero_image: "/assets/atlgym.jpg", lat: 33.749, lng: -84.388, sort_order: 1 },
-  { id: "loc-la", slug: "los-angeles", name: "Los Angeles", city: "Los Angeles", state: "CA", status: "waitlist", hero_image: "/assets/blue-hair-gym.jpg", lat: 34.0522, lng: -118.2437, sort_order: 2 },
-  { id: "loc-hou", slug: "houston", name: "Houston", city: "Houston", state: "TX", status: "waitlist", hero_image: null, lat: 29.7604, lng: -95.3698, sort_order: 3 },
-  { id: "loc-nyc", slug: "new-york", name: "New York", city: "Brooklyn", state: "NY", status: "waitlist", hero_image: null, lat: 40.6872, lng: -73.9418, sort_order: 4 },
-  { id: "loc-dc", slug: "washington-dc", name: "Washington DC", city: "Washington", state: "DC", status: "waitlist", hero_image: null, lat: 38.9072, lng: -77.0369, sort_order: 5 },
+  { id: "loc-atl", slug: "atlanta-hq", name: "Atlanta HQ", city: "Atlanta", state: "GA", status: "active", hero_image: "/assets/atlgym.jpg", lat: 33.7935, lng: -84.4150, sort_order: 1, address: "1198 Howell Mill Rd NW, Atlanta, GA 30318" },
+  { id: "loc-la", slug: "los-angeles", name: "Los Angeles", city: "Los Angeles", state: "CA", status: "waitlist", hero_image: "/assets/blue-hair-gym.jpg", lat: 34.0522, lng: -118.2437, sort_order: 2, address: null },
+  { id: "loc-hou", slug: "houston", name: "Houston", city: "Houston", state: "TX", status: "waitlist", hero_image: null, lat: 29.7604, lng: -95.3698, sort_order: 3, address: null },
+  { id: "loc-nyc", slug: "new-york", name: "New York", city: "Brooklyn", state: "NY", status: "waitlist", hero_image: null, lat: 40.6872, lng: -73.9418, sort_order: 4, address: null },
+  { id: "loc-dc", slug: "washington-dc", name: "Washington DC", city: "Washington", state: "DC", status: "waitlist", hero_image: null, lat: 38.9072, lng: -77.0369, sort_order: 5, address: null },
 ];
 
 export const fallbackTrainers: Trainer[] = [
