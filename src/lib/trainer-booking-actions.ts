@@ -67,7 +67,12 @@ export async function requestTrainerBookingAction(formData: FormData) {
   // unique partial index on trainer_sessions(trainer_id, starts_at) WHERE
   // status in (open,full,confirmed) is what now prevents the trainer from
   // being double-booked at the same instant.
-  const sessionInsert = await sb
+  //
+  // The trainer_sessions RLS only lets the trainer themselves write — so
+  // we use the admin client here (we've already auth-checked the member
+  // above; they're allowed to claim any open trainer slot).
+  const admin = createAdminClient();
+  const sessionInsert = await admin
     .from("trainer_sessions")
     .insert({
       trainer_id: trainerId,
@@ -92,6 +97,9 @@ export async function requestTrainerBookingAction(formData: FormData) {
   }
   const sessionId = (sessionInsert.data as { id: string }).id;
 
+  // Insert the booking via the user's session client so RLS confirms
+  // auth.uid() = user_id; if anything goes wrong (FK / constraint), the
+  // orphaned trainer_sessions row gets rolled back via admin below.
   const insert = await sb
     .from("trainer_bookings")
     .insert({
@@ -113,8 +121,10 @@ export async function requestTrainerBookingAction(formData: FormData) {
     .single();
 
   if (insert.error || !insert.data) {
-    // Roll back the orphaned session so the trainer's slot frees up again.
-    await sb.from("trainer_sessions").delete().eq("id", sessionId);
+    await admin.from("trainer_sessions").delete().eq("id", sessionId);
+    const errMsg = insert.error?.message ?? "unknown error";
+    // eslint-disable-next-line no-console
+    console.error("[trainer-booking] insert failed:", errMsg, insert.error);
     redirect(`/trainers/${trainerSlug}/book?error=${encodeURIComponent("Booking failed. Please try again.")}`);
   }
 

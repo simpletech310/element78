@@ -18,9 +18,9 @@ export default async function HomePage() {
       img: "/assets/blue-hair-gym.jpg", cta: "TOUR THE FLOOR", href: "/locations",
     },
     {
-      num: "II", t: "THE STUDIO", sub: "AI + human trainers, anywhere",
-      desc: "Pilates, HIIT, strength, mobility, yoga, conditioning. Trainers — human and AI — top of the game. Live in your living room or in our booths.",
-      img: "/assets/editorial-2.png", cta: "TRY A SESSION", href: "/ai-sessions",
+      num: "II", t: "THE STUDIO", sub: "Coaches, anywhere you train",
+      desc: "Pilates, HIIT, strength, mobility, yoga, conditioning. Studio sessions in your living room, live coaches in our booths — top of the game either way.",
+      img: "/assets/editorial-2.png", cta: "TRY A SESSION", href: "/train",
     },
     {
       num: "III", t: "THE STORE", sub: "Wear, gear, fuel",

@@ -6,15 +6,34 @@ import { Photo } from "@/components/ui/Photo";
 import { Icon } from "@/components/ui/Icon";
 import { Wordmark } from "@/components/brand/Wordmark";
 import { getUser } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
 import { signOutAction } from "@/lib/auth-actions";
 
-export default async function AccountPage() {
+export default async function AccountPage({ searchParams }: { searchParams?: { updated?: string } }) {
   const user = await getUser();
   if (!user) redirect("/login?next=/account");
 
-  const displayName = (user.user_metadata?.display_name as string | undefined) ?? user.email?.split("@")[0] ?? "Member";
+  // Profile data is the source of truth; user_metadata is the fallback for
+  // accounts that haven't gone through the editor yet.
+  const sb = createClient();
+  const { data: profile } = await sb
+    .from("profiles")
+    .select("display_name, handle, avatar_url")
+    .eq("id", user.id)
+    .maybeSingle();
+  const p = (profile as { display_name?: string; handle?: string; avatar_url?: string } | null) ?? {};
+
+  const displayName = p.display_name
+    ?? (user.user_metadata?.display_name as string | undefined)
+    ?? user.email?.split("@")[0]
+    ?? "Member";
   const email = user.email ?? "";
-  const handle = (user.user_metadata?.handle as string | undefined) ?? email.split("@")[0];
+  const handle = p.handle
+    ?? (user.user_metadata?.handle as string | undefined)
+    ?? email.split("@")[0];
+  const avatarUrl = p.avatar_url
+    ?? (user.user_metadata?.avatar_url as string | undefined)
+    ?? "/assets/blue-hair-selfie.jpg";
 
   const links: { label: string; href: string; icon: "cal" | "bag" | "heart" | "settings" | "fire" }[] = [
     { label: "ORDER HISTORY", href: "/account/purchases", icon: "bag" },
@@ -37,11 +56,17 @@ export default async function AccountPage() {
           <Wordmark size={14} color="var(--bone)" />
         </div>
 
+        {searchParams?.updated && (
+          <div className="e-mono" style={{ margin: "14px 22px 0", padding: "12px 14px", borderRadius: 12, background: "rgba(143,184,214,0.1)", border: "1px solid var(--sky)", color: "var(--sky)", fontSize: 11, letterSpacing: "0.18em" }}>
+            ✓ PROFILE UPDATED
+          </div>
+        )}
+
         {/* Profile hero */}
         <section style={{ padding: "32px 22px 32px" }}>
           <div style={{ display: "flex", gap: 18, alignItems: "center" }}>
             <div style={{ width: 84, height: 84, borderRadius: "50%", overflow: "hidden", border: "2px solid var(--sky)", flexShrink: 0 }}>
-              <Photo src="/assets/blue-hair-selfie.jpg" alt={displayName} style={{ width: "100%", height: "100%" }} />
+              <Photo src={avatarUrl} alt={displayName} style={{ width: "100%", height: "100%" }} />
             </div>
             <div style={{ minWidth: 0, flex: 1 }}>
               <div className="e-mono" style={{ color: "var(--sky)", fontSize: 10, letterSpacing: "0.25em" }}>MEMBER</div>
@@ -52,6 +77,9 @@ export default async function AccountPage() {
                 @{handle} · {email}
               </div>
             </div>
+            <Link href="/account/edit" className="e-mono" style={{ flexShrink: 0, padding: "8px 12px", borderRadius: 999, background: "rgba(143,184,214,0.12)", color: "var(--sky)", border: "1px solid rgba(143,184,214,0.3)", textDecoration: "none", fontSize: 10, letterSpacing: "0.2em" }}>
+              EDIT
+            </Link>
           </div>
 
           {/* Streak ribbon */}

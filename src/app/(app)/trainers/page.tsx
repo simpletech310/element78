@@ -94,8 +94,8 @@ export default async function TrainersPage() {
       <section style={{ padding: "44px 22px 80px", maxWidth: 1180, margin: "0 auto" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 8 }}>
           <div className="e-mono" style={{ color: "rgba(242,238,232,0.55)", letterSpacing: "0.2em" }}>STUDIO · IN-APP + IN-GYM</div>
-          <Link href="/ai-sessions" className="e-mono" style={{ color: "var(--sky)", display: "inline-flex", alignItems: "center", gap: 6 }}>
-            HOW STUDIO WORKS <Icon name="arrowUpRight" size={14} />
+          <Link href="/train" className="e-mono" style={{ color: "var(--sky)", display: "inline-flex", alignItems: "center", gap: 6 }}>
+            OPEN STUDIO <Icon name="arrowUpRight" size={14} />
           </Link>
         </div>
         <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 14 }}>

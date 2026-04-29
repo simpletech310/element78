@@ -251,17 +251,7 @@ export default async function TrainerBookingPage({
               <label
                 key={s.starts_at}
                 className="e-mono slot-pill"
-                style={{
-                  cursor: "pointer",
-                  padding: "12px 8px",
-                  borderRadius: 10,
-                  background: "var(--haze)",
-                  border: "1px solid rgba(143,184,214,0.2)",
-                  textAlign: "center",
-                  fontSize: 12,
-                  letterSpacing: "0.12em",
-                  color: "var(--bone)",
-                }}
+                style={{ cursor: "pointer" }}
               >
                 <input
                   type="radio"
@@ -269,12 +259,49 @@ export default async function TrainerBookingPage({
                   value={`${s.starts_at}|${s.ends_at}`}
                   defaultChecked={i === 0}
                   required
-                  style={{ position: "absolute", opacity: 0, pointerEvents: "none" }}
                 />
-                {fmtTimeLabel(s.starts_at)}
+                <span>{fmtTimeLabel(s.starts_at)}</span>
               </label>
             ))}
           </div>
+          {/* Pill styling — uses :has() so the picked slot lights up. The radio
+              itself stays in the DOM (so form submission carries the value) but
+              is visually replaced by the styled pill. */}
+          <style>{`
+            .slot-pill {
+              position: relative;
+              padding: 12px 8px;
+              border-radius: 10px;
+              background: var(--haze);
+              border: 1px solid rgba(143,184,214,0.2);
+              text-align: center;
+              font-size: 12px;
+              letter-spacing: 0.12em;
+              color: var(--bone);
+              transition: background .15s ease, border-color .15s ease, color .15s ease, transform .15s ease;
+              display: block;
+            }
+            .slot-pill input[type="radio"] {
+              position: absolute;
+              inset: 0;
+              opacity: 0;
+              cursor: pointer;
+              margin: 0;
+              width: 100%;
+              height: 100%;
+            }
+            .slot-pill:hover {
+              border-color: rgba(143,184,214,0.5);
+              background: rgba(143,184,214,0.12);
+            }
+            .slot-pill:has(input:checked) {
+              background: var(--sky);
+              border-color: var(--sky);
+              color: var(--ink);
+              transform: scale(1.03);
+              box-shadow: 0 0 12px rgba(143,184,214,0.45);
+            }
+          `}</style>
 
           <div style={{ marginTop: 28 }}>
             <div className="e-mono" style={{ color: "var(--sky)", letterSpacing: "0.2em", fontSize: 10 }}>04 · ROUTINE (OPTIONAL)</div>

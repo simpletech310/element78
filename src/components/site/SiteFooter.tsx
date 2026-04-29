@@ -13,9 +13,9 @@ const cols: { h: string; items: { label: string; href: string }[] }[] = [
   {
     h: "STUDIO",
     items: [
-      { label: "AI Sessions", href: "/ai-sessions" },
+      { label: "Studio Sessions", href: "/train" },
       { label: "Programs", href: "/programs" },
-      { label: "Trainers", href: "/trainers" },
+      { label: "Coaches", href: "/trainers" },
       { label: "Live Classes", href: "/classes" },
     ],
   },

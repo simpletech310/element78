@@ -315,20 +315,80 @@ export function RoutinePlayer({ routine, programContext }: { routine: Routine; p
           </button>
         </div>
 
-        {/* Up next preview */}
-        {!isLastExercise && (
-          <div style={{ marginTop: 14, padding: "12px 14px", borderRadius: 14, background: "rgba(143,184,214,0.06)", border: "1px solid rgba(143,184,214,0.18)", display: "flex", alignItems: "center", gap: 12 }}>
-            <span className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.25em" }}>UP NEXT</span>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontFamily: "var(--font-display)", fontSize: 14, letterSpacing: "0.02em" }}>
-                {routine.exercises[exerciseIdx + 1]?.name}
-              </div>
-              <div className="e-mono" style={{ color: "rgba(242,238,232,0.5)", fontSize: 9, marginTop: 2, letterSpacing: "0.18em" }}>
-                {routine.exercises[exerciseIdx + 1]?.sets} × {routine.exercises[exerciseIdx + 1]?.reps ?? `${routine.exercises[exerciseIdx + 1]?.hold_seconds}s HOLD`}
-              </div>
-            </div>
+        {/* Routine playlist — every move in the queue. The current move
+            highlights, completed moves dim, and tapping a future move jumps
+            you to it (handy if you want to preview or skip). */}
+        <div style={{ marginTop: 14 }}>
+          <div className="e-mono" style={{ color: "rgba(242,238,232,0.55)", fontSize: 9, letterSpacing: "0.25em", marginBottom: 8, padding: "0 4px", display: "flex", justifyContent: "space-between" }}>
+            <span>PLAYLIST · {routine.exercises.length} MOVES</span>
+            <span style={{ color: "var(--sky)" }}>{exerciseIdx + 1} / {routine.exercises.length}</span>
           </div>
-        )}
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 280, overflowY: "auto", paddingRight: 4 }}>
+            {routine.exercises.map((ex, i) => {
+              const isPast = i < exerciseIdx;
+              const isCurrent = i === exerciseIdx;
+              const repLabel = ex.reps !== null ? `${ex.sets} × ${ex.reps}` : `${ex.sets} × ${ex.hold_seconds ?? 0}S HOLD`;
+              return (
+                <button
+                  key={ex.slug}
+                  type="button"
+                  onClick={() => {
+                    if (i === exerciseIdx) return;
+                    setExerciseIdx(i);
+                    setSetIdx(0);
+                    setPhase("ready");
+                    pauseVideo();
+                  }}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    padding: "10px 12px",
+                    borderRadius: 12,
+                    textAlign: "left",
+                    cursor: isCurrent ? "default" : "pointer",
+                    background: isCurrent
+                      ? "linear-gradient(135deg, rgba(143,184,214,0.22), rgba(46,127,176,0.06))"
+                      : "rgba(143,184,214,0.04)",
+                    border: isCurrent
+                      ? "1px solid var(--sky)"
+                      : "1px solid rgba(143,184,214,0.14)",
+                    color: "var(--bone)",
+                    opacity: isPast && !isCurrent ? 0.45 : 1,
+                    transition: "background .15s ease, border-color .15s ease",
+                  }}
+                >
+                  <div
+                    style={{
+                      flexShrink: 0,
+                      width: 26, height: 26, borderRadius: "50%",
+                      background: isCurrent ? "var(--sky)" : isPast ? "rgba(143,184,214,0.18)" : "rgba(143,184,214,0.08)",
+                      color: isCurrent ? "var(--ink)" : "var(--sky)",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 600,
+                    }}
+                    aria-hidden
+                  >
+                    {isPast ? "✓" : (i + 1).toString().padStart(2, "0")}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: "var(--font-display)", fontSize: 14, lineHeight: 1.05, letterSpacing: "0.02em" }}>
+                      {ex.name}
+                    </div>
+                    <div className="e-mono" style={{ color: "rgba(242,238,232,0.5)", fontSize: 9, marginTop: 3, letterSpacing: "0.18em" }}>
+                      {repLabel} · {ex.rest_seconds}S REST
+                    </div>
+                  </div>
+                  {isCurrent && (
+                    <span className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.2em", flexShrink: 0 }}>
+                      ▶ NOW
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
     </div>
   );
