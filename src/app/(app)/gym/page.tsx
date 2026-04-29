@@ -5,15 +5,25 @@ import { TabBar } from "@/components/chrome/TabBar";
 import { Wordmark } from "@/components/brand/Wordmark";
 import { Photo } from "@/components/ui/Photo";
 import { Icon, IconName } from "@/components/ui/Icon";
-import { listClasses, listUserBookings } from "@/lib/data/queries";
+import { listClasses, listTrainers, listUserBookings } from "@/lib/data/queries";
 import { getUser } from "@/lib/auth";
+import { tierLabel, type MembershipTier } from "@/lib/membership";
+import { createClient } from "@/lib/supabase/server";
 
 export default async function GymScreen({ searchParams }: { searchParams: { date?: string } }) {
-  const [all, user] = await Promise.all([listClasses(), getUser()]);
+  const [all, trainers, user] = await Promise.all([listClasses(), listTrainers(), getUser()]);
   const memberName = ((user?.user_metadata?.display_name as string | undefined)
     ?? user?.email?.split("@")[0]
     ?? "Member").toUpperCase();
   const memberId = user?.id ? "E78-" + user.id.replace(/-/g, "").slice(0, 6).toUpperCase() : "E78-XXXXXX";
+
+  // Pull the user's actual membership tier so the card stops hard-coding "ELITE".
+  let tier: MembershipTier = "basic";
+  if (user) {
+    const sb = createClient();
+    const { data: profile } = await sb.from("profiles").select("membership_tier").eq("id", user.id).maybeSingle();
+    tier = ((profile as { membership_tier?: string } | null)?.membership_tier ?? "basic") as MembershipTier;
+  }
 
   // User's upcoming bookings drive the "Your Classes" strip + prevent
   // double-booking on the schedule below
@@ -55,10 +65,29 @@ export default async function GymScreen({ searchParams }: { searchParams: { date
     })
     .sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime());
 
-  const actions: { l: string; i: IconName }[] = [
-    { l: "CHECK IN", i: "qr" },
-    { l: "BRING GUEST", i: "plus" },
-    { l: "STUDIO MAP", i: "map" },
+  // Trainers teaching the selected day. Dedup by trainer_id so the same human
+  // teaching multiple slots only shows once. Skip AI avatars — they don't
+  // staff the gym floor.
+  const trainerById = new Map(trainers.map(t => [t.id, t]));
+  const trainersOnFloorById = new Map<string, { trainer: typeof trainers[number]; firstAt: string; classCount: number }>();
+  for (const c of dayClasses) {
+    if (!c.trainer_id) continue;
+    const t = trainerById.get(c.trainer_id);
+    if (!t || t.is_ai) continue;
+    const prev = trainersOnFloorById.get(t.id);
+    if (prev) {
+      prev.classCount += 1;
+    } else {
+      trainersOnFloorById.set(t.id, { trainer: t, firstAt: c.starts_at, classCount: 1 });
+    }
+  }
+  const trainersOnFloor = Array.from(trainersOnFloorById.values())
+    .sort((a, b) => new Date(a.firstAt).getTime() - new Date(b.firstAt).getTime());
+
+  const actions: { l: string; i: IconName; href: string }[] = [
+    { l: "CHECK IN", i: "qr", href: "/gym/checkin" },
+    { l: "BRING GUEST", i: "plus", href: "/gym/guest" },
+    { l: "STUDIO MAP", i: "map", href: "/locations" },
   ];
 
   return (
@@ -71,9 +100,9 @@ export default async function GymScreen({ searchParams }: { searchParams: { date
             <Link href="/locations" className="e-mono" style={{ color: "rgba(10,14,20,0.5)" }}>HQ · ATLANTA</Link>
             <div className="e-display" style={{ fontSize: 36, marginTop: 2 }}>THE GYM</div>
           </div>
-          <button style={{ width: 40, height: 40, borderRadius: 999, background: "var(--ink)", color: "var(--sky)", border: "none", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <Link href="/gym/checkin" aria-label="Check in" style={{ width: 40, height: 40, borderRadius: 999, background: "var(--ink)", color: "var(--sky)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "none" }}>
             <Icon name="qr" size={18} />
-          </button>
+          </Link>
         </div>
 
         {/* Membership card */}
@@ -86,7 +115,7 @@ export default async function GymScreen({ searchParams }: { searchParams: { date
             <div style={{ position: "absolute", right: -40, top: -40, width: 200, height: 200, borderRadius: "50%", background: "radial-gradient(circle, rgba(143,184,214,0.35), transparent 70%)" }} />
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", position: "relative" }}>
               <Wordmark size={20} color="var(--bone)" />
-              <span className="e-tag" style={{ background: "rgba(143,184,214,0.18)", color: "var(--sky)", padding: "4px 8px", borderRadius: 4 }}>ELITE · 24H</span>
+              <span className="e-tag" style={{ background: "rgba(143,184,214,0.18)", color: "var(--sky)", padding: "4px 8px", borderRadius: 4 }}>{tierLabel(tier)}</span>
             </div>
             <div style={{ marginTop: 32, position: "relative" }}>
               <div className="e-mono" style={{ color: "rgba(242,238,232,0.55)" }}>MEMBER</div>
@@ -112,14 +141,14 @@ export default async function GymScreen({ searchParams }: { searchParams: { date
         {/* Quick actions */}
         <div style={{ padding: "12px 22px", display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
           {actions.map(a => (
-            <button key={a.l} style={{
+            <Link key={a.l} href={a.href} style={{
               padding: "14px 8px", borderRadius: 12, background: "var(--paper)",
               border: "1px solid rgba(10,14,20,0.08)", display: "flex", flexDirection: "column",
-              alignItems: "center", gap: 6, cursor: "pointer", color: "var(--ink)",
+              alignItems: "center", gap: 6, color: "var(--ink)", textDecoration: "none",
             }}>
               <Icon name={a.i} size={18} />
               <span className="e-mono" style={{ fontSize: 9 }}>{a.l}</span>
-            </button>
+            </Link>
           ))}
         </div>
 
@@ -197,6 +226,54 @@ export default async function GymScreen({ searchParams }: { searchParams: { date
             );
           })}
         </div>
+
+        {/* TRAINERS ON THE FLOOR — only those teaching the selected day, capped
+            so the gym page doesn't turn into a trainer roster. */}
+        {trainersOnFloor.length > 0 && (
+          <div style={{ padding: "16px 22px 4px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 10 }}>
+              <div className="e-mono" style={{ color: "rgba(10,14,20,0.6)", letterSpacing: "0.2em", fontSize: 10 }}>
+                ON THE FLOOR · {trainersOnFloor.length}
+              </div>
+              <Link href="/trainers" className="e-mono" style={{ color: "var(--electric-deep)", fontSize: 10, letterSpacing: "0.2em", textDecoration: "none" }}>
+                ALL TRAINERS →
+              </Link>
+            </div>
+            <div className="no-scrollbar" style={{ display: "flex", gap: 10, overflowX: "auto" }}>
+              {trainersOnFloor.slice(0, 8).map(({ trainer, firstAt, classCount }) => {
+                const t = new Date(firstAt);
+                const time = t.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }).replace(" ", "").toUpperCase();
+                return (
+                  <Link
+                    key={trainer.id}
+                    href={`/trainers/${trainer.slug}`}
+                    style={{
+                      flexShrink: 0, width: 96, padding: "12px 10px",
+                      borderRadius: 14, background: "var(--paper)",
+                      border: "1px solid rgba(10,14,20,0.08)",
+                      color: "var(--ink)", textDecoration: "none",
+                      display: "flex", flexDirection: "column", alignItems: "center", gap: 6, textAlign: "center",
+                    }}
+                  >
+                    <div style={{
+                      width: 56, height: 56, borderRadius: "50%", overflow: "hidden",
+                      background: "var(--haze)",
+                      backgroundImage: trainer.avatar_url ? `url(${trainer.avatar_url})` : undefined,
+                      backgroundSize: "cover", backgroundPosition: "center",
+                      border: "2px solid var(--ink)",
+                    }} />
+                    <div style={{ fontFamily: "var(--font-display)", fontSize: 13, lineHeight: 1, letterSpacing: "0.02em" }}>
+                      {trainer.name.split(" ")[0].toUpperCase()}
+                    </div>
+                    <div className="e-mono" style={{ fontSize: 8, color: "rgba(10,14,20,0.55)", letterSpacing: "0.18em" }}>
+                      {time}{classCount > 1 ? ` · ${classCount}×` : ""}
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Class list for the selected day */}
         <div style={{ padding: "16px 22px 6px", display: "flex", flexDirection: "column", gap: 10 }}>

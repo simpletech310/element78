@@ -4,7 +4,7 @@ import { StatusBar, HomeIndicator } from "@/components/chrome/StatusBar";
 import { TabBar } from "@/components/chrome/TabBar";
 import { Photo } from "@/components/ui/Photo";
 import { Icon } from "@/components/ui/Icon";
-import { listPrograms, listUserEnrollments, listEnrollmentCompletions } from "@/lib/data/queries";
+import { listPrograms, listTrainers, listUserEnrollments, listEnrollmentCompletions } from "@/lib/data/queries";
 import { routines } from "@/lib/data/routines";
 import { getUser } from "@/lib/auth";
 
@@ -14,7 +14,8 @@ export default async function TrainScreen() {
     { l: "STRENGTH" }, { l: "YOGA" }, { l: "MOBILITY" },
   ];
 
-  const [user, allPrograms] = await Promise.all([getUser(), listPrograms()]);
+  const [user, allPrograms, allTrainers] = await Promise.all([getUser(), listPrograms(), listTrainers()]);
+  const humanTrainers = allTrainers.filter(t => !t.is_ai);
   const enrollments = user ? await listUserEnrollments(user.id) : [];
   const activePrograms = enrollments.filter(e => e.enrollment.status === "active");
 
@@ -149,6 +150,66 @@ export default async function TrainScreen() {
             </Link>
           ))}
         </div>
+
+        {/* HUMAN TRAINERS — compact rail so the page doesn't get crowded.
+            Avatar + first name + 1-on-1 CTA. Tap → trainer profile, where
+            programs / classes / "BOOK 1-ON-1" all live. */}
+        {humanTrainers.length > 0 && (
+          <div style={{ padding: "20px 22px 4px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 12 }}>
+              <div>
+                <div className="e-display" style={{ fontSize: 22 }}>WORK WITH A HUMAN</div>
+                <div className="e-mono" style={{ color: "rgba(10,14,20,0.5)", fontSize: 9, marginTop: 2, letterSpacing: "0.18em" }}>
+                  {humanTrainers.length} TRAINERS · 1-ON-1 + PROGRAMS
+                </div>
+              </div>
+              <Link href="/trainers" className="e-mono" style={{ color: "var(--electric-deep)", fontSize: 10, letterSpacing: "0.2em", textDecoration: "none" }}>
+                ALL →
+              </Link>
+            </div>
+            <div className="no-scrollbar" style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 4 }}>
+              {humanTrainers.slice(0, 8).map(t => (
+                <Link
+                  key={t.id}
+                  href={`/trainers/${t.slug}`}
+                  className="lift"
+                  style={{
+                    flexShrink: 0, width: 156, padding: 12, borderRadius: 14,
+                    background: "var(--paper)", border: "1px solid rgba(10,14,20,0.08)",
+                    color: "var(--ink)", textDecoration: "none",
+                    display: "flex", flexDirection: "column", alignItems: "center", gap: 8, textAlign: "center",
+                  }}
+                >
+                  <div style={{
+                    width: 72, height: 72, borderRadius: "50%", overflow: "hidden",
+                    background: "var(--haze)",
+                    backgroundImage: t.avatar_url ? `url(${t.avatar_url})` : undefined,
+                    backgroundSize: "cover", backgroundPosition: "center",
+                    border: "2px solid var(--ink)",
+                  }} />
+                  <div>
+                    <div style={{ fontFamily: "var(--font-display)", fontSize: 16, lineHeight: 1, letterSpacing: "0.02em" }}>
+                      {t.name.split(" ")[0].toUpperCase()}
+                    </div>
+                    {t.specialties && t.specialties.length > 0 && (
+                      <div className="e-mono" style={{ marginTop: 4, fontSize: 8, color: "rgba(10,14,20,0.5)", letterSpacing: "0.18em" }}>
+                        {t.specialties.slice(0, 2).join(" · ").toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+                  <span className="e-mono" style={{
+                    marginTop: "auto",
+                    padding: "5px 10px", borderRadius: 999,
+                    background: "rgba(46,127,176,0.1)", color: "var(--electric-deep)",
+                    fontSize: 9, letterSpacing: "0.18em",
+                  }}>
+                    BOOK 1-ON-1 →
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* YOUR PROGRAMS — only when enrolled */}
         {activePrograms.length > 0 && (

@@ -20,7 +20,7 @@ import Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getPaymentProvider } from "@/lib/payments/provider";
 
-export type PurchaseKind = "class_booking" | "program_enrollment" | "trainer_booking" | "shop_order";
+export type PurchaseKind = "class_booking" | "program_enrollment" | "trainer_booking" | "shop_order" | "guest_pass";
 
 export type PurchaseStatus = "pending" | "paid" | "refunded" | "failed" | "cancelled";
 
@@ -199,6 +199,17 @@ export async function fulfillPurchase(
           .eq("id", purchase.order_id);
       }
       break;
+
+    case "guest_pass": {
+      // Guest pass purchase row stashes guest_id in a column added in 0011.
+      // Look up the guest and flip status to confirmed.
+      const { data: row } = await sb.from("purchases").select("guest_id").eq("id", purchaseId).maybeSingle();
+      const guestId = (row as { guest_id?: string | null } | null)?.guest_id;
+      if (guestId) {
+        await sb.from("guests").update({ status: "confirmed", updated_at: new Date().toISOString() }).eq("id", guestId);
+      }
+      break;
+    }
   }
 }
 
@@ -255,6 +266,14 @@ export async function refundPurchase(purchaseId: string, opts?: { amountCents?: 
         await sb.from("orders").update({ status: "refunded" }).eq("id", purchase.order_id);
       }
       break;
+    case "guest_pass": {
+      const { data: row } = await sb.from("purchases").select("guest_id").eq("id", purchaseId).maybeSingle();
+      const guestId = (row as { guest_id?: string | null } | null)?.guest_id;
+      if (guestId) {
+        await sb.from("guests").update({ status: "cancelled", updated_at: new Date().toISOString() }).eq("id", guestId);
+      }
+      break;
+    }
   }
 }
 
