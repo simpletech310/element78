@@ -12,7 +12,13 @@ import { materializeAutoCompletions } from "@/lib/program-completion";
 import { getRoutine } from "@/lib/data/routines";
 import type { ProgramSession } from "@/lib/data/types";
 
-export default async function ProgramDetail({ params }: { params: { slug: string } }) {
+export default async function ProgramDetail({
+  params,
+  searchParams,
+}: {
+  params: { slug: string };
+  searchParams?: { locked?: string; enrolled?: string };
+}) {
   const user = await getUser();
   const data = await getProgram(params.slug);
   if (!data) notFound();
@@ -155,6 +161,34 @@ export default async function ProgramDetail({ params }: { params: { slug: string
           )}
         </div>
       </section>
+
+      {/* LOCK BANNER — paid programs are gated until Stripe confirms. We show
+          this both when the user just got bounced from a routine launch
+          (?locked=1) AND any time their enrollment is in pending_payment. */}
+      {isAuthed && program.requires_payment && (isPendingPayment || searchParams?.locked) && (
+        <section style={{ padding: "32px 22px 0", maxWidth: 1180, margin: "0 auto" }}>
+          <div style={{
+            padding: "18px 20px", borderRadius: 14,
+            background: "rgba(232,181,168,0.08)",
+            border: "1px solid rgba(232,181,168,0.4)",
+            display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, flexWrap: "wrap",
+          }}>
+            <div>
+              <div className="e-mono" style={{ color: "var(--rose)", fontSize: 10, letterSpacing: "0.25em" }}>🔒 LOCKED</div>
+              <p style={{ marginTop: 6, fontSize: 13, color: "rgba(242,238,232,0.78)", maxWidth: 540, lineHeight: 1.6 }}>
+                Complete payment to unlock the schedule. None of the sessions can be started until the program is paid.
+              </p>
+            </div>
+            <form action={enrollAction}>
+              <input type="hidden" name="program_id" value={program.id} />
+              <input type="hidden" name="program_slug" value={program.slug} />
+              <button type="submit" className="btn btn-sky" style={{ padding: "10px 18px" }}>
+                COMPLETE CHECKOUT · ${(program.price_cents / 100).toFixed(0)}
+              </button>
+            </form>
+          </div>
+        </section>
+      )}
 
       {/* DAY-BY-DAY BREAKDOWN */}
       <section style={{ padding: "44px 22px 32px", maxWidth: 1180, margin: "0 auto" }}>

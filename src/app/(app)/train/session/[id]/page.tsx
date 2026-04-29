@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { Navbar } from "@/components/site/Navbar";
 import { Icon } from "@/components/ui/Icon";
 import { RoutinePlayer } from "@/components/site/RoutinePlayer";
+import { DailyEmbed } from "@/components/site/DailyEmbed";
 import { getUser } from "@/lib/auth";
 import { getTrainerBooking } from "@/lib/data/queries";
 import { getTrainerForCurrentUser } from "@/lib/trainer-auth";
@@ -176,43 +177,6 @@ export default async function TrainerSessionRoom({ params }: { params: { id: str
   );
 }
 
-/**
- * Daily Prebuilt UI theme passed via URL query params. Daily honors a few
- * specific keys (background-color, accent-color, etc.) — full reference at
- * https://docs.daily.co/reference/daily-js/instance-methods/set-theme. We
- * encode the values that match our app palette so the room reads as native.
- */
-function applyDailyTheme(roomUrl: string): string {
-  if (!roomUrl) return roomUrl;
-  try {
-    const url = new URL(roomUrl);
-    // Hex versions of the CSS vars in src/app/globals.css.
-    const ink = "0a0e14";       // var(--ink)
-    const bone = "f2eee8";      // var(--bone)
-    const sky = "8fb8d6";       // var(--sky)
-    const accent = `#${sky}`;
-    // Daily's URL-param theming: a JSON object encoded in `t`.
-    const theme = {
-      colors: {
-        accent,
-        accentText: `#${ink}`,
-        background: `#${ink}`,
-        backgroundAccent: `#${ink}`,
-        baseText: `#${bone}`,
-        border: "rgba(143,184,214,0.3)",
-        mainAreaBg: `#${ink}`,
-        mainAreaBgAccent: "rgba(143,184,214,0.05)",
-        mainAreaText: `#${bone}`,
-        supportiveText: "rgba(242,238,232,0.7)",
-      },
-    };
-    url.searchParams.set("t", JSON.stringify(theme));
-    return url.toString();
-  } catch {
-    return roomUrl;
-  }
-}
-
 function VideoFrame({ videoRoomUrl, videoProvider }: { videoRoomUrl: string | null; videoProvider: string | null }) {
   const isMock = !videoRoomUrl || videoRoomUrl.startsWith("mock://") || videoProvider === "mock";
 
@@ -236,38 +200,11 @@ function VideoFrame({ videoRoomUrl, videoProvider }: { videoRoomUrl: string | nu
     );
   }
 
-  // Real Daily room: embed Prebuilt UI via iframe. We pass theme params on
-  // the room URL so Daily's controls match our brand palette
-  // (--ink ink, --bone foreground, --sky accent).
-  const themedUrl = applyDailyTheme(videoRoomUrl ?? "");
-
-  return (
-    <div style={{ position: "relative", aspectRatio: "16/9", borderRadius: 18, overflow: "hidden", border: "1px solid rgba(143,184,214,0.3)", background: "var(--ink)" }}>
-      {/* Branded chrome strip — sits above the iframe so the room always
-          reads as "in app" rather than a third-party widget. */}
-      <div style={{
-        position: "absolute", top: 0, left: 0, right: 0, zIndex: 2,
-        padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center",
-        background: "linear-gradient(180deg, rgba(10,14,20,0.7) 0%, transparent 100%)",
-        pointerEvents: "none",
-      }}>
-        <span className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.25em" }}>
-          ◉ ELEMENT 78 · LIVE
-        </span>
-        <span className="e-mono" style={{ color: "rgba(242,238,232,0.7)", fontSize: 9, letterSpacing: "0.2em" }}>
-          DAILY · ENCRYPTED
-        </span>
-      </div>
-      <iframe
-        src={themedUrl}
-        allow="camera; microphone; autoplay; encrypted-media; fullscreen; display-capture"
-        allowFullScreen
-        referrerPolicy="strict-origin-when-cross-origin"
-        style={{ width: "100%", height: "100%", border: 0, background: "var(--ink)" }}
-        title="Element 78 video session"
-      />
-    </div>
-  );
+  // Real Daily room: embed via @daily-co/daily-js so we can call setTheme()
+  // programmatically — URL `?t=` params drop on iOS Safari during Daily's
+  // mobile-prebuilt redirect, so the JS path is the consistent route across
+  // desktop + mobile. The DailyEmbed component handles the chrome strip too.
+  return <DailyEmbed url={videoRoomUrl ?? ""} />;
 }
 
 function Locked({ startsAt }: { startsAt: string }) {
