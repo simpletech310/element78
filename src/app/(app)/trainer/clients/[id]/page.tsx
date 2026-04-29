@@ -5,14 +5,18 @@ import { Icon } from "@/components/ui/Icon";
 import { Photo } from "@/components/ui/Photo";
 import { getTrainerForCurrentUser } from "@/lib/trainer-auth";
 import { listTrainerClientHistory, listProfilesByIds } from "@/lib/data/queries";
+import { startThreadAction } from "@/lib/messaging-actions";
+import { getActiveCoachClientNote } from "@/lib/coach-notes";
+import { saveCoachClientNoteAction } from "@/lib/coach-notes-actions";
 
 export default async function TrainerClientDetailPage({ params }: { params: { id: string } }) {
   const trainer = await getTrainerForCurrentUser();
   if (!trainer) redirect(`/login?next=/trainer/clients/${params.id}`);
 
-  const [history, profiles] = await Promise.all([
+  const [history, profiles, note] = await Promise.all([
     listTrainerClientHistory(trainer.id, params.id),
     listProfilesByIds([params.id]),
+    getActiveCoachClientNote(trainer.id, params.id),
   ]);
   const profile = profiles[params.id] ?? { display_name: "Member", avatar_url: null, handle: null };
 
@@ -40,7 +44,7 @@ export default async function TrainerClientDetailPage({ params }: { params: { id
               </div>
             )}
           </div>
-          <div>
+          <div style={{ flex: 1 }}>
             <div className="e-mono" style={{ color: "var(--sky)", letterSpacing: "0.25em", fontSize: 10 }}>CLIENT</div>
             <h1 className="e-display" style={{ fontSize: "clamp(28px, 5vw, 44px)", lineHeight: 0.95, marginTop: 6 }}>
               {(profile.display_name ?? "Member").toUpperCase()}
@@ -49,7 +53,31 @@ export default async function TrainerClientDetailPage({ params }: { params: { id
               TOTAL · ${(history.totalSpentCents / 100).toFixed(0)} SPENT
             </div>
           </div>
+          <form action={startThreadAction}>
+            <input type="hidden" name="other_user_id" value={params.id} />
+            <button type="submit" className="btn btn-sky" style={{ padding: "10px 18px" }}>MESSAGE →</button>
+          </form>
         </div>
+
+        {/* COACH NOTES (private) */}
+        <Section title="PRIVATE NOTES · COACH ONLY">
+          <form action={saveCoachClientNoteAction} style={{ padding: 14, borderRadius: 12, background: "var(--haze)", border: "1px solid rgba(143,184,214,0.18)" }}>
+            <input type="hidden" name="client_user_id" value={params.id} />
+            <textarea
+              name="body"
+              defaultValue={note?.body ?? ""}
+              placeholder="Goals, injuries, tendencies — invisible to the client."
+              rows={4}
+              style={{ width: "100%", padding: 10, borderRadius: 8, background: "rgba(10,14,20,0.4)", border: "1px solid rgba(143,184,214,0.2)", color: "var(--bone)", fontFamily: "var(--font-body)", fontSize: 14, resize: "vertical" }}
+            />
+            <div style={{ marginTop: 8, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+              <div className="e-mono" style={{ color: "rgba(242,238,232,0.45)", fontSize: 9, letterSpacing: "0.16em" }}>
+                {note ? `LAST UPDATED ${new Date(note.updated_at).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" }).toUpperCase()}` : "NOT YET SAVED"}
+              </div>
+              <button type="submit" className="btn btn-sky" style={{ padding: "8px 14px", fontSize: 11 }}>SAVE NOTE</button>
+            </div>
+          </form>
+        </Section>
 
         {/* PROGRAMS */}
         <Section title={`PROGRAMS · ${history.enrollments.length}`}>

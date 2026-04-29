@@ -516,6 +516,48 @@ export async function deleteAvailabilityRuleAction(formData: FormData) {
   redirect("/trainer/availability?deleted=1");
 }
 
+/* -------------------------------------------------------------------------- */
+/*  Time-off blocks (one-off "I'm out" windows)                               */
+/* -------------------------------------------------------------------------- */
+
+export async function createAvailabilityBlockAction(formData: FormData) {
+  const trainer = await getTrainerForCurrentUser();
+  if (!trainer) redirect("/login");
+
+  const startsAtRaw = String(formData.get("starts_at") ?? "").trim();
+  const endsAtRaw = String(formData.get("ends_at") ?? "").trim();
+  const reason = String(formData.get("reason") ?? "").trim() || null;
+  if (!startsAtRaw || !endsAtRaw) redirect("/trainer/availability?error=range_required");
+
+  const startsAt = new Date(startsAtRaw).toISOString();
+  const endsAt = new Date(endsAtRaw).toISOString();
+  if (new Date(endsAt).getTime() <= new Date(startsAt).getTime()) {
+    redirect("/trainer/availability?error=invalid_range");
+  }
+
+  const sb = createClient();
+  await sb.from("trainer_availability_blocks").insert({
+    trainer_id: trainer.id,
+    starts_at: startsAt,
+    ends_at: endsAt,
+    reason,
+  });
+  revalidatePath("/trainer/availability");
+  revalidatePath(`/trainers/${trainer.slug}/book`);
+  redirect("/trainer/availability?block_added=1");
+}
+
+export async function deleteAvailabilityBlockAction(formData: FormData) {
+  const trainer = await getTrainerForCurrentUser();
+  if (!trainer) redirect("/login");
+  const id = String(formData.get("id") ?? "");
+  const sb = createClient();
+  await sb.from("trainer_availability_blocks").delete().eq("id", id).eq("trainer_id", trainer.id);
+  revalidatePath("/trainer/availability");
+  revalidatePath(`/trainers/${trainer.slug}/book`);
+  redirect("/trainer/availability?block_removed=1");
+}
+
 export async function upsertSessionSettingsAction(formData: FormData) {
   const trainer = await getTrainerForCurrentUser();
   if (!trainer) redirect("/login");

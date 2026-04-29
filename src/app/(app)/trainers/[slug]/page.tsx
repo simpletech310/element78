@@ -14,6 +14,7 @@ import {
 import { getSavedKindRefs } from "@/lib/data/saved-queries";
 import { SaveButton } from "@/components/site/SaveButton";
 import { getUser } from "@/lib/auth";
+import { startThreadAction } from "@/lib/messaging-actions";
 
 function fmtPrice(cents: number) {
   if (!cents) return "FREE";
@@ -313,7 +314,14 @@ export default async function TrainerProfile({ params }: { params: { slug: strin
             ) : (
               <>
                 <Link href={isAuthed ? `/trainers/${t.slug}/book` : `/login?next=${encodeURIComponent(`/trainers/${t.slug}/book`)}`} className="btn btn-sky">{isAuthed ? "BOOK 1-ON-1" : "JOIN ELEMENT"}</Link>
-                <Link href="/contact" className="btn btn-ghost" style={{ color: "var(--bone)", borderColor: "rgba(242,238,232,0.3)" }}>MESSAGE {firstName.toUpperCase()}</Link>
+                {isAuthed && t.auth_user_id ? (
+                  <form action={startThreadAction}>
+                    <input type="hidden" name="other_user_id" value={t.auth_user_id} />
+                    <button type="submit" className="btn btn-ghost" style={{ color: "var(--bone)", borderColor: "rgba(242,238,232,0.3)" }}>MESSAGE {firstName.toUpperCase()}</button>
+                  </form>
+                ) : (
+                  <Link href="/contact" className="btn btn-ghost" style={{ color: "var(--bone)", borderColor: "rgba(242,238,232,0.3)" }}>MESSAGE {firstName.toUpperCase()}</Link>
+                )}
               </>
             )}
           </div>

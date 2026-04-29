@@ -31,6 +31,8 @@ export type Trainer = {
   /** Stripe Connect (migration 0018). */
   stripe_account_id?: string | null;
   payout_status?: "unverified" | "pending" | "active" | "rejected" | "paused";
+  /** Linked auth user — populated for coaches who can log in. */
+  auth_user_id?: string | null;
 };
 
 export type ClassRow = {
@@ -401,4 +403,65 @@ export type AdminAuditEntry = {
   target_id: string | null;
   details: Record<string, unknown> | null;
   created_at: string;
+};
+
+/* -------------------------------------------------------------------------- */
+/*  V1 wave 2 (migration 0019)                                                */
+/* -------------------------------------------------------------------------- */
+
+export type Thread = {
+  id: string;
+  participant_a: string;
+  participant_b: string;
+  last_message_at: string | null;
+  last_message_preview: string | null;
+  created_at: string;
+};
+
+export type Message = {
+  id: string;
+  thread_id: string;
+  sender_id: string;
+  body: string;
+  created_at: string;
+  read_at: string | null;
+};
+
+export type CoachClientNote = {
+  id: string;
+  coach_trainer_id: string;
+  client_user_id: string;
+  body: string;
+  updated_at: string;
+  created_at: string;
+};
+
+export type ProgramAnnouncement = {
+  id: string;
+  program_id: string;
+  author_trainer_id: string;
+  title: string;
+  body: string;
+  created_at: string;
+};
+
+export type CoachApplicationStatus = "pending" | "approved" | "rejected" | "withdrawn";
+
+export type CoachApplication = {
+  id: string;
+  user_id: string;
+  display_name: string;
+  headline: string | null;
+  bio: string | null;
+  specialties: string[];
+  certifications: string | null;
+  years_experience: number | null;
+  sample_video_url: string | null;
+  status: CoachApplicationStatus;
+  reviewer_id: string | null;
+  reviewed_at: string | null;
+  rejection_reason: string | null;
+  trainer_id: string | null;
+  created_at: string;
+  updated_at: string;
 };

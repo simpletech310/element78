@@ -3,7 +3,8 @@ import { redirect, notFound } from "next/navigation";
 import { Navbar } from "@/components/site/Navbar";
 import { Icon } from "@/components/ui/Icon";
 import { getTrainerForCurrentUser } from "@/lib/trainer-auth";
-import { getProgramById, listClassKinds, listTrainers, listEnrollmentsByProgram } from "@/lib/data/queries";
+import { getProgramById, listClassKinds, listTrainers, listEnrollmentsByProgram, listProgramAnnouncements } from "@/lib/data/queries";
+import { postProgramAnnouncementAction, deleteProgramAnnouncementAction } from "@/lib/program-announcement-actions";
 import { routines } from "@/lib/data/routines";
 import {
   updateProgramAction,
@@ -30,10 +31,11 @@ export default async function EditProgramPage({
   const owns = program.author_trainer_id === trainer.id || program.trainer_id === trainer.id;
   if (!owns) redirect("/trainer/programs?error=unauthorized");
 
-  const [classKinds, allTrainers, enrollments] = await Promise.all([
+  const [classKinds, allTrainers, enrollments, announcements] = await Promise.all([
     listClassKinds(),
     listTrainers(),
     listEnrollmentsByProgram(program.id),
+    listProgramAnnouncements(program.id),
   ]);
   const humanTrainers = allTrainers.filter(t => !t.is_ai);
 
@@ -173,6 +175,44 @@ export default async function EditProgramPage({
               );
             })}
           </div>
+        </section>
+
+        {/* ANNOUNCEMENTS */}
+        <section style={{ marginTop: 32 }}>
+          <div className="e-mono" style={{ color: "var(--sky)", letterSpacing: "0.2em", fontSize: 10 }}>
+            ANNOUNCEMENTS · {announcements.length}
+          </div>
+          <p style={{ marginTop: 6, fontSize: 13, color: "rgba(242,238,232,0.55)" }}>
+            Broadcasts to every enrolled client. They show up on the public program page.
+          </p>
+
+          <form action={postProgramAnnouncementAction} style={{ marginTop: 14, padding: 14, borderRadius: 12, background: "var(--haze)", border: "1px solid rgba(143,184,214,0.18)", display: "flex", flexDirection: "column", gap: 10 }}>
+            <input type="hidden" name="program_id" value={program.id} />
+            <input name="title" placeholder="Title (e.g. 'Day 7 swap')" required maxLength={200} className="ta-input" />
+            <textarea name="body" placeholder="What's the update?" required maxLength={4000} rows={3} className="ta-input" style={{ resize: "vertical" }} />
+            <button type="submit" className="btn btn-sky" style={{ alignSelf: "flex-start", padding: "8px 14px", fontSize: 11 }}>POST ANNOUNCEMENT</button>
+          </form>
+
+          {announcements.length > 0 && (
+            <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+              {announcements.map(a => (
+                <div key={a.id} style={{ padding: 12, borderRadius: 12, background: "var(--haze)", border: "1px solid rgba(143,184,214,0.12)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 6 }}>
+                    <div style={{ fontFamily: "var(--font-display)", fontSize: 16 }}>{a.title}</div>
+                    <div className="e-mono" style={{ color: "rgba(242,238,232,0.5)", fontSize: 9, letterSpacing: "0.16em" }}>
+                      {new Date(a.created_at).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "2-digit" }).toUpperCase()}
+                    </div>
+                  </div>
+                  <p style={{ marginTop: 8, fontSize: 13, color: "rgba(242,238,232,0.8)", lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{a.body}</p>
+                  <form action={deleteProgramAnnouncementAction} style={{ marginTop: 8 }}>
+                    <input type="hidden" name="id" value={a.id} />
+                    <input type="hidden" name="program_id" value={program.id} />
+                    <button type="submit" className="btn" style={{ padding: "4px 10px", fontSize: 9, background: "transparent", color: "rgba(242,238,232,0.55)", border: "1px solid rgba(143,184,214,0.2)" }}>DELETE</button>
+                  </form>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
 
         {/* SECTION 3 — ENROLLED CLIENTS */}

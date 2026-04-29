@@ -67,6 +67,9 @@ export default async function TrainerDashboard({ searchParams }: { searchParams:
             <Link href="/trainer/availability" className="e-mono" style={{ color: "var(--sky)", textDecoration: "none", letterSpacing: "0.2em", fontSize: 11 }}>
               EDIT AVAILABILITY →
             </Link>
+            <Link href="/trainer/profile" className="e-mono" style={{ color: "var(--sky)", textDecoration: "none", letterSpacing: "0.2em", fontSize: 11 }}>
+              EDIT PROFILE →
+            </Link>
           </div>
         </div>
 

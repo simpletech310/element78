@@ -5,7 +5,7 @@ import { SiteFooter } from "@/components/site/SiteFooter";
 import { FloatingTabBar } from "@/components/site/FloatingTabBar";
 import { Photo } from "@/components/ui/Photo";
 import { Icon } from "@/components/ui/Icon";
-import { getProgram, getEnrollment, listEnrollmentCompletions } from "@/lib/data/queries";
+import { getProgram, getEnrollment, listEnrollmentCompletions, listProgramAnnouncements } from "@/lib/data/queries";
 import { getSavedKindRefs } from "@/lib/data/saved-queries";
 import { getUser } from "@/lib/auth";
 import { enrollAction, completeSessionAction, leaveAction } from "@/lib/program-actions";
@@ -32,6 +32,7 @@ export default async function ProgramDetail({
 
   const enrollment = user ? await getEnrollment(user.id, program.id) : null;
   const completions = enrollment ? await listEnrollmentCompletions(enrollment.id) : [];
+  const announcements = enrollment ? await listProgramAnnouncements(program.id) : [];
   const completedIds = new Set(completions.map(c => c.session_id));
   const savedProgramIds = user ? await getSavedKindRefs(user.id, "program") : new Set<string>();
   const isSaved = savedProgramIds.has(program.id);
@@ -309,6 +310,27 @@ export default async function ProgramDetail({
           </div>
         </div>
       </section>
+
+      {announcements.length > 0 && (
+        <section style={{ padding: "0 22px 60px" }}>
+          <div style={{ maxWidth: 880, margin: "0 auto" }}>
+            <div className="e-mono" style={{ color: "var(--sky)", letterSpacing: "0.2em", fontSize: 10 }}>FROM YOUR COACH · {announcements.length}</div>
+            <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+              {announcements.map(a => (
+                <div key={a.id} style={{ padding: 14, borderRadius: 14, background: "var(--haze)", border: "1px solid rgba(143,184,214,0.18)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 6 }}>
+                    <div style={{ fontFamily: "var(--font-display)", fontSize: 18 }}>{a.title}</div>
+                    <div className="e-mono" style={{ color: "rgba(242,238,232,0.55)", fontSize: 9, letterSpacing: "0.16em" }}>
+                      {new Date(a.created_at).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "2-digit" }).toUpperCase()}
+                    </div>
+                  </div>
+                  <p style={{ marginTop: 8, fontSize: 14, color: "rgba(242,238,232,0.85)", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{a.body}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       <SiteFooter />
       {user && <FloatingTabBar />}

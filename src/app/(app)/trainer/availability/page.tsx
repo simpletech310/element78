@@ -6,12 +6,15 @@ import { getTrainerForCurrentUser } from "@/lib/trainer-auth";
 import {
   getTrainerSessionSettings,
   listAllAvailabilityRules,
+  listAvailabilityBlocks,
   listLocations,
 } from "@/lib/data/queries";
 import {
   upsertAvailabilityRuleAction,
   deleteAvailabilityRuleAction,
   upsertSessionSettingsAction,
+  createAvailabilityBlockAction,
+  deleteAvailabilityBlockAction,
 } from "@/lib/trainer-booking-actions";
 import type { TrainerAvailabilityRule } from "@/lib/data/types";
 
@@ -27,10 +30,13 @@ export default async function TrainerAvailabilityPage({ searchParams }: { search
   const trainer = await getTrainerForCurrentUser();
   if (!trainer) redirect("/login?next=/trainer/availability");
 
-  const [settings, rules, locations] = await Promise.all([
+  const now = new Date();
+  const yearAhead = new Date(now.getTime() + 365 * 24 * 60 * 60_000);
+  const [settings, rules, locations, blocks] = await Promise.all([
     getTrainerSessionSettings(trainer.id),
     listAllAvailabilityRules(trainer.id),
     listLocations(),
+    listAvailabilityBlocks(trainer.id, now.toISOString(), yearAhead.toISOString()),
   ]);
 
   const grouped = new Map<number, TrainerAvailabilityRule[]>();
@@ -42,6 +48,8 @@ export default async function TrainerAvailabilityPage({ searchParams }: { search
   const flash = searchParams.saved ? "RULE SAVED"
               : searchParams.deleted ? "RULE DELETED"
               : searchParams.settings_saved ? "SETTINGS SAVED"
+              : (searchParams as { block_added?: string; block_removed?: string }).block_added ? "TIME OFF ADDED"
+              : (searchParams as { block_added?: string; block_removed?: string }).block_removed ? "TIME OFF REMOVED"
               : searchParams.error ? `ERROR: ${searchParams.error}`
               : null;
 
@@ -159,6 +167,50 @@ export default async function TrainerAvailabilityPage({ searchParams }: { search
               );
             })}
           </div>
+        </section>
+
+        {/* TIME-OFF BLOCKS */}
+        <section style={{ marginTop: 32 }}>
+          <div className="e-mono" style={{ color: "var(--sky)", letterSpacing: "0.2em", fontSize: 10 }}>03 / TIME OFF</div>
+          <p style={{ marginTop: 6, fontSize: 13, color: "rgba(242,238,232,0.55)" }}>
+            One-off blocks (vacation, sick day, training week). Members won't see these slots on your booking page.
+          </p>
+
+          <form action={createAvailabilityBlockAction} style={{ marginTop: 14, padding: 14, borderRadius: 12, background: "var(--haze)", border: "1px solid rgba(143,184,214,0.18)", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
+            <Field label="START *">
+              <input type="datetime-local" name="starts_at" required className="ta-input" />
+            </Field>
+            <Field label="END *">
+              <input type="datetime-local" name="ends_at" required className="ta-input" />
+            </Field>
+            <Field label="REASON" full>
+              <input name="reason" placeholder="e.g. 'Out of town' (optional)" className="ta-input" />
+            </Field>
+            <div style={{ gridColumn: "1 / -1" }}>
+              <button type="submit" className="btn btn-sky" style={{ padding: "8px 14px", fontSize: 11 }}>ADD TIME OFF</button>
+            </div>
+          </form>
+
+          {blocks.length > 0 && (
+            <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 6 }}>
+              {blocks.map(b => (
+                <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", borderRadius: 10, background: "var(--haze)", border: "1px solid rgba(143,184,214,0.12)", flexWrap: "wrap" }}>
+                  <div className="e-mono" style={{ fontSize: 11, letterSpacing: "0.14em", color: "rgba(242,238,232,0.85)", flex: 1 }}>
+                    {new Date(b.starts_at).toLocaleString("en-US", { month: "short", day: "2-digit", hour: "numeric", minute: "2-digit" })}
+                    {" → "}
+                    {new Date(b.ends_at).toLocaleString("en-US", { month: "short", day: "2-digit", hour: "numeric", minute: "2-digit" })}
+                    {b.reason ? ` · ${b.reason}` : ""}
+                  </div>
+                  <form action={deleteAvailabilityBlockAction}>
+                    <input type="hidden" name="id" value={b.id} />
+                    <button type="submit" className="btn" style={{ padding: "5px 10px", fontSize: 10, background: "transparent", color: "var(--rose)", border: "1px solid rgba(232,181,168,0.3)" }}>
+                      REMOVE
+                    </button>
+                  </form>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
       </div>
 

@@ -788,6 +788,18 @@ export async function getTrainerEarnings(trainerId: string): Promise<TrainerEarn
   return { thisMonthCents, lifetimeCents, thisMonthCount, lifetimeCount, pendingCents, byKind, recent };
 }
 
+export async function listProgramAnnouncements(programId: string): Promise<Array<{ id: string; title: string; body: string; created_at: string }>> {
+  if (!isConfigured()) return [];
+  const sb = createClient();
+  const { data } = await sb
+    .from("program_announcements")
+    .select("id, title, body, created_at")
+    .eq("program_id", programId)
+    .order("created_at", { ascending: false })
+    .limit(50);
+  return (data as Array<{ id: string; title: string; body: string; created_at: string }>) ?? [];
+}
+
 /** Roster of attendees for a single trainer_sessions row (group session). */
 export async function listGroupSessionRoster(sessionId: string): Promise<Array<{ booking: TrainerBooking; profile: { display_name: string | null; avatar_url: string | null; handle: string | null } }>> {
   if (!isConfigured()) return [];

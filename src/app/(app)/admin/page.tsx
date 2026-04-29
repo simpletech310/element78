@@ -51,6 +51,7 @@ export default async function AdminHomePage() {
           <NavTile href="/admin/purchases" label="PURCHASES" hint="Filter · refund · audit" />
           <NavTile href="/admin/payouts" label="PAYOUTS" hint="Coach payouts ledger" />
           <NavTile href="/admin/posts" label="POSTS" hint="Wall moderation" />
+          <NavTile href="/admin/coaches" label="COACH APPLICATIONS" hint="Review pending coach applications" />
           <NavTile href="/admin/audit" label="AUDIT LOG" hint="What admins did" />
         </section>
       </div>
