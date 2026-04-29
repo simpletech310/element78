@@ -28,6 +28,9 @@ export type Trainer = {
   is_ai?: boolean;
   years_experience?: number | null;
   cert?: string | null;
+  /** Stripe Connect (migration 0018). */
+  stripe_account_id?: string | null;
+  payout_status?: "unverified" | "pending" | "active" | "rejected" | "paused";
 };
 
 export type ClassRow = {

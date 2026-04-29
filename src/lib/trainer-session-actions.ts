@@ -249,6 +249,7 @@ export async function joinGroupSessionAction(formData: FormData) {
     refIds: { trainer_booking_id: booking.id },
     successPath: `/account/sessions?booked=${booking.id}`,
     cancelPath: `/trainers/${trainerSlug}/book`,
+    trainerId: session!.trainer_id,
   });
   redirect(checkoutUrl);
 }

@@ -705,6 +705,89 @@ export async function listTrainerClientHistory(trainerId: string, userId: string
   return { enrollments, bookings, classBookings, totalSpentCents: totalCents };
 }
 
+/* -------------------------------------------------------------------------- */
+/*  Coach earnings (Stripe Connect payouts)                                   */
+/* -------------------------------------------------------------------------- */
+
+export type EarningsRow = {
+  payout: { id: string; gross_cents: number; platform_fee_cents: number; trainer_cents: number; stripe_transfer_id: string | null; status: string; created_at: string };
+  description: string;
+  kind: string;
+};
+
+export type TrainerEarnings = {
+  thisMonthCents: number;
+  lifetimeCents: number;
+  thisMonthCount: number;
+  lifetimeCount: number;
+  pendingCents: number;
+  byKind: Record<string, { count: number; cents: number; label: string }>;
+  recent: EarningsRow[];
+};
+
+export async function getTrainerEarnings(trainerId: string): Promise<TrainerEarnings> {
+  const empty: TrainerEarnings = { thisMonthCents: 0, lifetimeCents: 0, thisMonthCount: 0, lifetimeCount: 0, pendingCents: 0, byKind: {}, recent: [] };
+  if (!isConfigured()) return empty;
+  const sb = createClient();
+  const { data: rows } = await sb
+    .from("payouts")
+    .select("*, purchases:purchase_id(description, kind)")
+    .eq("trainer_id", trainerId)
+    .order("created_at", { ascending: false });
+  const list = (rows as Array<{
+    id: string; gross_cents: number; platform_fee_cents: number; trainer_cents: number;
+    stripe_transfer_id: string | null; status: string; created_at: string;
+    purchases: { description: string | null; kind: string } | null;
+  }>) ?? [];
+
+  const now = new Date();
+  const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
+
+  const KIND_LABELS: Record<string, string> = {
+    trainer_booking: "1-ON-1 / GROUP",
+    class_booking: "CLASSES",
+    program_enrollment: "PROGRAMS",
+    shop_order: "SHOP",
+    guest_pass: "GUEST PASS",
+  };
+
+  const byKind: TrainerEarnings["byKind"] = {};
+  let thisMonthCents = 0;
+  let lifetimeCents = 0;
+  let thisMonthCount = 0;
+  let lifetimeCount = 0;
+  let pendingCents = 0;
+  const recent: EarningsRow[] = [];
+
+  for (const r of list) {
+    if (r.status === "sent") {
+      lifetimeCents += r.trainer_cents;
+      lifetimeCount += 1;
+      if (r.created_at >= monthStart) {
+        thisMonthCents += r.trainer_cents;
+        thisMonthCount += 1;
+      }
+      const kind = r.purchases?.kind ?? "other";
+      const label = KIND_LABELS[kind] ?? kind.toUpperCase();
+      const cur = byKind[kind] ?? { count: 0, cents: 0, label };
+      cur.count += 1;
+      cur.cents += r.trainer_cents;
+      byKind[kind] = cur;
+    } else if (r.status === "pending") {
+      pendingCents += r.trainer_cents;
+    }
+    if (recent.length < 50) {
+      recent.push({
+        payout: { id: r.id, gross_cents: r.gross_cents, platform_fee_cents: r.platform_fee_cents, trainer_cents: r.trainer_cents, stripe_transfer_id: r.stripe_transfer_id, status: r.status, created_at: r.created_at },
+        description: r.purchases?.description ?? "—",
+        kind: r.purchases?.kind ?? "other",
+      });
+    }
+  }
+
+  return { thisMonthCents, lifetimeCents, thisMonthCount, lifetimeCount, pendingCents, byKind, recent };
+}
+
 /** Roster of attendees for a single trainer_sessions row (group session). */
 export async function listGroupSessionRoster(sessionId: string): Promise<Array<{ booking: TrainerBooking; profile: { display_name: string | null; avatar_url: string | null; handle: string | null } }>> {
   if (!isConfigured()) return [];

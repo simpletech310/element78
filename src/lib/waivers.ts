@@ -29,3 +29,15 @@ export async function hasSignedAllRequiredWaivers(userId: string): Promise<boole
   ]);
   return Boolean(parq && liability);
 }
+
+/**
+ * Throwing variant for action-layer gating. Call before any first-paid action;
+ * if waivers aren't signed, it redirects to /account/waiver and the original
+ * action never completes. `returnPath` should be where to send the user after
+ * they sign so the booking flow can resume.
+ */
+import { redirect } from "next/navigation";
+export async function requireWaivers(userId: string, returnPath: string): Promise<void> {
+  if (await hasSignedAllRequiredWaivers(userId)) return;
+  redirect(`/account/waiver?next=${encodeURIComponent(returnPath)}`);
+}

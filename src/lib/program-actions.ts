@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getUser } from "@/lib/auth";
 import { createPurchaseAndCheckout, refundPurchase } from "@/lib/purchases";
+import { requireWaivers } from "@/lib/waivers";
 
 /**
  * Enroll the current user in a program. Idempotent — re-enrolling
@@ -19,6 +20,8 @@ export async function enrollAction(formData: FormData) {
   const slug = String(formData.get("program_slug") ?? "");
   const user = await getUser();
   if (!user) redirect(`/login?next=/programs/${slug}`);
+
+  await requireWaivers(user.id, `/programs/${slug}`);
 
   const sb = createClient();
 

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getUser } from "@/lib/auth";
 import { createPurchaseAndCheckout, refundPurchase } from "@/lib/purchases";
+import { requireWaivers } from "@/lib/waivers";
 
 /**
  * Reserve a spot in a class. Free classes book instantly. Paid classes
@@ -23,12 +24,14 @@ export async function bookClassAction(formData: FormData) {
   const user = await getUser();
   if (!user) redirect(`/login?next=${encodeURIComponent(returnTo || `/classes/${classId}`)}`);
 
+  await requireWaivers(user.id, returnTo || `/classes/${classId}`);
+
   const sb = createClient();
 
   // Capacity check before booking
   const { data: cls } = await sb
     .from("classes")
-    .select("id, capacity, booked, name")
+    .select("id, capacity, booked, name, trainer_id")
     .eq("id", classId)
     .single();
   if (!cls) redirect(`/classes/${classId}?error=${encodeURIComponent("Class not found")}`);
@@ -113,6 +116,7 @@ export async function bookClassAction(formData: FormData) {
       refIds: { class_booking_id: bookingId },
       successPath: `/classes/${classId}?reserved=1${spot_number ? `&spot=${spot_number}` : ""}`,
       cancelPath: `/classes/${classId}`,
+      trainerId: (cls as { trainer_id?: string | null }).trainer_id ?? null,
     });
     redirect(checkoutUrl);
   }

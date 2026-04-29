@@ -7,7 +7,14 @@
  */
 
 import "server-only";
+import Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
+
+function stripeClient(): Stripe {
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key || !key.startsWith("sk_")) throw new Error("STRIPE_SECRET_KEY not configured");
+  return new Stripe(key);
+}
 
 export const PLATFORM_FEE_BPS = 2000; // 20.00%
 
@@ -34,9 +41,34 @@ export async function ensureConnectAccountForTrainer(
   refreshUrl: string,
   returnUrl: string,
 ): Promise<CreateConnectAccountResult> {
-  // Implementation provided by Wave 1 Agent A.
-  void trainerId; void email; void refreshUrl; void returnUrl;
-  throw new Error("ensureConnectAccountForTrainer not implemented");
+  const stripe = stripeClient();
+  const sb = createAdminClient();
+  const { data: row } = await sb.from("trainers").select("stripe_account_id").eq("id", trainerId).maybeSingle();
+  let accountId = (row as { stripe_account_id: string | null } | null)?.stripe_account_id ?? null;
+  if (!accountId) {
+    const account = await stripe.accounts.create({
+      type: "express",
+      email,
+      country: "US",
+      business_type: "individual",
+      capabilities: {
+        card_payments: { requested: true },
+        transfers: { requested: true },
+      },
+    });
+    accountId = account.id;
+    await sb
+      .from("trainers")
+      .update({ stripe_account_id: accountId, payout_status: "pending" })
+      .eq("id", trainerId);
+  }
+  const link = await stripe.accountLinks.create({
+    account: accountId,
+    refresh_url: refreshUrl,
+    return_url: returnUrl,
+    type: "account_onboarding",
+  });
+  return { accountId, onboardingUrl: link.url };
 }
 
 /**
@@ -44,8 +76,16 @@ export async function ensureConnectAccountForTrainer(
  * coach with `pending` or `unverified` status).
  */
 export async function syncTrainerPayoutStatus(trainerId: string): Promise<void> {
-  void trainerId;
-  throw new Error("syncTrainerPayoutStatus not implemented");
+  const sb = createAdminClient();
+  const { data } = await sb.from("trainers").select("stripe_account_id").eq("id", trainerId).maybeSingle();
+  const accountId = (data as { stripe_account_id: string | null } | null)?.stripe_account_id;
+  if (!accountId) return;
+  const stripe = stripeClient();
+  const acct = await stripe.accounts.retrieve(accountId);
+  let status: "active" | "pending" | "rejected" = "pending";
+  if (acct.requirements?.disabled_reason) status = "rejected";
+  else if (acct.charges_enabled && acct.payouts_enabled) status = "active";
+  await sb.from("trainers").update({ payout_status: status }).eq("id", trainerId);
 }
 
 /**

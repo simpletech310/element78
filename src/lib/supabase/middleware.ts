@@ -47,5 +47,20 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  if (user && request.nextUrl.pathname !== "/banned") {
+    // Banned users get redirected to /banned; everything else 404-ish.
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("is_banned")
+      .eq("id", user.id)
+      .maybeSingle();
+    if ((profile as { is_banned?: boolean } | null)?.is_banned) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/banned";
+      url.search = "";
+      return NextResponse.redirect(url);
+    }
+  }
+
   return response;
 }

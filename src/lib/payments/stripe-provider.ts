@@ -26,13 +26,13 @@ export class StripePaymentProvider implements PaymentProvider {
   async createCheckoutIntent(
     input: CreateCheckoutInput,
   ): Promise<CheckoutIntent> {
-    const { amountCents, bookingId, successUrl, cancelUrl, description } =
+    const { amountCents, bookingId, successUrl, cancelUrl, description, trainerStripeAccountId, applicationFeeAmount } =
       input;
 
     const origin =
       process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
-    const session = await this.stripe.checkout.sessions.create({
+    const params: Stripe.Checkout.SessionCreateParams = {
       mode: "payment",
       line_items: [
         {
@@ -44,14 +44,19 @@ export class StripePaymentProvider implements PaymentProvider {
           quantity: 1,
         },
       ],
-      // `purchase_id` is the canonical key the webhook reads to dispatch
-      // fulfillment. We also keep `booking_id` for backward compatibility
-      // with rows created before the purchases ledger landed (the webhook
-      // tries `purchase_id` first, then falls back).
       metadata: { purchase_id: bookingId, booking_id: bookingId },
       success_url: `${origin}${successUrl}`,
       cancel_url: `${origin}${cancelUrl}`,
-    });
+    };
+
+    if (trainerStripeAccountId && typeof applicationFeeAmount === "number" && applicationFeeAmount > 0) {
+      params.payment_intent_data = {
+        application_fee_amount: applicationFeeAmount,
+        transfer_data: { destination: trainerStripeAccountId },
+      };
+    }
+
+    const session = await this.stripe.checkout.sessions.create(params);
 
     return {
       url: session.url!,

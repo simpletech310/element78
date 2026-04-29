@@ -19,8 +19,9 @@
 import Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getPaymentProvider } from "@/lib/payments/provider";
+import { platformFeeFor, getTrainerStripeAccountId } from "@/lib/connect";
 
-export type PurchaseKind = "class_booking" | "program_enrollment" | "trainer_booking" | "shop_order" | "guest_pass";
+export type PurchaseKind = "class_booking" | "program_enrollment" | "trainer_booking" | "shop_order" | "guest_pass" | "subscription";
 
 export type PurchaseStatus = "pending" | "paid" | "refunded" | "failed" | "cancelled";
 
@@ -47,6 +48,8 @@ export type Purchase = {
   stripe_charge_id: string | null;
   description: string | null;
   metadata: Record<string, unknown>;
+  trainer_id: string | null;
+  platform_fee_cents: number;
   created_at: string;
   updated_at: string;
 };
@@ -61,6 +64,13 @@ export type CreatePurchaseInput = {
   successPath: string;
   /** Where Stripe should redirect if the user cancels mid-checkout. */
   cancelPath: string;
+  /**
+   * When set, 80/20 split routes funds to this trainer's connected account.
+   * If the trainer hasn't completed Stripe Connect onboarding yet, the
+   * checkout falls back to platform-only and a pending payouts row is
+   * recorded so the coach gets paid out manually later.
+   */
+  trainerId?: string | null;
 };
 
 /**
@@ -70,7 +80,8 @@ export type CreatePurchaseInput = {
 export async function createPurchaseAndCheckout(input: CreatePurchaseInput): Promise<{ purchase: Purchase; checkoutUrl: string }> {
   const sb = createAdminClient();
 
-  // 1. Insert the purchase row first so we have an id to put in metadata.
+  const platformFee = input.trainerId ? platformFeeFor(input.amountCents) : 0;
+
   const { data, error } = await sb
     .from("purchases")
     .insert({
@@ -84,6 +95,8 @@ export async function createPurchaseAndCheckout(input: CreatePurchaseInput): Pro
       program_enrollment_id: input.refIds.program_enrollment_id ?? null,
       trainer_booking_id: input.refIds.trainer_booking_id ?? null,
       order_id: input.refIds.order_id ?? null,
+      trainer_id: input.trainerId ?? null,
+      platform_fee_cents: platformFee,
     })
     .select("*")
     .single();
@@ -91,16 +104,19 @@ export async function createPurchaseAndCheckout(input: CreatePurchaseInput): Pro
   if (error || !data) throw new Error(`Failed to create purchase: ${error?.message ?? "no data"}`);
   const purchase = data as Purchase;
 
-  // 2. Ask the configured payment provider for a checkout URL. The provider
-  //    (Stripe or mock) handles the heavy lifting and embeds purchase_id in
-  //    its session metadata so the webhook can dispatch on it.
+  // Look up coach's connected account; null means coach hasn't onboarded yet,
+  // so the checkout proceeds platform-only and reconciliation happens later.
+  const trainerAccountId = input.trainerId ? await getTrainerStripeAccountId(input.trainerId) : null;
+
   const provider = getPaymentProvider();
   const intent = await provider.createCheckoutIntent({
     amountCents: input.amountCents,
-    bookingId: purchase.id, // provider treats this as the generic id; metadata key is `purchase_id`
+    bookingId: purchase.id,
     successUrl: input.successPath,
     cancelUrl: input.cancelPath,
     description: input.description,
+    trainerStripeAccountId: trainerAccountId,
+    applicationFeeAmount: trainerAccountId ? platformFee : null,
   });
 
   // 3. Stash the session id back on the purchase so we can look it up from

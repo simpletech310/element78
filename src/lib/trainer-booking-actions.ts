@@ -14,6 +14,7 @@ import {
 } from "@/lib/notifications";
 import { getTrainerBooking, getTrainerSessionSettings } from "@/lib/data/queries";
 import { createPurchaseAndCheckout, refundPurchase } from "@/lib/purchases";
+import { requireWaivers } from "@/lib/waivers";
 import type { TrainerSessionMode } from "@/lib/data/types";
 
 function parseTimeOrMinutes(timeVal: FormDataEntryValue | null, minuteVal: FormDataEntryValue | null): number {
@@ -52,6 +53,8 @@ export async function requestTrainerBookingAction(formData: FormData) {
   if (!user) {
     redirect(`/login?next=${encodeURIComponent(`/trainers/${trainerSlug}/book`)}`);
   }
+
+  await requireWaivers(user!.id, `/trainers/${trainerSlug}/book`);
 
   const sb = createClient();
   const settings = await getTrainerSessionSettings(trainerId);
@@ -149,6 +152,7 @@ export async function requestTrainerBookingAction(formData: FormData) {
     refIds: { trainer_booking_id: booking.id },
     successPath: `/account/sessions?booked=${booking.id}`,
     cancelPath: `/trainers/${trainerSlug}/book`,
+    trainerId,
   });
   redirect(checkoutUrl);
 }

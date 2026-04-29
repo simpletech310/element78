@@ -55,6 +55,9 @@ export default async function TrainerDashboard({ searchParams }: { searchParams:
             <Link href="/trainer/clients" className="e-mono" style={{ color: "var(--sky)", textDecoration: "none", letterSpacing: "0.2em", fontSize: 11 }}>
               YOUR CLIENTS →
             </Link>
+            <Link href="/trainer/earnings" className="e-mono" style={{ color: "var(--sky)", textDecoration: "none", letterSpacing: "0.2em", fontSize: 11 }}>
+              EARNINGS →
+            </Link>
             <Link href="/trainer/classes" className="e-mono" style={{ color: "var(--sky)", textDecoration: "none", letterSpacing: "0.2em", fontSize: 11 }}>
               YOUR CLASSES →
             </Link>
@@ -72,6 +75,18 @@ export default async function TrainerDashboard({ searchParams }: { searchParams:
             <div className="e-mono" style={{ padding: "12px 14px", borderRadius: 12, background: "rgba(143,184,214,0.1)", border: "1px solid var(--sky)", color: "var(--sky)", fontSize: 11, letterSpacing: "0.18em" }}>
               ✓ {flash}
             </div>
+          </section>
+        )}
+
+        {trainer.payout_status !== "active" && (
+          <section style={{ padding: "14px 22px 0" }}>
+            <Link href="/trainer/onboarding/connect" className="e-mono" style={{
+              display: "block", padding: "14px 16px", borderRadius: 12,
+              background: "rgba(243,200,99,0.1)", border: "1px solid rgba(243,200,99,0.5)",
+              color: "rgb(243,200,99)", fontSize: 11, letterSpacing: "0.18em", textDecoration: "none",
+            }}>
+              ⚠ SET UP PAYOUTS SO YOU CAN GET PAID — 80/20 SPLIT VIA STRIPE →
+            </Link>
           </section>
         )}
 

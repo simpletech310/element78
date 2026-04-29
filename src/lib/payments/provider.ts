@@ -25,6 +25,10 @@ export type CreateCheckoutInput = {
   successUrl: string;
   cancelUrl: string;
   description: string;
+  /** When set, route the charge to a connected coach account. */
+  trainerStripeAccountId?: string | null;
+  /** Platform fee in cents — only honored when trainerStripeAccountId is set. */
+  applicationFeeAmount?: number | null;
 };
 
 export interface PaymentProvider {

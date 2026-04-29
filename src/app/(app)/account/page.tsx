@@ -36,11 +36,15 @@ export default async function AccountPage({ searchParams }: { searchParams?: { u
     ?? "/assets/blue-hair-selfie.jpg";
 
   const links: { label: string; href: string; icon: "cal" | "bag" | "heart" | "settings" | "fire" }[] = [
+    { label: "MEMBERSHIP", href: "/account/membership", icon: "settings" },
     { label: "ORDER HISTORY", href: "/account/purchases", icon: "bag" },
     { label: "PROGRAM HISTORY", href: "/account/history", icon: "fire" },
     { label: "1-ON-1 SESSIONS", href: "/account/sessions", icon: "cal" },
     { label: "MY BOOKINGS", href: "/gym", icon: "cal" },
     { label: "SAVED", href: "/account/saved", icon: "heart" },
+    { label: "WAIVER · WELLNESS", href: "/account/waiver", icon: "heart" },
+    { label: "EXPORT MY DATA", href: "/api/account/export", icon: "settings" },
+    { label: "DELETE ACCOUNT", href: "/account/delete", icon: "settings" },
   ];
 
   return (
