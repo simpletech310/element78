@@ -1,6 +1,7 @@
 import "server-only";
 import Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { fulfillPurchase, getPurchaseBySessionId, markPurchaseFailed } from "@/lib/purchases";
 
 // Required so Next.js does not parse / cache the body — Stripe signature
 // verification needs the raw bytes exactly as they came in.
@@ -45,54 +46,73 @@ export async function POST(req: Request) {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
-        const bookingId = session.metadata?.booking_id;
-        if (!bookingId) {
-          console.warn(
-            "[stripe webhook] checkout.session.completed missing metadata.booking_id",
-            { sessionId: session.id },
-          );
+
+        // Prefer `purchase_id` (the new unified ledger). Fall back to
+        // `booking_id` for legacy 1-on-1 sessions created before the
+        // purchases table existed — those rows still live in trainer_bookings
+        // with a `stripe_session_id` column.
+        const purchaseId = session.metadata?.purchase_id;
+        const legacyBookingId = session.metadata?.booking_id;
+
+        if (purchaseId) {
+          await fulfillPurchase(purchaseId, {
+            paymentIntentId: typeof session.payment_intent === "string" ? session.payment_intent : null,
+            chargeId: null, // payment intent → charge is one extra hop; refunds use payment_intent so we can skip
+          });
           break;
         }
 
-        const supabase = createAdminClient();
-        if (!supabase) {
-          console.error(
-            "[stripe webhook] Supabase admin client unavailable — cannot mark booking paid",
-          );
-          return new Response("supabase admin unavailable", { status: 500 });
+        if (legacyBookingId) {
+          // Legacy path: this session was created before the purchases ledger
+          // landed. Keep the old direct-update for back-compat.
+          const supabase = createAdminClient();
+          const { error } = await supabase
+            .from("trainer_bookings")
+            .update({
+              paid_status: "paid",
+              stripe_session_id: session.id,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", legacyBookingId);
+          if (error) {
+            console.error("[stripe webhook] legacy booking update failed", { legacyBookingId, error });
+            return new Response("db update failed", { status: 500 });
+          }
+          break;
         }
 
-        const { error } = await supabase
-          .from("trainer_bookings")
-          .update({
-            paid_status: "paid",
-            stripe_session_id: session.id,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", bookingId);
+        console.warn("[stripe webhook] checkout.session.completed missing metadata", {
+          sessionId: session.id,
+        });
+        break;
+      }
 
-        if (error) {
-          console.error("[stripe webhook] failed to update booking", {
-            bookingId,
-            sessionId: session.id,
-            error,
-          });
-          return new Response("db update failed", { status: 500 });
-        }
+      case "checkout.session.expired": {
+        const session = event.data.object as Stripe.Checkout.Session;
+        const purchase = await getPurchaseBySessionId(session.id);
+        if (purchase) await markPurchaseFailed(purchase.id);
         break;
       }
 
       case "charge.refunded": {
-        // MVP: log only. Full implementation would resolve charge ->
-        // payment_intent -> checkout session, match against
-        // trainer_bookings.stripe_session_id, then flip paid_status to
-        // 'refunded'. Skipping for now — manual reconciliation via
-        // Stripe Dashboard + Supabase is acceptable at current volume.
+        // Auto-refund flow: when a refund is initiated outside our app
+        // (e.g. via Stripe Dashboard), update our local state to match.
         const charge = event.data.object as Stripe.Charge;
-        console.info("[stripe webhook] charge.refunded received (no-op)", {
-          chargeId: charge.id,
-          paymentIntent: charge.payment_intent,
-        });
+        const paymentIntentId = typeof charge.payment_intent === "string" ? charge.payment_intent : null;
+        if (!paymentIntentId) {
+          console.info("[stripe webhook] charge.refunded with no payment_intent — skipping");
+          break;
+        }
+        const supabase = createAdminClient();
+        const { data: rows } = await supabase
+          .from("purchases")
+          .select("id, status")
+          .eq("stripe_payment_intent_id", paymentIntentId);
+        for (const r of (rows as Array<{ id: string; status: string }> | null) ?? []) {
+          if (r.status !== "refunded") {
+            await supabase.from("purchases").update({ status: "refunded", updated_at: new Date().toISOString() }).eq("id", r.id);
+          }
+        }
         break;
       }
 

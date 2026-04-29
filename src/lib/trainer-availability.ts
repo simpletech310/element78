@@ -4,6 +4,7 @@ import type {
   TrainerAvailabilityRule,
   TrainerBooking,
   TrainerSessionMode,
+  TrainerSessionRow,
   TrainerSessionSettings,
 } from "@/lib/data/types";
 
@@ -29,6 +30,10 @@ export type GenerateSlotsInput = {
   rules: TrainerAvailabilityRule[];
   blocks: TrainerAvailabilityBlock[];
   existingBookings: TrainerBooking[];
+  /** Active parent trainer_sessions rows in the window. Group sessions live
+   *  here even when nobody has booked a seat yet, so the slot generator must
+   *  also subtract these to avoid double-booking the trainer. */
+  existingSessions?: TrainerSessionRow[];
   settings: TrainerSessionSettings;
   fromUtc: Date;
   toUtc: Date;
@@ -38,7 +43,7 @@ export type GenerateSlotsInput = {
 };
 
 export function generateSlots(input: GenerateSlotsInput): GeneratedSlot[] {
-  const { rules, blocks, existingBookings, settings, fromUtc, toUtc, preferredMode } = input;
+  const { rules, blocks, existingBookings, existingSessions, settings, fromUtc, toUtc, preferredMode } = input;
   if (rules.length === 0) return [];
 
   const slotMs = settings.duration_min * 60 * 1000;
@@ -79,6 +84,7 @@ export function generateSlots(input: GenerateSlotsInput): GeneratedSlot[] {
           if (preferredMode && mode !== preferredMode) continue;
           if (overlapsBlock(slotStart, slotEnd, blocks)) continue;
           if (overlapsBooking(slotStart, slotEnd, existingBookings)) continue;
+          if (existingSessions && overlapsSession(slotStart, slotEnd, existingSessions)) continue;
           out.push({
             starts_at: new Date(slotStart).toISOString(),
             ends_at: new Date(slotEnd).toISOString(),
@@ -117,6 +123,15 @@ function overlapsBooking(startMs: number, endMs: number, bookings: TrainerBookin
     const bs = new Date(b.starts_at).getTime();
     const be = new Date(b.ends_at).getTime();
     if (startMs < be && endMs > bs) return true;
+  }
+  return false;
+}
+
+function overlapsSession(startMs: number, endMs: number, sessions: TrainerSessionRow[]): boolean {
+  for (const s of sessions) {
+    const ss = new Date(s.starts_at).getTime();
+    const se = new Date(s.ends_at).getTime();
+    if (startMs < se && endMs > ss) return true;
   }
   return false;
 }

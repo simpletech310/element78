@@ -28,6 +28,12 @@ export type CreateRoomInput = {
 
 export interface VideoProvider {
   createRoom(input: CreateRoomInput): Promise<VideoRoom>;
+  /**
+   * Best-effort cleanup. Called when a session completes or is cancelled
+   * before its `exp` window so we don't leave zombie rooms in the provider's
+   * account. Idempotent — safe to call on a room that's already gone.
+   */
+  destroyRoom(roomName: string): Promise<void>;
 }
 
 class MockVideoProvider implements VideoProvider {
@@ -38,6 +44,9 @@ class MockVideoProvider implements VideoProvider {
       name,
       provider: "mock",
     };
+  }
+  async destroyRoom(_roomName: string): Promise<void> {
+    // Mock has nothing to clean up.
   }
 }
 
@@ -86,6 +95,26 @@ class DailyVideoProvider implements VideoProvider {
       throw new Error("Daily room create succeeded but response had no `url` and DAILY_DOMAIN is not set.");
     }
     return { url, name: body.name, provider: "daily" };
+  }
+
+  async destroyRoom(roomName: string): Promise<void> {
+    if (!roomName) return;
+    try {
+      const res = await fetch(`https://api.daily.co/v1/rooms/${encodeURIComponent(roomName)}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${this.apiKey}` },
+      });
+      // 200 = deleted, 404 = already gone — both fine.
+      if (!res.ok && res.status !== 404) {
+        const detail = await res.text().catch(() => "");
+        // eslint-disable-next-line no-console
+        console.warn(`[daily] destroyRoom ${roomName} returned ${res.status}: ${detail}`);
+      }
+    } catch (err) {
+      // Network glitch shouldn't block the user-visible action — just log.
+      // eslint-disable-next-line no-console
+      console.warn(`[daily] destroyRoom ${roomName} threw:`, (err as Error).message);
+    }
   }
 }
 

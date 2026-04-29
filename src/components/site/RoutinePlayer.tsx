@@ -58,16 +58,21 @@ export function RoutinePlayer({ routine, programContext }: { routine: Routine; p
   );
   const overallPct = Math.round((completedSets / Math.max(1, totalSets)) * 100);
 
-  // Whenever the active exercise changes, swap the video source and try to play.
+  // Whenever the active exercise changes, swap the video source and PAUSE.
+  // We no longer autoplay on load — the video is now strictly tied to the
+  // working-set phase: it runs while the user is actively repping, stops the
+  // moment they tap COMPLETE SET, and stays paused through rest. This makes
+  // the demo loop a deliberate part of each set rather than an ambient layer.
   useEffect(() => {
     const v = videoRef.current;
     if (!v || !current) return;
     setLoadState("loading");
     v.src = current.video_url;
     v.load();
-    // Best-effort autoplay (muted) — most browsers allow this.
-    v.muted = true;
-    v.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
+    v.muted = false; // we want the cue audio synced to the working set
+    v.currentTime = 0;
+    v.pause();
+    setPlaying(false);
   }, [current]);
 
   // Rest countdown.
@@ -94,17 +99,30 @@ export function RoutinePlayer({ routine, programContext }: { routine: Routine; p
     // Handled in completeSet().
   }
 
+  // Helpers — keep video state in lockstep with the set phase.
+  function playFromStart() {
+    const v = videoRef.current;
+    if (!v) return;
+    v.currentTime = 0;
+    v.muted = false;
+    v.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
+  }
+
+  function pauseVideo() {
+    const v = videoRef.current;
+    if (!v) return;
+    v.pause();
+    setPlaying(false);
+  }
+
   function startSet() {
     setPhase("working");
-    const v = videoRef.current;
-    if (v && v.paused) {
-      v.muted = false;
-      v.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
-    }
+    playFromStart();
   }
 
   function completeSet() {
     if (!current) return;
+    pauseVideo();
     const nextSetIdx = setIdx + 1;
     if (nextSetIdx < current.sets) {
       // Still more sets of this exercise — go to rest.
@@ -116,8 +134,6 @@ export function RoutinePlayer({ routine, programContext }: { routine: Routine; p
     // Finished the last set — advance to next exercise (or done).
     if (isLastExercise) {
       setPhase("done");
-      videoRef.current?.pause();
-      setPlaying(false);
       return;
     }
     setExerciseIdx(i => i + 1);
@@ -129,6 +145,7 @@ export function RoutinePlayer({ routine, programContext }: { routine: Routine; p
   function skipRest() {
     setPhase("ready");
     setRestRemaining(0);
+    pauseVideo();
   }
 
   function previousExercise() {
@@ -136,6 +153,7 @@ export function RoutinePlayer({ routine, programContext }: { routine: Routine; p
     setExerciseIdx(i => i - 1);
     setSetIdx(0);
     setPhase("ready");
+    pauseVideo();
   }
 
   function nextExercise() {
@@ -143,6 +161,7 @@ export function RoutinePlayer({ routine, programContext }: { routine: Routine; p
     setExerciseIdx(i => i + 1);
     setSetIdx(0);
     setPhase("ready");
+    pauseVideo();
   }
 
   function togglePlay() {

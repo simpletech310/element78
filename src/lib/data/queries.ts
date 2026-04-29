@@ -16,6 +16,7 @@ import type {
   TrainerAvailabilityRule,
   TrainerAvailabilityBlock,
   TrainerBooking,
+  TrainerSessionRow,
 } from "./types";
 import { fallbackProducts, fallbackClasses, fallbackTrainers, fallbackLocations, fallbackPosts, fallbackPrograms, fallbackProgramSessions, fallbackFlows } from "./fallback";
 
@@ -394,6 +395,109 @@ export async function listProfilesByIds(ids: string[]): Promise<Record<string, {
     out[row.id] = { display_name: row.display_name, handle: row.handle, avatar_url: row.avatar_url };
   }
   return out;
+}
+
+/* -------------------------------------------------------------------------- */
+/*  trainer_sessions (parent rows for 1-on-1 + group)                         */
+/* -------------------------------------------------------------------------- */
+
+export async function getTrainerSessionRow(id: string): Promise<TrainerSessionRow | null> {
+  if (!isConfigured()) return null;
+  const sb = createClient();
+  const { data } = await sb.from("trainer_sessions").select("*").eq("id", id).maybeSingle();
+  return (data as TrainerSessionRow) ?? null;
+}
+
+/**
+ * Active trainer_sessions for the trainer in a window, used by the slot
+ * generator so it doesn't suggest times the trainer already has booked
+ * (group or otherwise).
+ */
+export async function listActiveTrainerSessionsInWindow(
+  trainerId: string,
+  fromIso: string,
+  toIso: string,
+): Promise<TrainerSessionRow[]> {
+  if (!isConfigured()) return [];
+  const sb = createClient();
+  const { data } = await sb
+    .from("trainer_sessions")
+    .select("*")
+    .eq("trainer_id", trainerId)
+    .in("status", ["open", "full", "confirmed"])
+    .gte("starts_at", fromIso)
+    .lte("starts_at", toIso)
+    .order("starts_at");
+  return (data as TrainerSessionRow[]) ?? [];
+}
+
+/**
+ * Open group sessions for a trainer in a window, plus the live attendee count
+ * (confirmed + pending_trainer bookings) so the booking page can render
+ * "X of N seats" and gray out full ones.
+ */
+export async function listOpenGroupSessionsForTrainer(
+  trainerId: string,
+  fromIso: string,
+  toIso: string,
+): Promise<Array<{ session: TrainerSessionRow; attendees: number }>> {
+  if (!isConfigured()) return [];
+  const sb = createClient();
+  const { data: sessions } = await sb
+    .from("trainer_sessions")
+    .select("*")
+    .eq("trainer_id", trainerId)
+    .eq("is_group", true)
+    .eq("status", "open")
+    .gte("starts_at", fromIso)
+    .lte("starts_at", toIso)
+    .order("starts_at");
+  const rows = (sessions as TrainerSessionRow[]) ?? [];
+  if (rows.length === 0) return [];
+
+  // One IN-list query for all attendee counts beats N round-trips.
+  const ids = rows.map(r => r.id);
+  const { data: bookings } = await sb
+    .from("trainer_bookings")
+    .select("session_id, status")
+    .in("session_id", ids)
+    .in("status", ["pending_trainer", "confirmed"]);
+  const counts = new Map<string, number>();
+  for (const b of (bookings as Array<{ session_id: string | null; status: string }>) ?? []) {
+    if (!b.session_id) continue;
+    counts.set(b.session_id, (counts.get(b.session_id) ?? 0) + 1);
+  }
+  return rows.map(s => ({ session: s, attendees: counts.get(s.id) ?? 0 }));
+}
+
+/**
+ * All trainer_sessions this trainer owns that haven't ended yet — for the
+ * trainer dashboard "GROUP SESSIONS · YOUR UPCOMING" rail.
+ */
+export async function listTrainerOwnedSessions(trainerId: string): Promise<Array<{ session: TrainerSessionRow; attendees: number }>> {
+  if (!isConfigured()) return [];
+  const sb = createClient();
+  const { data: sessions } = await sb
+    .from("trainer_sessions")
+    .select("*")
+    .eq("trainer_id", trainerId)
+    .eq("is_group", true)
+    .in("status", ["open", "full", "confirmed"])
+    .order("starts_at");
+  const rows = (sessions as TrainerSessionRow[]) ?? [];
+  if (rows.length === 0) return [];
+  const ids = rows.map(r => r.id);
+  const { data: bookings } = await sb
+    .from("trainer_bookings")
+    .select("session_id, status")
+    .in("session_id", ids)
+    .in("status", ["pending_trainer", "confirmed"]);
+  const counts = new Map<string, number>();
+  for (const b of (bookings as Array<{ session_id: string | null; status: string }>) ?? []) {
+    if (!b.session_id) continue;
+    counts.set(b.session_id, (counts.get(b.session_id) ?? 0) + 1);
+  }
+  return rows.map(s => ({ session: s, attendees: counts.get(s.id) ?? 0 }));
 }
 
 export async function listPosts(): Promise<Post[]> {

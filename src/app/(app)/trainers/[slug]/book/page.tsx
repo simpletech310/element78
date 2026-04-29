@@ -10,11 +10,14 @@ import {
   listAvailabilityRules,
   listAvailabilityBlocks,
   listActiveTrainerBookingsInWindow,
+  listActiveTrainerSessionsInWindow,
+  listOpenGroupSessionsForTrainer,
 } from "@/lib/data/queries";
 import { getUser } from "@/lib/auth";
 import { generateSlots } from "@/lib/trainer-availability";
 import { routines } from "@/lib/data/routines";
 import { requestTrainerBookingAction } from "@/lib/trainer-booking-actions";
+import { joinGroupSessionAction } from "@/lib/trainer-session-actions";
 import type { TrainerSessionMode } from "@/lib/data/types";
 
 type SearchParams = { mode?: string; day?: string; error?: string; program_session?: string };
@@ -60,10 +63,12 @@ export default async function TrainerBookingPage({
   const windowEnd = new Date(now);
   windowEnd.setDate(windowEnd.getDate() + settings.booking_window_days);
 
-  const [rules, blocks, existing] = await Promise.all([
+  const [rules, blocks, existing, existingSessions, groupSessions] = await Promise.all([
     listAvailabilityRules(trainer.id),
     listAvailabilityBlocks(trainer.id, now.toISOString(), windowEnd.toISOString()),
     listActiveTrainerBookingsInWindow(trainer.id, now.toISOString(), windowEnd.toISOString()),
+    listActiveTrainerSessionsInWindow(trainer.id, now.toISOString(), windowEnd.toISOString()),
+    listOpenGroupSessionsForTrainer(trainer.id, now.toISOString(), windowEnd.toISOString()),
   ]);
 
   const requestedMode = (searchParams.mode === "video" || searchParams.mode === "in_person")
@@ -74,6 +79,7 @@ export default async function TrainerBookingPage({
     rules,
     blocks,
     existingBookings: existing,
+    existingSessions,
     settings,
     fromUtc: now,
     toUtc: windowEnd,
@@ -113,6 +119,50 @@ export default async function TrainerBookingPage({
         <section style={{ padding: "14px 22px 0" }}>
           <div className="e-mono" style={{ padding: "12px 14px", borderRadius: 12, background: "rgba(232,181,168,0.12)", border: "1px solid rgba(232,181,168,0.4)", color: "var(--rose)", fontSize: 12, letterSpacing: "0.12em" }}>
             {error}
+          </div>
+        </section>
+      )}
+
+      {/* GROUP SESSIONS — trainer-led group sessions with shared room. Listed
+          ahead of the slot picker because they're the marquee offering when
+          the trainer has any scheduled. */}
+      {groupSessions.filter(g => g.attendees < g.session.capacity).length > 0 && (
+        <section style={{ padding: "32px 22px 0" }}>
+          <div className="e-mono" style={{ color: "var(--sky)", letterSpacing: "0.2em", fontSize: 10 }}>
+            GROUP SESSIONS · OPEN
+          </div>
+          <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 10 }}>
+            {groupSessions
+              .filter(g => g.attendees < g.session.capacity)
+              .map(({ session, attendees }) => {
+                const dt = new Date(session.starts_at);
+                const dateStr = dt.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "2-digit" }).toUpperCase();
+                const timeStr = dt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+                return (
+                  <div key={session.id} style={{ padding: 14, borderRadius: 14, background: "linear-gradient(135deg, rgba(143,184,214,0.16), rgba(46,127,176,0.04))", border: "1px solid rgba(143,184,214,0.32)", display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
+                    <div style={{ minWidth: 96, paddingRight: 14, borderRight: "1px solid rgba(143,184,214,0.18)" }}>
+                      <div className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.2em" }}>{dateStr}</div>
+                      <div style={{ fontFamily: "var(--font-display)", fontSize: 22, lineHeight: 1, marginTop: 4 }}>{timeStr}</div>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 180 }}>
+                      <div style={{ fontFamily: "var(--font-display)", fontSize: 18 }}>
+                        {(session.title ?? "GROUP SESSION").toUpperCase()}
+                      </div>
+                      <div className="e-mono" style={{ color: "rgba(242,238,232,0.7)", fontSize: 9, letterSpacing: "0.18em", marginTop: 6 }}>
+                        {session.mode === "video" ? "VIDEO" : "IN PERSON"} · {attendees} OF {session.capacity} SEATS · {fmtDollars(session.price_cents)}/PERSON
+                      </div>
+                      {session.description && (
+                        <p style={{ marginTop: 8, fontSize: 13, color: "rgba(242,238,232,0.7)", lineHeight: 1.5 }}>{session.description}</p>
+                      )}
+                    </div>
+                    <form action={joinGroupSessionAction}>
+                      <input type="hidden" name="session_id" value={session.id} />
+                      <input type="hidden" name="trainer_slug" value={trainer.slug} />
+                      <button type="submit" className="btn btn-sky" style={{ padding: "10px 18px", fontSize: 11 }}>JOIN →</button>
+                    </form>
+                  </div>
+                );
+              })}
           </div>
         </section>
       )}

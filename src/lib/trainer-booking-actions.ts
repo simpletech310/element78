@@ -3,9 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getUser } from "@/lib/auth";
 import { getTrainerForCurrentUser, getTrainerOwningBooking } from "@/lib/trainer-auth";
-import { getPaymentProvider } from "@/lib/payments/provider";
 import { getVideoProvider } from "@/lib/video/provider";
 import {
   notifyTrainerOfBooking,
@@ -13,6 +13,7 @@ import {
   notifyPaymentReceived,
 } from "@/lib/notifications";
 import { getTrainerBooking, getTrainerSessionSettings } from "@/lib/data/queries";
+import { createPurchaseAndCheckout, refundPurchase } from "@/lib/purchases";
 import type { TrainerSessionMode } from "@/lib/data/types";
 
 function parseTimeOrMinutes(timeVal: FormDataEntryValue | null, minuteVal: FormDataEntryValue | null): number {
@@ -61,11 +62,42 @@ export async function requestTrainerBookingAction(formData: FormData) {
   const requiresPayment = settings.price_cents > 0;
   const paid_status = requiresPayment ? "pending" : "free";
 
+  // Phase 3: every booking is a seat in a parent trainer_sessions row. For
+  // private 1-on-1s we create a fresh capacity=1 session each time. The
+  // unique partial index on trainer_sessions(trainer_id, starts_at) WHERE
+  // status in (open,full,confirmed) is what now prevents the trainer from
+  // being double-booked at the same instant.
+  const sessionInsert = await sb
+    .from("trainer_sessions")
+    .insert({
+      trainer_id: trainerId,
+      starts_at: startsAt,
+      ends_at: endsAt,
+      mode,
+      location_id: mode === "in_person" ? settings.in_person_location_id : null,
+      capacity: 1,
+      price_cents: settings.price_cents,
+      status: "open",
+      is_group: false,
+      routine_slug: routineSlug,
+    })
+    .select("id")
+    .single();
+
+  if (sessionInsert.error || !sessionInsert.data) {
+    const msg = sessionInsert.error?.message?.includes("duplicate") || sessionInsert.error?.code === "23505"
+      ? "Sorry, that slot was just taken. Please pick another."
+      : "Booking failed. Please try again.";
+    redirect(`/trainers/${trainerSlug}/book?error=${encodeURIComponent(msg)}`);
+  }
+  const sessionId = (sessionInsert.data as { id: string }).id;
+
   const insert = await sb
     .from("trainer_bookings")
     .insert({
       trainer_id: trainerId,
       user_id: user!.id,
+      session_id: sessionId,
       starts_at: startsAt,
       ends_at: endsAt,
       mode,
@@ -81,12 +113,9 @@ export async function requestTrainerBookingAction(formData: FormData) {
     .single();
 
   if (insert.error || !insert.data) {
-    // The unique partial index on (trainer_id, starts_at) WHERE status in
-    // (pending,confirmed) prevents duplicate bookings for the same slot.
-    const msg = insert.error?.message?.includes("duplicate") || insert.error?.code === "23505"
-      ? "Sorry, that slot was just taken. Please pick another."
-      : "Booking failed. Please try again.";
-    redirect(`/trainers/${trainerSlug}/book?error=${encodeURIComponent(msg)}`);
+    // Roll back the orphaned session so the trainer's slot frees up again.
+    await sb.from("trainer_sessions").delete().eq("id", sessionId);
+    redirect(`/trainers/${trainerSlug}/book?error=${encodeURIComponent("Booking failed. Please try again.")}`);
   }
 
   const booking = insert.data;
@@ -100,16 +129,18 @@ export async function requestTrainerBookingAction(formData: FormData) {
     redirect(`/account/sessions?booked=${booking.id}`);
   }
 
-  // Redirect to whichever payment provider is configured.
-  const payments = getPaymentProvider();
-  const intent = await payments.createCheckoutIntent({
+  // Funnel through the unified purchases ledger. The webhook will flip both
+  // the purchase row and the booking's paid_status when Stripe confirms.
+  const { checkoutUrl } = await createPurchaseAndCheckout({
+    userId: user!.id,
+    kind: "trainer_booking",
     amountCents: settings.price_cents,
-    bookingId: booking.id,
-    successUrl: `/account/sessions?booked=${booking.id}`,
-    cancelUrl: `/trainers/${trainerSlug}/book`,
-    description: `1-on-1 session`,
+    description: `1-on-1 session with ${trainerSlug.replace(/-/g, " ")}`,
+    refIds: { trainer_booking_id: booking.id },
+    successPath: `/account/sessions?booked=${booking.id}`,
+    cancelPath: `/trainers/${trainerSlug}/book`,
   });
-  redirect(intent.url);
+  redirect(checkoutUrl);
 }
 
 /**
@@ -180,6 +211,24 @@ export async function acceptTrainerBookingAction(formData: FormData) {
     })
     .eq("id", bookingId);
 
+  // Mirror the video fields onto the parent session so future group attendees
+  // share the same Daily room. For private 1-on-1 it's the same effect.
+  if (booking.session_id && (videoFields.video_room_url || videoFields.video_room_name)) {
+    await sb
+      .from("trainer_sessions")
+      .update({
+        ...videoFields,
+        status: "confirmed",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", booking.session_id);
+  } else if (booking.session_id) {
+    await sb
+      .from("trainer_sessions")
+      .update({ status: "confirmed", updated_at: new Date().toISOString() })
+      .eq("id", booking.session_id);
+  }
+
   await notifyClientOfBookingDecision({ ...booking, status: "confirmed" });
   revalidatePath("/trainer/dashboard");
   revalidatePath("/account/sessions");
@@ -205,6 +254,16 @@ export async function rejectTrainerBookingAction(formData: FormData) {
       updated_at: new Date().toISOString(),
     })
     .eq("id", bookingId);
+
+  // If the user already paid (rare for reject, but possible if accept races),
+  // hit Stripe's refund API and flip the purchase ledger.
+  if (booking.paid_status === "paid") {
+    const admin = createAdminClient();
+    const { data: purchase } = await admin.from("purchases").select("id").eq("trainer_booking_id", bookingId).maybeSingle();
+    if (purchase) {
+      await refundPurchase((purchase as { id: string }).id, { reason: "requested_by_customer" });
+    }
+  }
 
   await notifyClientOfBookingDecision({ ...booking, status: "rejected" });
   revalidatePath("/trainer/dashboard");
@@ -232,6 +291,22 @@ export async function cancelTrainerBookingAction(formData: FormData) {
   if (!isOwner && !isTrainer) redirect(`${returnTo}?error=unauthorized`);
 
   const wasPaid = (booking as { paid_status: string }).paid_status === "paid";
+  // Prefer the session-level room (post-Phase 3 source of truth); fall back
+  // to the legacy per-booking column for rows created before migration 0009.
+  const sessionId = (booking as { session_id: string | null }).session_id;
+  let roomName: string | null = null;
+  if (sessionId) {
+    const { data: sessRow } = await sb
+      .from("trainer_sessions")
+      .select("video_room_name")
+      .eq("id", sessionId)
+      .maybeSingle();
+    roomName = (sessRow as { video_room_name: string | null } | null)?.video_room_name ?? null;
+  }
+  if (!roomName) {
+    roomName = (booking as { video_room_name: string | null }).video_room_name;
+  }
+
   await sb
     .from("trainer_bookings")
     .update({
@@ -240,6 +315,21 @@ export async function cancelTrainerBookingAction(formData: FormData) {
       updated_at: new Date().toISOString(),
     })
     .eq("id", bookingId);
+
+  // Auto-refund via Stripe API + flip the linked purchase row.
+  if (wasPaid) {
+    const admin = createAdminClient();
+    const { data: purchase } = await admin.from("purchases").select("id").eq("trainer_booking_id", bookingId).maybeSingle();
+    if (purchase) {
+      await refundPurchase((purchase as { id: string }).id, { reason: "requested_by_customer" });
+    }
+  }
+
+  // Tear down any provisioned video room so we don't leave a zombie sitting
+  // in Daily until exp passes.
+  if (roomName) {
+    await getVideoProvider().destroyRoom(roomName);
+  }
 
   revalidatePath("/trainer/dashboard");
   revalidatePath("/account/sessions");
@@ -329,6 +419,28 @@ export async function completeTrainerBookingAction(formData: FormData) {
           }, { onConflict: "enrollment_id,session_id" });
         }
       }
+    }
+  }
+
+  // Tear down the Daily room so it doesn't sit around as a zombie until exp.
+  // Session is the source of truth post-Phase 3; legacy per-booking column
+  // is the fallback for rows created before migration 0009.
+  if (booking) {
+    const sessionId = (booking as { session_id: string | null }).session_id;
+    let roomName: string | null = null;
+    if (sessionId) {
+      const { data: sessRow } = await sb
+        .from("trainer_sessions")
+        .select("video_room_name")
+        .eq("id", sessionId)
+        .maybeSingle();
+      roomName = (sessRow as { video_room_name: string | null } | null)?.video_room_name ?? null;
+    }
+    if (!roomName) {
+      roomName = (booking as { video_room_name: string | null }).video_room_name;
+    }
+    if (roomName) {
+      await getVideoProvider().destroyRoom(roomName);
     }
   }
 

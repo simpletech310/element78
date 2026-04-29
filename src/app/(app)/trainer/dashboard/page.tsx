@@ -3,24 +3,26 @@ import { redirect } from "next/navigation";
 import { Navbar } from "@/components/site/Navbar";
 import { Icon } from "@/components/ui/Icon";
 import { getTrainerForCurrentUser } from "@/lib/trainer-auth";
-import { listTrainerInbox, listProfilesByIds } from "@/lib/data/queries";
+import { listTrainerInbox, listProfilesByIds, listTrainerOwnedSessions } from "@/lib/data/queries";
 import { isSessionJoinable } from "@/lib/video/provider";
 import {
   acceptTrainerBookingAction,
   rejectTrainerBookingAction,
   cancelTrainerBookingAction,
 } from "@/lib/trainer-booking-actions";
+import { cancelGroupSessionAction } from "@/lib/trainer-session-actions";
 import { testVideoRoomAction } from "@/lib/video/test-action";
 import { routines } from "@/lib/data/routines";
-import type { TrainerBooking } from "@/lib/data/types";
+import type { TrainerBooking, TrainerSessionRow } from "@/lib/data/types";
 
-export default async function TrainerDashboard({ searchParams }: { searchParams: { accepted?: string; rejected?: string; completed?: string; test_room?: string } }) {
+export default async function TrainerDashboard({ searchParams }: { searchParams: { accepted?: string; rejected?: string; completed?: string; test_room?: string; group_created?: string; group_cancelled?: string } }) {
   const trainer = await getTrainerForCurrentUser();
   if (!trainer) redirect("/login?next=/trainer/dashboard");
 
   const all = await listTrainerInbox(trainer.id);
   const userIds = Array.from(new Set(all.map(b => b.user_id)));
   const profiles = await listProfilesByIds(userIds);
+  const groupSessions = await listTrainerOwnedSessions(trainer.id);
 
   const now = Date.now();
   const pending = all.filter(b => b.status === "pending_trainer");
@@ -30,6 +32,8 @@ export default async function TrainerDashboard({ searchParams }: { searchParams:
   const flash = searchParams.accepted ? "BOOKING ACCEPTED · CLIENT NOTIFIED"
               : searchParams.rejected ? "BOOKING DECLINED · PAYMENT REFUNDED IF APPLICABLE"
               : searchParams.completed ? "SESSION COMPLETE · LOGGED TO CLIENT HISTORY"
+              : searchParams.group_created ? "GROUP SESSION CREATED · NOW BOOKABLE"
+              : searchParams.group_cancelled ? "GROUP SESSION CANCELLED · ATTENDEES REFUNDED"
               : null;
 
   return (
@@ -41,7 +45,10 @@ export default async function TrainerDashboard({ searchParams }: { searchParams:
             <div className="e-mono" style={{ color: "var(--sky)", letterSpacing: "0.25em", fontSize: 10 }}>TRAINER · {trainer.name.toUpperCase()}</div>
             <h1 className="e-display" style={{ fontSize: "clamp(36px, 7vw, 56px)", lineHeight: 0.92, marginTop: 8 }}>DASHBOARD.</h1>
           </div>
-          <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
+            <Link href="/trainer/sessions/new" className="e-mono" style={{ color: "var(--sky)", textDecoration: "none", letterSpacing: "0.2em", fontSize: 11 }}>
+              + NEW GROUP SESSION
+            </Link>
             <Link href="/trainer/programs" className="e-mono" style={{ color: "var(--sky)", textDecoration: "none", letterSpacing: "0.2em", fontSize: 11 }}>
               YOUR PROGRAMS →
             </Link>
@@ -102,6 +109,20 @@ export default async function TrainerDashboard({ searchParams }: { searchParams:
           ) : (
             <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 10 }}>
               {upcoming.map(b => <UpcomingRow key={b.id} booking={b} clientName={profiles[b.user_id]?.display_name ?? "Member"} />)}
+            </div>
+          )}
+        </section>
+
+        {/* GROUP SESSIONS · YOUR UPCOMING */}
+        <section style={{ padding: "32px 22px 0" }}>
+          <div className="e-mono" style={{ color: "var(--sky)", letterSpacing: "0.2em", fontSize: 10 }}>
+            GROUP SESSIONS · YOUR UPCOMING · {groupSessions.length}
+          </div>
+          {groupSessions.length === 0 ? (
+            <Empty body="No group sessions on the books. Create one with + NEW GROUP SESSION above." />
+          ) : (
+            <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+              {groupSessions.map(({ session, attendees }) => <GroupSessionRow key={session.id} session={session} attendees={attendees} />)}
             </div>
           )}
         </section>
@@ -231,6 +252,39 @@ function RecentRow({ booking, clientName }: { booking: TrainerBooking; clientNam
           {booking.duration_actual_min ? ` · ${booking.duration_actual_min}M` : ""}
         </div>
       </div>
+    </div>
+  );
+}
+
+function GroupSessionRow({ session, attendees }: { session: TrainerSessionRow; attendees: number }) {
+  const dt = new Date(session.starts_at);
+  const dateStr = dt.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "2-digit" }).toUpperCase();
+  const timeStr = dt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  const full = attendees >= session.capacity;
+  return (
+    <div style={{
+      padding: 14, borderRadius: 14,
+      background: "linear-gradient(135deg, rgba(143,184,214,0.16), rgba(46,127,176,0.04))",
+      border: "1px solid rgba(143,184,214,0.32)",
+      display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap",
+    }}>
+      <div style={{ minWidth: 96, paddingRight: 14, borderRight: "1px solid rgba(143,184,214,0.18)" }}>
+        <div className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.2em" }}>{dateStr}</div>
+        <div style={{ fontFamily: "var(--font-display)", fontSize: 22, lineHeight: 1, marginTop: 4 }}>{timeStr}</div>
+      </div>
+      <div style={{ flex: 1, minWidth: 180 }}>
+        <div style={{ fontFamily: "var(--font-display)", fontSize: 18 }}>
+          {(session.title ?? "GROUP SESSION").toUpperCase()}
+        </div>
+        <div className="e-mono" style={{ color: "rgba(242,238,232,0.7)", fontSize: 9, letterSpacing: "0.18em", marginTop: 6 }}>
+          {session.mode === "video" ? "VIDEO" : "IN PERSON"} · ({attendees}/{session.capacity}) · ${(session.price_cents / 100).toFixed(0)}/PERSON
+          {full ? " · FULL" : ""}
+        </div>
+      </div>
+      <form action={cancelGroupSessionAction}>
+        <input type="hidden" name="session_id" value={session.id} />
+        <button type="submit" className="btn" style={{ padding: "8px 12px", fontSize: 10, background: "transparent", color: "rgba(242,238,232,0.55)", border: "1px solid rgba(143,184,214,0.2)" }}>CANCEL</button>
+      </form>
     </div>
   );
 }

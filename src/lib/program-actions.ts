@@ -4,10 +4,15 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getUser } from "@/lib/auth";
+import { createPurchaseAndCheckout, refundPurchase } from "@/lib/purchases";
 
 /**
  * Enroll the current user in a program. Idempotent — re-enrolling
  * resumes a paused/left enrollment instead of creating a duplicate.
+ *
+ * Free programs activate immediately. Paid programs create the enrollment
+ * in `pending_payment` state and redirect through Stripe Checkout; the
+ * webhook flips status to `active` and stamps `started_at` on confirmation.
  */
 export async function enrollAction(formData: FormData) {
   const programId = String(formData.get("program_id") ?? "");
@@ -17,6 +22,17 @@ export async function enrollAction(formData: FormData) {
 
   const sb = createClient();
 
+  // Look up program pricing so we know whether to route through Stripe.
+  const { data: program } = await sb
+    .from("programs")
+    .select("id, name, slug, requires_payment, price_cents")
+    .eq("id", programId)
+    .maybeSingle();
+  if (!program) redirect(`/programs/${slug}`);
+  const prog = program as { id: string; name: string; slug: string; requires_payment: boolean; price_cents: number };
+
+  const requiresPayment = prog.requires_payment === true;
+
   // Re-activate if a prior enrollment exists.
   const { data: existing } = await sb
     .from("program_enrollments")
@@ -25,18 +41,48 @@ export async function enrollAction(formData: FormData) {
     .eq("program_id", programId)
     .maybeSingle();
 
+  let enrollmentId: string;
+
   if (existing) {
-    await sb
-      .from("program_enrollments")
-      .update({ status: "active", started_at: new Date().toISOString(), completed_at: null })
-      .eq("id", existing.id);
+    const existingRow = existing as { id: string };
+    if (requiresPayment) {
+      // Reactivate into pending_payment; don't reset started_at — webhook stamps it on confirm.
+      await sb
+        .from("program_enrollments")
+        .update({ status: "pending_payment", completed_at: null })
+        .eq("id", existingRow.id);
+    } else {
+      await sb
+        .from("program_enrollments")
+        .update({ status: "active", started_at: new Date().toISOString(), completed_at: null })
+        .eq("id", existingRow.id);
+    }
+    enrollmentId = existingRow.id;
   } else {
-    await sb.from("program_enrollments").insert({
-      user_id: user.id,
-      program_id: programId,
-      status: "active",
-      current_day: 1,
+    const { data: inserted } = await sb
+      .from("program_enrollments")
+      .insert({
+        user_id: user.id,
+        program_id: programId,
+        status: requiresPayment ? "pending_payment" : "active",
+        current_day: 1,
+      })
+      .select("id")
+      .single();
+    enrollmentId = (inserted as { id: string }).id;
+  }
+
+  if (requiresPayment) {
+    const { checkoutUrl } = await createPurchaseAndCheckout({
+      userId: user.id,
+      kind: "program_enrollment",
+      amountCents: prog.price_cents,
+      description: `Program: ${prog.name}`,
+      refIds: { program_enrollment_id: enrollmentId },
+      successPath: `/programs/${slug}?enrolled=1`,
+      cancelPath: `/programs/${slug}`,
     });
+    redirect(checkoutUrl);
   }
 
   revalidatePath(`/programs/${slug}`);
@@ -134,6 +180,20 @@ export async function leaveAction(formData: FormData) {
 
   const sb = createClient();
   await sb.from("program_enrollments").update({ status: "left" }).eq("id", enrollmentId);
+
+  // If this enrollment was paid for, kick off a Stripe refund. The refund call
+  // is best-effort — purchases.ts swallows Stripe errors so local state still
+  // reflects the leave.
+  const { data: paidPurchase } = await sb
+    .from("purchases")
+    .select("id")
+    .eq("program_enrollment_id", enrollmentId)
+    .eq("status", "paid")
+    .maybeSingle();
+  if (paidPurchase) {
+    await refundPurchase((paidPurchase as { id: string }).id, { reason: "requested_by_customer" });
+  }
+
   revalidatePath(`/programs/${slug}`);
   revalidatePath("/account/history");
 }

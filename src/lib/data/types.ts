@@ -154,7 +154,7 @@ export type ProgramEnrollment = {
   id: string;
   user_id: string;
   program_id: string;
-  status: "active" | "completed" | "paused" | "left";
+  status: "active" | "completed" | "paused" | "left" | "pending_payment";
   started_at: string;
   completed_at: string | null;
   current_day: number;
@@ -222,6 +222,9 @@ export type TrainerBooking = {
   id: string;
   trainer_id: string;
   user_id: string;
+  /** Parent trainer_sessions row. Populated for new bookings; legacy rows
+   *  were backfilled with private 1-attendee sessions in migration 0009. */
+  session_id: string | null;
   starts_at: string;
   ends_at: string;
   mode: TrainerSessionMode;
@@ -235,6 +238,43 @@ export type TrainerBooking = {
   video_provider: string | null;
   video_room_url: string | null;
   video_room_name: string | null;
+  duration_actual_min: number | null;
+  rejected_reason: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+/**
+ * Parent row for one or more trainer_bookings. capacity=1, is_group=false is a
+ * private 1-on-1; capacity>=2, is_group=true is a group session that multiple
+ * members share a single Daily room for. See migration 0009.
+ */
+export type TrainerSessionStatus =
+  | "open"
+  | "full"
+  | "confirmed"
+  | "cancelled"
+  | "completed"
+  | "no_show";
+
+export type TrainerSessionRow = {
+  id: string;
+  trainer_id: string;
+  starts_at: string;
+  ends_at: string;
+  mode: TrainerSessionMode;
+  location_id: string | null;
+  capacity: number;
+  price_cents: number;
+  status: TrainerSessionStatus;
+  is_group: boolean;
+  title: string | null;
+  description: string | null;
+  routine_slug: string | null;
+  video_provider: string | null;
+  video_room_url: string | null;
+  video_room_name: string | null;
+  trainer_notes: string | null;
   duration_actual_min: number | null;
   rejected_reason: string | null;
   created_at: string;

@@ -44,7 +44,11 @@ export class StripePaymentProvider implements PaymentProvider {
           quantity: 1,
         },
       ],
-      metadata: { booking_id: bookingId },
+      // `purchase_id` is the canonical key the webhook reads to dispatch
+      // fulfillment. We also keep `booking_id` for backward compatibility
+      // with rows created before the purchases ledger landed (the webhook
+      // tries `purchase_id` first, then falls back).
+      metadata: { purchase_id: bookingId, booking_id: bookingId },
       success_url: `${origin}${successUrl}`,
       cancel_url: `${origin}${cancelUrl}`,
     });

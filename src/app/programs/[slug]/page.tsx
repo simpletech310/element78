@@ -29,6 +29,7 @@ export default async function ProgramDetail({ params }: { params: { slug: string
   const isAuthed = !!user;
   const isActive = enrollment?.status === "active";
   const isCompleted = enrollment?.status === "completed";
+  const isPendingPayment = enrollment?.status === "pending_payment";
   const currentDay = enrollment?.current_day ?? 1;
   const currentSession = sessions.find(s => s.day_index === currentDay) ?? sessions[0];
   const completedCount = completions.length;
@@ -96,6 +97,15 @@ export default async function ProgramDetail({ params }: { params: { slug: string
                 <input type="hidden" name="program_id" value={program.id} />
                 <input type="hidden" name="program_slug" value={program.slug} />
                 <button type="submit" className="btn btn-sky" style={{ minWidth: 200 }}>RE-ENROLL</button>
+              </form>
+            )}
+            {isAuthed && isPendingPayment && (
+              <form action={enrollAction}>
+                <input type="hidden" name="program_id" value={program.id} />
+                <input type="hidden" name="program_slug" value={program.slug} />
+                <button type="submit" className="btn btn-sky" style={{ minWidth: 280 }}>
+                  PAYMENT PENDING — COMPLETE CHECKOUT
+                </button>
               </form>
             )}
             {isAuthed && enrollment && enrollment.status === "completed" && (
@@ -228,12 +238,21 @@ export default async function ProgramDetail({ params }: { params: { slug: string
           <h2 className="e-display glow" style={{ fontSize: "clamp(36px, 7vw, 56px)", marginTop: 14, lineHeight: 0.95 }}>{program.name}<br/>STARTS WHEN YOU DO.</h2>
           <div style={{ marginTop: 24, display: "flex", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
             {!isAuthed && <Link href={`/login?next=/programs/${program.slug}`} className="btn btn-sky" style={{ minWidth: 200 }}>SIGN IN TO ENROLL</Link>}
-            {isAuthed && !isActive && !isCompleted && (
+            {isAuthed && !isActive && !isCompleted && !isPendingPayment && (
               <form action={enrollAction}>
                 <input type="hidden" name="program_id" value={program.id} />
                 <input type="hidden" name="program_slug" value={program.slug} />
                 <button type="submit" className="btn btn-sky" style={{ minWidth: 200 }}>
                   {program.requires_payment ? `ENROLL · $${(program.price_cents / 100).toFixed(0)}` : "ENROLL · FREE"}
+                </button>
+              </form>
+            )}
+            {isAuthed && isPendingPayment && (
+              <form action={enrollAction}>
+                <input type="hidden" name="program_id" value={program.id} />
+                <input type="hidden" name="program_slug" value={program.slug} />
+                <button type="submit" className="btn btn-sky" style={{ minWidth: 280 }}>
+                  PAYMENT PENDING — COMPLETE CHECKOUT
                 </button>
               </form>
             )}
