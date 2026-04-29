@@ -168,7 +168,7 @@ export default async function GymScreen({ searchParams }: { searchParams: { date
                                 : booking.paid_status === "paid" ? `PAID · $${(booking.price_cents_paid / 100).toFixed(0)}`
                                 : `PAY AT CHECK-IN · $${(booking.price_cents_paid / 100).toFixed(0)}`;
                 return (
-                  <Link key={booking.id} href={`/gym/classes/${cls.id}`} className="lift" style={{
+                  <Link key={booking.id} href={`/classes/${cls.id}`} className="lift" style={{
                     display: "grid", gridTemplateColumns: "auto 1fr auto", gap: 14, alignItems: "center",
                     padding: "14px 16px", borderRadius: 14,
                     background: "linear-gradient(135deg, rgba(46,127,176,0.18), rgba(143,184,214,0.05))",
@@ -289,7 +289,7 @@ export default async function GymScreen({ searchParams }: { searchParams: { date
             const full = c.booked >= c.capacity;
             const booked = bookedClassIds.has(c.id);
             return (
-              <Link key={c.id} href={`/gym/classes/${c.id}`} style={{
+              <Link key={c.id} href={`/classes/${c.id}`} style={{
                 display: "flex", gap: 14, padding: 14, borderRadius: 16,
                 background: booked ? "linear-gradient(135deg, rgba(143,184,214,0.18), rgba(77,169,214,0.06))" : "var(--paper)",
                 border: booked ? "1px solid rgba(143,184,214,0.4)" : "1px solid rgba(10,14,20,0.06)",

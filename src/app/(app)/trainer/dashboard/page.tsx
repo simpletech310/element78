@@ -46,6 +46,9 @@ export default async function TrainerDashboard({ searchParams }: { searchParams:
             <h1 className="e-display" style={{ fontSize: "clamp(36px, 7vw, 56px)", lineHeight: 0.92, marginTop: 8 }}>DASHBOARD.</h1>
           </div>
           <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
+            <Link href="/trainer/classes/new" className="e-mono" style={{ color: "var(--sky)", textDecoration: "none", letterSpacing: "0.2em", fontSize: 11 }}>
+              + NEW CLASS
+            </Link>
             <Link href="/trainer/sessions/new" className="e-mono" style={{ color: "var(--sky)", textDecoration: "none", letterSpacing: "0.2em", fontSize: 11 }}>
               + NEW GROUP SESSION
             </Link>

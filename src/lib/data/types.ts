@@ -45,6 +45,12 @@ export type ClassRow = {
   requires_payment: boolean;
   summary: string | null;
   what_to_bring: string | null;
+  /** When true, the detail page renders a SpotPicker. Class capacity should
+   *  be small (1–10 for new classes; legacy seeds may exceed). */
+  has_equipment: boolean;
+  /** With `has_equipment`, render the picker as two mirrored halves with a
+   *  center aisle — matches a reformer studio layout. */
+  mirrored_layout: boolean;
 };
 
 export type Booking = {

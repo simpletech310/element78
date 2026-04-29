@@ -5,9 +5,10 @@ import { SiteFooter } from "@/components/site/SiteFooter";
 import { FloatingTabBar } from "@/components/site/FloatingTabBar";
 import { Photo } from "@/components/ui/Photo";
 import { Icon } from "@/components/ui/Icon";
-import { getClass, listTrainers, getUserBookingForClass } from "@/lib/data/queries";
+import { getClass, listTrainers, getUserBookingForClass, listTakenSpots } from "@/lib/data/queries";
 import { getSavedKindRefs } from "@/lib/data/saved-queries";
 import { SaveButton } from "@/components/site/SaveButton";
+import { SpotPicker } from "@/components/site/SpotPicker";
 import { getUser } from "@/lib/auth";
 import { bookClassAction, cancelBookingAction } from "@/lib/class-actions";
 
@@ -27,9 +28,14 @@ export default async function ClassDetail({
   if (!c) notFound();
   const trainer = c.trainer_id ? trainers.find(t => t.id === c.trainer_id) ?? null : null;
   const booking = user ? await getUserBookingForClass(user.id, c.id) : null;
-  const isReserved = booking && booking.status === "reserved";
+  const isReserved = !!(booking && booking.status === "reserved");
   const savedClassIds = user ? await getSavedKindRefs(user.id, "class") : new Set<string>();
   const isSaved = savedClassIds.has(c.id);
+
+  // Equipment classes pull the taken-spot list so the SpotPicker can render
+  // the studio layout. Skip the query for non-equipment classes — they don't
+  // need it and we want the page to stay snappy.
+  const takenSpots = c.has_equipment ? await listTakenSpots(c.id) : [];
 
   const dt = new Date(c.starts_at);
   const dayLabel = dt.toLocaleDateString("en-US", { weekday: "long" }).toUpperCase();
@@ -133,7 +139,9 @@ export default async function ClassDetail({
                 </form>
               </>
             )}
-            {user && !isReserved && !isFull && (
+            {/* Equipment classes use the SpotPicker below as the primary
+                reserve action, so we skip the inline RESERVE button there. */}
+            {user && !isReserved && !isFull && !c.has_equipment && (
               <form action={bookClassAction}>
                 <input type="hidden" name="class_id" value={c.id} />
                 <input type="hidden" name="requires_payment" value={String(c.requires_payment)} />
@@ -143,13 +151,18 @@ export default async function ClassDetail({
                 </button>
               </form>
             )}
-            {user && !isReserved && isFull && (
+            {user && !isReserved && isFull && !c.has_equipment && (
               <form action={bookClassAction}>
                 <input type="hidden" name="class_id" value={c.id} />
                 <input type="hidden" name="requires_payment" value={String(c.requires_payment)} />
                 <input type="hidden" name="price_cents" value={c.price_cents} />
                 <button type="submit" className="btn btn-ghost" style={{ color: "var(--bone)", borderColor: "rgba(242,238,232,0.4)", minWidth: 200 }}>JOIN WAITLIST</button>
               </form>
+            )}
+            {user && c.has_equipment && (
+              <p className="e-mono" style={{ fontSize: 9, color: "rgba(242,238,232,0.5)", letterSpacing: "0.2em" }}>
+                ↓ PICK YOUR REFORMER BELOW
+              </p>
             )}
           </div>
 
@@ -160,6 +173,34 @@ export default async function ClassDetail({
           )}
         </div>
       </section>
+
+      {/* STUDIO MAP — only for equipment classes. Renders the mirrored
+          reformer layout so members can pick their station. */}
+      {c.has_equipment && user && (
+        <section style={{ padding: "32px 22px 0", maxWidth: 880, margin: "0 auto" }}>
+          <SpotPicker
+            classId={c.id}
+            capacity={c.capacity}
+            taken={takenSpots}
+            ownSpot={booking?.spot_number ?? null}
+            requiresPayment={c.requires_payment}
+            priceCents={c.price_cents}
+            isReserved={isReserved}
+            returnTo={`/classes/${c.id}`}
+            mirrored={c.mirrored_layout}
+          />
+        </section>
+      )}
+      {c.has_equipment && !user && (
+        <section style={{ padding: "32px 22px 0", maxWidth: 720, margin: "0 auto" }}>
+          <div style={{ padding: "20px 22px", borderRadius: 14, border: "1px dashed rgba(143,184,214,0.35)", textAlign: "center" }}>
+            <div className="e-mono" style={{ color: "var(--sky)", fontSize: 10, letterSpacing: "0.25em" }}>STUDIO MAP</div>
+            <p style={{ marginTop: 8, fontSize: 14, color: "rgba(242,238,232,0.7)" }}>
+              <Link href={`/login?next=/classes/${c.id}`} className="e-mono" style={{ color: "var(--sky)" }}>SIGN IN</Link> to pick your reformer.
+            </p>
+          </div>
+        </section>
+      )}
 
       {/* SPECS + DETAILS */}
       <section style={{ padding: "48px 22px 32px", maxWidth: 1180, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 28 }}>
@@ -235,7 +276,8 @@ export default async function ClassDetail({
           <h2 className="e-display glow" style={{ fontSize: "clamp(36px, 7vw, 56px)", marginTop: 14, lineHeight: 0.95 }}>HOLD A SPOT.</h2>
           <div style={{ marginTop: 24, display: "flex", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
             {!user && <Link href={`/login?next=/classes/${c.id}`} className="btn btn-sky" style={{ minWidth: 200 }}>SIGN IN TO RESERVE</Link>}
-            {user && !isReserved && !isFull && (
+            {/* Equipment classes route reserves through the SpotPicker — skip the duplicate button. */}
+            {user && !isReserved && !isFull && !c.has_equipment && (
               <form action={bookClassAction}>
                 <input type="hidden" name="class_id" value={c.id} />
                 <input type="hidden" name="requires_payment" value={String(c.requires_payment)} />

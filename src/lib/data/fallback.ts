@@ -80,6 +80,7 @@ export const fallbackClasses: ClassRow[] = (() => {
       if (slot.weekendOnly && !isWeekend) continue;
       const start = new Date(date);
       start.setHours(slot.hour, slot.minute, 0, 0);
+      const hasEquipment = slot.kind === "reformer";
       out.push({
         id: `cls-${slot.slug}-${dayOffset}`,
         slug: `${slot.slug}-${dayOffset}`,
@@ -99,6 +100,8 @@ export const fallbackClasses: ClassRow[] = (() => {
         requires_payment: slot.price_cents > 0,
         summary: slot.summary,
         what_to_bring: slot.what_to_bring,
+        has_equipment: hasEquipment,
+        mirrored_layout: hasEquipment,
       });
     }
   }
