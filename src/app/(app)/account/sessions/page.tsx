@@ -7,6 +7,7 @@ import { getUser } from "@/lib/auth";
 import { listClientTrainerBookings } from "@/lib/data/queries";
 import { isSessionJoinable } from "@/lib/video/provider";
 import { cancelTrainerBookingAction } from "@/lib/trainer-booking-actions";
+import { AutoRefresh } from "@/components/site/AutoRefresh";
 import { routines } from "@/lib/data/routines";
 import type { TrainerBookingStatus } from "@/lib/data/types";
 
@@ -53,6 +54,7 @@ export default async function ClientSessionsPage({ searchParams }: { searchParam
   return (
     <div className="app app-dark" style={{ height: "100dvh", background: "var(--ink)", color: "var(--bone)" }}>
       <Navbar authed={true} />
+      <AutoRefresh interval={45000} />
       <div className="app-scroll" style={{ paddingBottom: 100 }}>
         <div style={{ padding: "20px 22px 4px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <Link href="/account" aria-label="Back" style={{ color: "var(--bone)", display: "inline-flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
@@ -159,6 +161,9 @@ function BookingCard({ booking, trainer, compact }: { booking: import("@/lib/dat
             JOIN →
           </Link>
         )}
+        <Link href={`/booking/${booking.id}`} className="e-mono" style={{ color: "var(--sky)", fontSize: 10, letterSpacing: "0.18em", textDecoration: "none" }}>
+          DETAILS →
+        </Link>
         {(booking.status === "pending_trainer" || booking.status === "confirmed") && (
           <>
             <a

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { Icon } from "@/components/ui/Icon";
 import { Photo } from "@/components/ui/Photo";
 import { CoachShell } from "@/components/site/CoachShell";
+import { SubmitButton } from "@/components/site/SubmitButton";
 import { getTrainerForCurrentUser } from "@/lib/trainer-auth";
 import { updateCoachProfileAction } from "@/lib/coach-profile-actions";
 
@@ -72,7 +73,9 @@ export default async function CoachProfileEditPage({ searchParams }: { searchPar
             <input type="file" name="hero_file" accept="image/*" className="ta-input" />
           </Field>
 
-          <button type="submit" className="btn btn-sky" style={{ alignSelf: "flex-start", padding: "12px 22px" }}>SAVE</button>
+          <div style={{ alignSelf: "flex-start" }}>
+            <SubmitButton>SAVE</SubmitButton>
+          </div>
         </form>
       </div>
 

@@ -38,11 +38,30 @@ export default async function CoachConnectPage({ searchParams }: { searchParams:
           Element 78 keeps 20% of every booking. The remaining 80% goes straight to your bank via Stripe — usually within 2 business days. Set up your account once and you're done.
         </p>
 
-        {searchParams.error && (
+        {searchParams.error && /signed up for connect/i.test(searchParams.error) ? (
+          <div style={{ marginTop: 18, padding: 18, borderRadius: 14, background: "rgba(243,200,99,0.08)", border: "1px solid rgba(243,200,99,0.45)" }}>
+            <div className="e-mono" style={{ color: "rgb(243,200,99)", fontSize: 10, letterSpacing: "0.2em" }}>⚠ CONNECT NOT ENABLED YET</div>
+            <p style={{ marginTop: 10, fontSize: 14, color: "rgba(242,238,232,0.85)", lineHeight: 1.6 }}>
+              Stripe Connect needs to be enabled on the Element 78 platform account once before any coach can onboard. The platform owner can enable it in a single click.
+            </p>
+            <a
+              href="https://dashboard.stripe.com/connect/overview"
+              target="_blank"
+              rel="noreferrer"
+              className="btn btn-sky"
+              style={{ marginTop: 14, display: "inline-block", padding: "10px 18px" }}
+            >
+              ENABLE CONNECT IN STRIPE DASHBOARD →
+            </a>
+            <div className="e-mono" style={{ marginTop: 12, color: "rgba(242,238,232,0.55)", fontSize: 9, letterSpacing: "0.16em" }}>
+              ONCE ENABLED · COME BACK AND HIT CREATE STRIPE ACCOUNT
+            </div>
+          </div>
+        ) : searchParams.error ? (
           <div className="e-mono" style={{ marginTop: 18, padding: "12px 14px", borderRadius: 12, background: "rgba(232,181,168,0.12)", border: "1px solid var(--rose)", color: "var(--rose)", fontSize: 11, letterSpacing: "0.16em", lineHeight: 1.5, wordBreak: "break-word" }}>
             ✗ {searchParams.error.replace(/_/g, " ").toUpperCase()}
           </div>
-        )}
+        ) : null}
 
         <div style={{ marginTop: 26, padding: 22, borderRadius: 16, background: "var(--haze)", border: "1px solid rgba(143,184,214,0.2)" }}>
           <div className="e-mono" style={{ color: "rgba(242,238,232,0.55)", fontSize: 10, letterSpacing: "0.2em" }}>STATUS</div>

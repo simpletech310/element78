@@ -7,6 +7,7 @@ import type { Trainer } from "@/lib/data/types";
 const TABS: Array<{ label: string; href: string; match?: (path: string) => boolean }> = [
   { label: "DASHBOARD", href: "/trainer/dashboard", match: (p) => p === "/trainer/dashboard" },
   { label: "CLIENTS", href: "/trainer/clients", match: (p) => p.startsWith("/trainer/clients") },
+  { label: "CHECK-IN", href: "/trainer/checkin", match: (p) => p === "/trainer/checkin" },
   { label: "EARNINGS", href: "/trainer/earnings", match: (p) => p === "/trainer/earnings" },
   { label: "CLASSES", href: "/trainer/classes", match: (p) => p.startsWith("/trainer/classes") },
   { label: "PROGRAMS", href: "/trainer/programs", match: (p) => p.startsWith("/trainer/programs") },
@@ -110,9 +111,17 @@ export function CoachShell({
         </div>
       )}
 
-      <main style={{ maxWidth: 1200, margin: "0 auto", padding: "26px 22px 100px" }}>
+      <main className="coach-main" style={{ maxWidth: 1200, margin: "0 auto", padding: "26px 22px 100px" }}>
         {children}
       </main>
+
+      <style>{`
+        .coach-main { animation: coach-fade 220ms cubic-bezier(.2,.8,.2,1); }
+        @keyframes coach-fade {
+          from { opacity: 0; transform: translateY(4px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </div>
   );
 }

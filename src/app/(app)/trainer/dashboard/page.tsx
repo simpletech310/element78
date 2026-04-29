@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CoachShell, CoachSection, CoachEmpty } from "@/components/site/CoachShell";
 import { Time } from "@/components/site/Time";
+import { AutoRefresh } from "@/components/site/AutoRefresh";
 import { getTrainerForCurrentUser } from "@/lib/trainer-auth";
 import { listTrainerInbox, listProfilesByIds, listTrainerOwnedSessions, getTrainerEarnings } from "@/lib/data/queries";
 import { isSessionJoinable } from "@/lib/video/provider";
@@ -43,6 +44,7 @@ export default async function CoachDashboardPage({ searchParams }: { searchParam
 
   return (
     <CoachShell coach={coach} pathname="/trainer/dashboard">
+      <AutoRefresh interval={30000} />
       {flash && (
         <div className="e-mono" style={{ marginBottom: 24, padding: "12px 14px", borderRadius: 12, background: "rgba(143,184,214,0.1)", border: "1px solid var(--sky)", color: "var(--sky)", fontSize: 11, letterSpacing: "0.18em" }}>
           ✓ {flash}
@@ -68,7 +70,7 @@ export default async function CoachDashboardPage({ searchParams }: { searchParam
       {/* INBOX */}
       <CoachSection index="01" title={`REQUESTS · ${pending.length} PENDING`} hint="Members asking for a 1-on-1. Accept to lock in the slot.">
         {pending.length === 0 ? (
-          <CoachEmpty body="No new requests." />
+          <CoachEmpty body="Inbox is clear. New 1-on-1 requests land here the moment a member books one." />
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {pending.map(b => <PendingRow key={b.id} booking={b} clientName={profiles[b.user_id]?.display_name ?? "Member"} />)}
@@ -79,7 +81,7 @@ export default async function CoachDashboardPage({ searchParams }: { searchParam
       {/* UPCOMING */}
       <CoachSection index="02" title={`UPCOMING · ${upcoming.length}`} hint="Confirmed 1-on-1 sessions on the books.">
         {upcoming.length === 0 ? (
-          <CoachEmpty body="No confirmed sessions on the books." />
+          <CoachEmpty body="Nothing confirmed yet. As soon as you accept a request from the inbox above, it'll show up here with a JOIN button." />
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {upcoming.map(b => <UpcomingRow key={b.id} booking={b} clientName={profiles[b.user_id]?.display_name ?? "Member"} />)}
@@ -211,11 +213,10 @@ function UpcomingRow({ booking, clientName }: { booking: TrainerBooking; clientN
           <Link href={`/train/session/${booking.id}`} className="btn btn-sky" style={{ padding: "8px 14px", fontSize: 11 }}>
             JOIN →
           </Link>
-        ) : (
-          <Link href={`/train/session/${booking.id}`} className="e-mono" style={{ color: "var(--sky)", fontSize: 10, letterSpacing: "0.18em", textDecoration: "none" }}>
-            DETAIL →
-          </Link>
-        )}
+        ) : null}
+        <Link href={`/booking/${booking.id}`} className="e-mono" style={{ color: "var(--sky)", fontSize: 10, letterSpacing: "0.18em", textDecoration: "none" }}>
+          DETAILS →
+        </Link>
         {canMarkComplete && (
           <form action={completeTrainerBookingAction}>
             <input type="hidden" name="booking_id" value={booking.id} />

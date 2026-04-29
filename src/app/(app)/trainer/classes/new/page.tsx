@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
 import { CoachShell } from "@/components/site/CoachShell";
+import { DateTimeField } from "@/components/site/DateTimeField";
+import { SubmitButton } from "@/components/site/SubmitButton";
 import { getTrainerForCurrentUser } from "@/lib/trainer-auth";
 import { createClassAction } from "@/lib/class-create-actions";
 
@@ -63,9 +65,7 @@ export default async function NewClassPage({ searchParams }: { searchParams: { e
             <Field label="DURATION (MIN) *">
               <input name="duration_min" type="number" min={5} max={180} defaultValue={45} required className="ta-input" />
             </Field>
-            <Field label="STARTS AT *">
-              <input name="starts_at" type="datetime-local" required className="ta-input" />
-            </Field>
+            <DateTimeField name="starts_at" label="STARTS AT" required />
           </div>
 
           {/* Equipment toggle controls how the rest of the form behaves. We
@@ -106,7 +106,7 @@ export default async function NewClassPage({ searchParams }: { searchParams: { e
           </Field>
 
           <div style={{ marginTop: 6 }}>
-            <button type="submit" className="btn btn-sky" style={{ padding: "12px 22px" }}>PUBLISH CLASS →</button>
+            <SubmitButton pendingLabel="PUBLISHING…">PUBLISH CLASS →</SubmitButton>
           </div>
         </form>
       </div>

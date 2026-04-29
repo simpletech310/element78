@@ -80,7 +80,7 @@ export default async function HomePage() {
           </p>
 
           <p className="reveal reveal-d3" style={{ marginTop: 14, fontSize: 15, color: "rgba(242,238,232,0.7)", maxWidth: 460, lineHeight: 1.6, fontWeight: 300 }}>
-            Lift, flow, run, recover. A full-floor gym, an AI studio, and trainers — human and AI — who are top of the game. Built for the women the wellness industry forgot.
+            Lift, flow, run, recover. A full-floor gym, a Studio of guided sessions, and elite coaches who actually answer the phone. Tech-forward training built for the women the wellness industry forgot.
           </p>
 
           <div className="reveal reveal-d4" style={{ marginTop: "auto", paddingTop: 36, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>

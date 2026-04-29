@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { CoachShell, CoachSection } from "@/components/site/CoachShell";
+import { DateTimeField } from "@/components/site/DateTimeField";
 import { getTrainerForCurrentUser } from "@/lib/trainer-auth";
 import {
   getTrainerSessionSettings,
@@ -164,13 +165,9 @@ export default async function CoachAvailabilityPage({ searchParams }: { searchPa
             One-off blocks (vacation, sick day, training week). Members won't see these slots on your booking page.
           </p>
 
-          <form action={createAvailabilityBlockAction} style={{ marginTop: 14, padding: 14, borderRadius: 12, background: "var(--haze)", border: "1px solid rgba(143,184,214,0.18)", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
-            <Field label="START *">
-              <input type="datetime-local" name="starts_at" required className="ta-input" />
-            </Field>
-            <Field label="END *">
-              <input type="datetime-local" name="ends_at" required className="ta-input" />
-            </Field>
+          <form action={createAvailabilityBlockAction} style={{ marginTop: 14, padding: 14, borderRadius: 12, background: "var(--haze)", border: "1px solid rgba(143,184,214,0.18)", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
+            <DateTimeField name="starts_at" label="START" required />
+            <DateTimeField name="ends_at" label="END" required />
             <Field label="REASON" full>
               <input name="reason" placeholder="e.g. 'Out of town' (optional)" className="ta-input" />
             </Field>

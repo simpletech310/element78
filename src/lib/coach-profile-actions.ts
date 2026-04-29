@@ -49,11 +49,24 @@ export async function updateCoachProfileAction(formData: FormData) {
   if (avatarUrl) updates.avatar_url = avatarUrl;
   if (heroUrl) updates.hero_image = heroUrl;
 
-  const { error } = await sb.from("trainers").update(updates).eq("id", trainer.id);
+  // Use .select() so RLS rejections surface as 0 returned rows instead of
+  // the misleading silent error: null. We then re-check that the new name
+  // actually landed before claiming success.
+  const { data: updated, error } = await sb
+    .from("trainers")
+    .update(updates)
+    .eq("id", trainer.id)
+    .select("id, name")
+    .maybeSingle();
   if (error) redirect(`/trainer/profile?error=${encodeURIComponent(error.message)}`);
+  if (!updated || (updated as { name?: string }).name !== name) {
+    redirect("/trainer/profile?error=update_blocked_check_rls");
+  }
 
   revalidatePath("/trainer/profile");
   revalidatePath(`/trainers/${trainer.slug}`);
   revalidatePath("/trainers");
+  revalidatePath("/account");
+  revalidatePath("/trainer/dashboard");
   redirect("/trainer/profile?saved=1");
 }

@@ -500,6 +500,67 @@ export async function completeTrainerBookingAction(formData: FormData) {
   redirect(`/trainer/dashboard?completed=${bookingId}`);
 }
 
+/**
+ * Coach manually kicks off a 1-on-1 call ahead of acceptance/scheduled time.
+ * Idempotent — provisions the Daily room only if missing, then redirects the
+ * coach into /train/session/[id]. The client lands there on their own when
+ * they click JOIN.
+ */
+export async function initiateCallAction(formData: FormData) {
+  const bookingId = String(formData.get("booking_id") ?? "").trim();
+  const trainer = await getTrainerOwningBooking(bookingId);
+  if (!trainer) redirect("/trainer/dashboard?error=unauthorized");
+
+  const booking = await getTrainerBooking(bookingId);
+  if (!booking) redirect("/trainer/dashboard?error=not_found");
+  if (booking.mode !== "video") redirect(`/booking/${bookingId}?error=not_a_video_session`);
+
+  const sb = createClient();
+
+  // Provision room if it doesn't exist on the parent session yet.
+  let roomUrl = booking.video_room_url;
+  if (!roomUrl && booking.session_id) {
+    const { data: sess } = await sb.from("trainer_sessions").select("video_room_url").eq("id", booking.session_id).maybeSingle();
+    roomUrl = (sess as { video_room_url: string | null } | null)?.video_room_url ?? null;
+  }
+  if (!roomUrl) {
+    const room = await getVideoProvider().createRoom({
+      bookingId: booking.id,
+      startsAt: new Date(booking.starts_at),
+      endsAt: new Date(booking.ends_at),
+      label: `Element 78 1-on-1`,
+    });
+    await sb
+      .from("trainer_bookings")
+      .update({
+        video_provider: room.provider,
+        video_room_url: room.url,
+        video_room_name: room.name,
+        status: booking.status === "pending_trainer" ? "confirmed" : booking.status,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", bookingId);
+    if (booking.session_id) {
+      await sb
+        .from("trainer_sessions")
+        .update({
+          video_provider: room.provider,
+          video_room_url: room.url,
+          video_room_name: room.name,
+          status: "confirmed",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", booking.session_id);
+    }
+    await notifyClientOfBookingDecision({ ...booking, status: "confirmed" });
+  }
+
+  revalidatePath(`/booking/${bookingId}`);
+  revalidatePath(`/account/sessions`);
+  revalidatePath(`/trainer/dashboard`);
+  redirect(`/train/session/${bookingId}`);
+}
+
 /* -------------------------------------------------------------------------- */
 /*  Availability management (trainer-only)                                    */
 /* -------------------------------------------------------------------------- */

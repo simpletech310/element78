@@ -184,7 +184,7 @@ export function RoutinePlayer({ routine, programContext }: { routine: Routine; p
   if (!current) return null;
 
   return (
-    <div className="app app-dark" style={{ height: "100dvh", background: "var(--ink)", color: "var(--bone)", display: "flex", flexDirection: "column" }}>
+    <div className="app app-dark" style={{ minHeight: "100dvh", background: "var(--ink)", color: "var(--bone)", display: "flex", flexDirection: "column" }}>
       {/* Top bar */}
       <div style={{ flexShrink: 0, padding: "20px 22px 10px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <Link href="/train" aria-label="Back" style={{ width: 42, height: 42, borderRadius: 999, background: "rgba(143,184,214,0.06)", color: "var(--bone)", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid rgba(143,184,214,0.25)", textDecoration: "none" }}>
@@ -210,9 +210,11 @@ export function RoutinePlayer({ routine, programContext }: { routine: Routine; p
         </div>
       </div>
 
-      {/* Video stage */}
-      <div style={{ flex: 1, padding: "4px 22px 0", display: "flex", flexDirection: "column", minHeight: 0 }}>
-        <div style={{ position: "relative", borderRadius: 22, overflow: "hidden", background: "#000", flex: 1, minHeight: 0 }}>
+      {/* Video stage — explicit 16:9 ratio so the video scales cleanly on
+          every viewport and the playlist below it stays scroll-friendly.
+          minHeight ensures the stage doesn't collapse on tall narrow screens. */}
+      <div style={{ flexShrink: 0, padding: "4px 22px 0", display: "flex", flexDirection: "column" }}>
+        <div style={{ position: "relative", borderRadius: 22, overflow: "hidden", background: "#000", width: "100%", aspectRatio: "16 / 9", minHeight: 220, maxHeight: "60vh" }}>
           <video
             ref={videoRef}
             playsInline
@@ -323,7 +325,7 @@ export function RoutinePlayer({ routine, programContext }: { routine: Routine; p
             <span>PLAYLIST · {routine.exercises.length} MOVES</span>
             <span style={{ color: "var(--sky)" }}>{exerciseIdx + 1} / {routine.exercises.length}</span>
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 280, overflowY: "auto", paddingRight: 4 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, paddingRight: 4 }}>
             {routine.exercises.map((ex, i) => {
               const isPast = i < exerciseIdx;
               const isCurrent = i === exerciseIdx;

@@ -49,7 +49,7 @@ export default async function JoinPage({ searchParams }: { searchParams: { error
             However you need to move — we got you.
           </p>
           <p className="reveal reveal-d3" style={{ marginTop: 14, fontSize: 14, color: "rgba(242,238,232,0.7)", maxWidth: 420, lineHeight: 1.6 }}>
-            Lift, flow, run, recover. Trainers — human and AI — top of the game. The wellness industry forgot us, so we built our own.
+            Lift, flow, run, recover. Coaches who answer the phone, a Studio of guided sessions, training that's tech-forward without forgetting it's still about you. The wellness industry forgot us — we built our own.
           </p>
         </div>
       </section>

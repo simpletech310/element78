@@ -29,7 +29,7 @@ export default async function CoachProgramsListPage({ searchParams }: { searchPa
 
       <div style={{ marginTop: 26, display: "flex", flexDirection: "column", gap: 10 }}>
         {programs.length === 0 ? (
-          <CoachEmpty body="No programs yet. Tap + NEW PROGRAM to author your first one." />
+          <CoachEmpty body="Author your first program. The day-by-day builder is on the next screen — drop in Studio routines, classes, or 1-on-1 days." />
         ) : (
           programs.map(p => (
             <Link

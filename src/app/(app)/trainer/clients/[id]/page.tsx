@@ -9,7 +9,9 @@ import { listTrainerClientHistory, listProfilesByIds } from "@/lib/data/queries"
 import { startThreadAction } from "@/lib/messaging-actions";
 import { getActiveCoachClientNote } from "@/lib/coach-notes";
 import { saveCoachClientNoteAction } from "@/lib/coach-notes-actions";
-import { fmtDollars } from "@/lib/format";
+import { fmtDollars, fmtDateShort } from "@/lib/format";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { isSessionJoinable } from "@/lib/video/provider";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +24,35 @@ export default async function CoachClientDetailPage({ params }: { params: { id: 
     listProfilesByIds([params.id]),
     getActiveCoachClientNote(coach.id, params.id),
   ]);
+
+  // Surface the next session (1-on-1 OR class) so the coach has one tap to it.
+  const now = Date.now();
+  const upcomingTrainer = history.bookings
+    .filter(b => ["pending_trainer", "confirmed"].includes(b.status) && new Date(b.starts_at).getTime() >= now - 30 * 60_000)
+    .sort((a, b) => a.starts_at.localeCompare(b.starts_at))[0] ?? null;
+  const upcomingClass = history.classBookings
+    .filter(({ booking, class: c }) => booking.status !== "cancelled" && new Date(c.starts_at).getTime() >= now - 30 * 60_000)
+    .sort((a, b) => a.class.starts_at.localeCompare(b.class.starts_at))[0] ?? null;
+  const nextSession =
+    upcomingTrainer && upcomingClass
+      ? new Date(upcomingTrainer.starts_at).getTime() < new Date(upcomingClass.class.starts_at).getTime()
+        ? { kind: "trainer" as const, booking: upcomingTrainer }
+        : { kind: "class" as const, ...upcomingClass }
+      : upcomingTrainer
+        ? { kind: "trainer" as const, booking: upcomingTrainer }
+        : upcomingClass
+          ? { kind: "class" as const, ...upcomingClass }
+          : null;
+
+  // Recent check-in history (any source).
+  const admin = createAdminClient();
+  const { data: checkIns } = await admin
+    .from("gym_check_ins")
+    .select("id, source, checked_in_at, note")
+    .eq("user_id", params.id)
+    .order("checked_in_at", { ascending: false })
+    .limit(10);
+  const checkInRows = (checkIns as Array<{ id: string; source: string; checked_in_at: string; note: string | null }>) ?? [];
   const profile = profiles[params.id] ?? { display_name: "Member", avatar_url: null, handle: null };
 
   const totalInteractions = history.bookings.length + history.classBookings.length + history.enrollments.length;
@@ -55,6 +86,66 @@ export default async function CoachClientDetailPage({ params }: { params: { id: 
           <button type="submit" className="btn btn-sky" style={{ padding: "12px 22px" }}>MESSAGE →</button>
         </form>
       </div>
+
+        {/* NEXT SESSION */}
+        {nextSession && (
+          <Section title="NEXT SESSION">
+            {nextSession.kind === "trainer" ? (
+              <Link
+                href={`/booking/${nextSession.booking.id}`}
+                className="lift"
+                style={{
+                  display: "flex", gap: 14, padding: 18, borderRadius: 14,
+                  background: "linear-gradient(135deg, rgba(143,184,214,0.18), rgba(46,127,176,0.04))",
+                  border: "1px solid var(--sky)",
+                  color: "var(--bone)", textDecoration: "none", alignItems: "center", flexWrap: "wrap",
+                }}
+              >
+                <div style={{ minWidth: 110, paddingRight: 14, borderRight: "1px solid rgba(143,184,214,0.18)" }}>
+                  <div className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.2em" }}>
+                    <Time iso={nextSession.booking.starts_at} format="date" />
+                  </div>
+                  <div style={{ fontFamily: "var(--font-display)", fontSize: 22, lineHeight: 1, marginTop: 6 }}>
+                    <Time iso={nextSession.booking.starts_at} format="time" />
+                  </div>
+                </div>
+                <div style={{ flex: 1, minWidth: 180 }}>
+                  <div style={{ fontFamily: "var(--font-display)", fontSize: 18 }}>1-ON-1 · {nextSession.booking.mode === "video" ? "VIDEO" : "IN PERSON"}</div>
+                  <div className="e-mono" style={{ marginTop: 6, color: "rgba(242,238,232,0.55)", fontSize: 10, letterSpacing: "0.18em" }}>
+                    {nextSession.booking.status.replace(/_/g, " ").toUpperCase()} · {nextSession.booking.paid_status.toUpperCase()}
+                  </div>
+                </div>
+                {isSessionJoinable(nextSession.booking.starts_at, nextSession.booking.ends_at) ? (
+                  <span className="btn btn-sky" style={{ padding: "10px 18px", fontSize: 11 }}>JOIN →</span>
+                ) : (
+                  <span className="e-mono" style={{ color: "var(--sky)", fontSize: 10, letterSpacing: "0.2em" }}>OPEN →</span>
+                )}
+              </Link>
+            ) : (
+              <div style={{
+                display: "flex", gap: 14, padding: 18, borderRadius: 14,
+                background: "linear-gradient(135deg, rgba(143,184,214,0.18), rgba(46,127,176,0.04))",
+                border: "1px solid var(--sky)", alignItems: "center", flexWrap: "wrap",
+              }}>
+                <div style={{ minWidth: 110, paddingRight: 14, borderRight: "1px solid rgba(143,184,214,0.18)" }}>
+                  <div className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.2em" }}>
+                    <Time iso={nextSession.class.starts_at} format="date" />
+                  </div>
+                  <div style={{ fontFamily: "var(--font-display)", fontSize: 22, lineHeight: 1, marginTop: 6 }}>
+                    <Time iso={nextSession.class.starts_at} format="time" />
+                  </div>
+                </div>
+                <div style={{ flex: 1, minWidth: 180 }}>
+                  <div style={{ fontFamily: "var(--font-display)", fontSize: 18 }}>{nextSession.class.name.toUpperCase()}</div>
+                  <div className="e-mono" style={{ marginTop: 6, color: "rgba(242,238,232,0.55)", fontSize: 10, letterSpacing: "0.18em" }}>
+                    CLASS · {nextSession.booking.status.toUpperCase()}
+                  </div>
+                </div>
+                <Link href={`/trainer/checkin?user=${params.id}`} className="btn btn-sky" style={{ padding: "10px 18px", fontSize: 11 }}>CHECK IN →</Link>
+              </div>
+            )}
+          </Section>
+        )}
 
         {/* COACH NOTES (private) */}
         <Section title="PRIVATE NOTES · COACH ONLY">
@@ -160,6 +251,30 @@ export default async function CoachClientDetailPage({ params }: { params: { id: 
                 </div>
               );
             })
+          )}
+        </Section>
+
+        {/* CHECK-IN HISTORY */}
+        <Section title={`CHECK-IN HISTORY · ${checkInRows.length}`}>
+          {checkInRows.length === 0 ? (
+            <Empty body="No gym check-ins yet — they'll appear here once this member checks in or you do it for them from /trainer/checkin." />
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {checkInRows.map(c => (
+                <div key={c.id} className="e-mono" style={{
+                  display: "flex", justifyContent: "space-between", alignItems: "center",
+                  gap: 10, padding: "10px 12px", borderRadius: 10,
+                  background: "var(--haze)", border: "1px solid rgba(255,255,255,0.04)",
+                  fontSize: 11, letterSpacing: "0.14em",
+                }}>
+                  <span><Time iso={c.checked_in_at} format="datetime" /></span>
+                  <span style={{ color: "rgba(242,238,232,0.55)" }}>
+                    SOURCE · {c.source.toUpperCase()}
+                    {c.note ? ` · "${c.note.slice(0, 40)}${c.note.length > 40 ? "…" : ""}"` : ""}
+                  </span>
+                </div>
+              ))}
+            </div>
           )}
         </Section>
     </CoachShell>

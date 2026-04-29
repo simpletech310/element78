@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
 import { CoachShell } from "@/components/site/CoachShell";
+import { DateTimeField } from "@/components/site/DateTimeField";
+import { SubmitButton } from "@/components/site/SubmitButton";
 import { getTrainerForCurrentUser } from "@/lib/trainer-auth";
 import { createGroupSessionAction } from "@/lib/trainer-session-actions";
 import { routines } from "@/lib/data/routines";
@@ -32,12 +34,8 @@ export default async function NewGroupSessionPage({ searchParams }: { searchPara
           <Field label="DESCRIPTION">
             <textarea name="description" rows={3} placeholder="What this group session covers" className="ta-input" style={{ resize: "vertical" }} />
           </Field>
-          <Field label="STARTS AT *">
-            <input name="starts_at" type="datetime-local" required className="ta-input" />
-          </Field>
-          <Field label="ENDS AT *">
-            <input name="ends_at" type="datetime-local" required className="ta-input" />
-          </Field>
+          <DateTimeField name="starts_at" label="STARTS AT" required />
+          <DateTimeField name="ends_at" label="ENDS AT" required />
           <Field label="MODE">
             <select name="mode" defaultValue="video" className="ta-input">
               <option value="video">Video</option>
@@ -62,7 +60,7 @@ export default async function NewGroupSessionPage({ searchParams }: { searchPara
           </Field>
 
           <div style={{ marginTop: 6 }}>
-            <button type="submit" className="btn btn-sky" style={{ padding: "12px 22px" }}>CREATE GROUP SESSION →</button>
+            <SubmitButton pendingLabel="CREATING…">CREATE GROUP SESSION →</SubmitButton>
           </div>
         </form>
       </div>
