@@ -184,7 +184,9 @@ export function RoutinePlayer({ routine, programContext }: { routine: Routine; p
   if (!current) return null;
 
   return (
-    <div className="app app-dark" style={{ minHeight: "100dvh", background: "var(--ink)", color: "var(--bone)", display: "flex", flexDirection: "column" }}>
+    // Don't use the `app` class here — it sets overflow:hidden which clips
+    // the playlist. Plain scrolling div keeps everything reachable.
+    <div style={{ minHeight: "100dvh", background: "var(--ink)", color: "var(--bone)", display: "flex", flexDirection: "column" }}>
       {/* Top bar */}
       <div style={{ flexShrink: 0, padding: "20px 22px 10px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <Link href="/train" aria-label="Back" style={{ width: 42, height: 42, borderRadius: 999, background: "rgba(143,184,214,0.06)", color: "var(--bone)", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid rgba(143,184,214,0.25)", textDecoration: "none" }}>
@@ -241,24 +243,26 @@ export function RoutinePlayer({ routine, programContext }: { routine: Routine; p
             </span>
           </div>
 
-          {/* Bottom: exercise label + cue */}
-          <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, padding: "20px 18px", background: "linear-gradient(180deg, transparent 0%, rgba(10,14,20,0.95) 70%)" }}>
-            <div className="e-mono" style={{ color: "var(--sky)", fontSize: 10, letterSpacing: "0.25em" }}>
-              MOVE {(exerciseIdx + 1).toString().padStart(2, "0")} / {routine.exercises.length}
-            </div>
-            <div style={{ fontFamily: "var(--font-display)", fontSize: 28, lineHeight: 0.95, marginTop: 6, letterSpacing: "0.02em" }}>
-              {current.name}
-            </div>
-            <div style={{ fontSize: 13, lineHeight: 1.5, color: "rgba(242,238,232,0.78)", marginTop: 10, fontStyle: "italic", fontFamily: "var(--font-serif)" }}>
-              {current.cue}
-            </div>
-          </div>
-
           {loadState === "loading" && (
             <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(10,14,20,0.4)", backdropFilter: "blur(2px)", pointerEvents: "none" }}>
               <span className="e-mono" style={{ color: "rgba(242,238,232,0.7)", fontSize: 9, letterSpacing: "0.25em" }}>LOADING…</span>
             </div>
           )}
+        </div>
+
+        {/* Move title + cue · sits BELOW the video so the full frame stays
+            visible. Keeps the same display-font + serif-italic treatment
+            the overlay used. */}
+        <div style={{ marginTop: 14 }}>
+          <div className="e-mono" style={{ color: "var(--sky)", fontSize: 10, letterSpacing: "0.25em" }}>
+            MOVE {(exerciseIdx + 1).toString().padStart(2, "0")} / {routine.exercises.length}
+          </div>
+          <div style={{ fontFamily: "var(--font-display)", fontSize: 28, lineHeight: 0.95, marginTop: 6, letterSpacing: "0.02em" }}>
+            {current.name}
+          </div>
+          <div style={{ fontSize: 13, lineHeight: 1.5, color: "rgba(242,238,232,0.78)", marginTop: 10, fontStyle: "italic", fontFamily: "var(--font-serif)" }}>
+            {current.cue}
+          </div>
         </div>
       </div>
 
