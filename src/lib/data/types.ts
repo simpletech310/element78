@@ -313,3 +313,89 @@ export type Post = {
   meta: Record<string, unknown>;
   created_at: string;
 };
+
+/* -------------------------------------------------------------------------- */
+/*  V1 foundation (migration 0018)                                            */
+/* -------------------------------------------------------------------------- */
+
+export type PayoutStatus = "pending" | "sent" | "reversed" | "failed";
+
+export type Payout = {
+  id: string;
+  trainer_id: string;
+  purchase_id: string;
+  gross_cents: number;
+  platform_fee_cents: number;
+  trainer_cents: number;
+  stripe_transfer_id: string | null;
+  status: PayoutStatus;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SubscriptionTier = "free" | "basic" | "premium" | "elite";
+export type SubscriptionStatus =
+  | "incomplete"
+  | "trialing"
+  | "active"
+  | "past_due"
+  | "canceled"
+  | "paused";
+
+export type SubscriptionPlan = {
+  tier: SubscriptionTier;
+  stripe_product_id: string | null;
+  stripe_price_id: string | null;
+  price_cents: number;
+  active: boolean;
+  display_name: string;
+  blurb: string | null;
+  features: string[];
+};
+
+export type Subscription = {
+  id: string;
+  user_id: string;
+  tier: SubscriptionTier;
+  stripe_subscription_id: string | null;
+  stripe_customer_id: string | null;
+  status: SubscriptionStatus;
+  current_period_end: string | null;
+  cancel_at_period_end: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type WaiverKind = "parq" | "liability" | "minor";
+
+export type Waiver = {
+  id: string;
+  user_id: string;
+  kind: WaiverKind;
+  signed_at: string;
+  signature_text: string;
+  parq_answers: Record<string, unknown> | null;
+  ip_address: string | null;
+  user_agent: string | null;
+  expires_at: string | null;
+};
+
+export type AccountDeletion = {
+  id: string;
+  user_id: string;
+  requested_at: string;
+  scheduled_for: string;
+  completed_at: string | null;
+  cancelled_at: string | null;
+  reason: string | null;
+};
+
+export type AdminAuditEntry = {
+  id: string;
+  admin_user_id: string;
+  action: string;
+  target_type: string | null;
+  target_id: string | null;
+  details: Record<string, unknown> | null;
+  created_at: string;
+};
