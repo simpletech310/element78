@@ -7,17 +7,12 @@ import { Icon } from "@/components/ui/Icon";
 import { listTrainers } from "@/lib/data/queries";
 import { getUser } from "@/lib/auth";
 
-const aiAvatars = [
-  { slug: "zuri", name: "ZURI", spec: "Pilates · Reformer · Mobility", img: "/assets/blue-hair-gym.jpg", note: "Slow tempo, hard work. Modeled on Kai's signature flow." },
-  { slug: "mari", name: "MARI", spec: "HIIT · Functional · Conditioning", img: "/assets/dumbbell-street.jpg", note: "Heavy basics, quick rounds. Modeled on Amara." },
-  { slug: "leila", name: "LEILA", spec: "Yoga · Breathwork · Recovery", img: "/assets/pilates-pink.jpg", note: "Breath-led restorative flows. Soft tempo, deeper holds." },
-];
-
 export default async function TrainersPage() {
   const [allTrainers, user] = await Promise.all([listTrainers(), getUser()]);
   const isAuthed = !!user;
-  // The "human team" rail is bookable coaches only. AI avatars are listed
-  // in the separate Studio section below via the `aiAvatars` constant.
+  // Every coach in the directory is a real bookable human now — no AI
+  // avatars on this page. (Studio routines still get rendered via their own
+  // path in /train.)
   const trainers = allTrainers.filter(t => !t.is_ai);
   const featured = trainers[0];
   const rest = trainers.slice(1);
@@ -27,12 +22,12 @@ export default async function TrainersPage() {
     <>
       {/* HERO */}
       <section style={{ position: "relative", padding: "60px 22px 28px", maxWidth: 1180, margin: "0 auto" }}>
-        <div className="e-mono reveal" style={{ color: "var(--sky)" }}>FAMILY · {trainers.length + aiAvatars.length} COACHES</div>
+        <div className="e-mono reveal" style={{ color: "var(--sky)" }}>COACH DIRECTORY · {trainers.length} ACTIVE</div>
         <h1 className="e-display reveal reveal-d1" style={{ fontSize: "clamp(48px, 11vw, 104px)", marginTop: 14, lineHeight: 0.92 }}>
-          THE TEAM.
+          BOOK A COACH.
         </h1>
-        <p className="reveal reveal-d2" style={{ marginTop: 18, fontSize: 16, color: "rgba(242,238,232,0.7)", maxWidth: 540, lineHeight: 1.6 }}>
-          Certified coaches on the Atlanta floor. Studio coaches in your phone. Same standard, same cues, all available to every member.
+        <p className="reveal reveal-d2" style={{ marginTop: 18, fontSize: 16, color: "rgba(242,238,232,0.7)", maxWidth: 560, lineHeight: 1.6 }}>
+          Real people, on the floor and on your screen. 1-on-1 video sessions, in-person privates, group sessions, classes — pick the coach, pick the time. Members book in two taps; non-members can browse and join when you&rsquo;re ready.
         </p>
       </section>
 
@@ -93,34 +88,48 @@ export default async function TrainersPage() {
         </div>
       </section>
 
-      {/* AI AVATARS */}
-      <section style={{ padding: "44px 22px 80px", maxWidth: 1180, margin: "0 auto" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 8 }}>
-          <div className="e-mono" style={{ color: "rgba(242,238,232,0.55)", letterSpacing: "0.2em" }}>STUDIO · IN-APP + IN-GYM</div>
-          <Link href="/train" className="e-mono" style={{ color: "var(--sky)", display: "inline-flex", alignItems: "center", gap: 6 }}>
-            OPEN STUDIO <Icon name="arrowUpRight" size={14} />
-          </Link>
-        </div>
-        <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 14 }}>
-          {aiAvatars.map(a => (
-            <div key={a.slug} className="lift" style={{ borderRadius: 18, overflow: "hidden", background: "var(--haze)", border: "1px solid rgba(143,184,214,0.18)" }}>
-              <div style={{ position: "relative", aspectRatio: "0.82" }}>
-                <Photo src={a.img} alt={a.name} className="zoom-on-hover" style={{ position: "absolute", inset: 0 }} />
-                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, transparent 45%, rgba(10,14,20,0.95) 100%)" }} />
-                <div style={{ position: "absolute", top: 14, left: 14, display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 11px", borderRadius: 999, background: "rgba(10,14,20,0.7)", backdropFilter: "blur(10px)" }}>
-                  <span style={{ width: 5, height: 5, borderRadius: "50%", background: "var(--sky)" }} />
-                  <span className="e-mono" style={{ fontSize: 9, color: "var(--sky)", letterSpacing: "0.2em" }}>STUDIO COACH</span>
-                </div>
-                <div style={{ position: "absolute", left: 18, right: 18, bottom: 18 }}>
-                  <div className="e-display" style={{ fontSize: 28, lineHeight: 0.95, letterSpacing: "0.02em" }}>{a.name}</div>
-                  <div className="e-mono" style={{ color: "var(--sky)", fontSize: 9, marginTop: 6, letterSpacing: "0.18em" }}>{a.spec.toUpperCase()}</div>
-                </div>
-              </div>
-              <div style={{ padding: "16px 18px" }}>
-                <p style={{ fontSize: 12.5, color: "rgba(242,238,232,0.7)", lineHeight: 1.55 }}>{a.note}</p>
-              </div>
+      {/* BECOME A COACH — apply to join the network. Lives in the same
+          slot the AI avatars used to occupy so the page rhythm holds. */}
+      <section style={{ padding: "60px 22px 80px", maxWidth: 1180, margin: "0 auto" }}>
+        <div
+          style={{
+            position: "relative",
+            borderRadius: 24,
+            overflow: "hidden",
+            border: "1px solid rgba(143,184,214,0.32)",
+            background: "linear-gradient(135deg, rgba(46,127,176,0.22), rgba(10,14,20,0.95))",
+            padding: "44px 32px",
+            display: "grid",
+            gridTemplateColumns: "minmax(0, 1fr) auto",
+            gap: 28,
+            alignItems: "center",
+          }}
+        >
+          <div>
+            <div className="e-mono" style={{ color: "var(--sky)", letterSpacing: "0.28em", fontSize: 11 }}>
+              ◉ COACHES WANTED
             </div>
-          ))}
+            <h2 className="e-display" style={{ fontSize: "clamp(32px, 5.5vw, 48px)", lineHeight: 0.95, marginTop: 12 }}>
+              TRAIN PEOPLE.<br/>GET PAID FOR IT.
+            </h2>
+            <p style={{ marginTop: 14, fontSize: 15, color: "rgba(242,238,232,0.78)", lineHeight: 1.6, maxWidth: 540, fontWeight: 300 }}>
+              Apply to join the Element 78 coaching network. Set your own price, your own hours, your own programs. We handle the booking flow, payments, and the tech — Daily for the call, Stripe for the payout. You bring the work.
+            </p>
+            <div style={{ marginTop: 20, display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <Link href="/coach/apply" className="btn btn-sky" style={{ padding: "13px 24px" }}>
+                APPLY TO COACH →
+              </Link>
+              <Link href="/faq#real-coaches" className="e-mono" style={{ alignSelf: "center", color: "rgba(242,238,232,0.7)", fontSize: 11, letterSpacing: "0.2em", textDecoration: "none", borderBottom: "1px solid rgba(242,238,232,0.25)", paddingBottom: 4 }}>
+                HOW IT WORKS
+              </Link>
+            </div>
+          </div>
+          <div className="e-mono" style={{ display: "grid", gap: 10, color: "rgba(242,238,232,0.85)", fontSize: 12, letterSpacing: "0.16em", alignSelf: "stretch", borderLeft: "1px solid rgba(143,184,214,0.25)", paddingLeft: 22 }}>
+            <PerkLine label="SET YOUR RATE" sub="$30 – $300+ / session" />
+            <PerkLine label="OWN YOUR SCHEDULE" sub="Hour blocks · 30-min slots" />
+            <PerkLine label="KEEP MOST OF IT" sub="Stripe payout to you direct" />
+            <PerkLine label="GROW YOUR LIST" sub="Programs · groups · 1-on-1" />
+          </div>
         </div>
       </section>
     </>
@@ -132,6 +141,15 @@ export default async function TrainersPage() {
       {body}
       <SiteFooter />
       {isAuthed && <FloatingTabBar />}
+    </div>
+  );
+}
+
+function PerkLine({ label, sub }: { label: string; sub: string }) {
+  return (
+    <div>
+      <div style={{ color: "var(--sky)" }}>{label}</div>
+      <div style={{ marginTop: 4, color: "rgba(242,238,232,0.65)", fontSize: 10, letterSpacing: "0.14em" }}>{sub}</div>
     </div>
   );
 }
