@@ -60,6 +60,16 @@ export async function insertNotificationRow(
       // eslint-disable-next-line no-console
       console.warn(`[notify] insert failed for ${kind}:`, error.message);
     }
+    // Best-effort web push fan-out. The in-app row is the source of truth;
+    // push is just the out-of-app channel. Never let a push failure cascade
+    // back into the booking action that triggered the notification.
+    try {
+      const { sendPushToUser } = await import("@/lib/push");
+      await sendPushToUser(userId, { title, body, url: actionUrl ?? "/home", kind });
+    } catch (pushErr) {
+      // eslint-disable-next-line no-console
+      console.warn(`[notify] push send threw for ${kind}:`, (pushErr as Error).message);
+    }
   } catch (err) {
     // eslint-disable-next-line no-console
     console.warn(`[notify] insert threw for ${kind}:`, err);

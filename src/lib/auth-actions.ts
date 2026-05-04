@@ -3,6 +3,24 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getTrainerForCurrentUser } from "@/lib/trainer-auth";
+
+/**
+ * After auth succeeds, decide where to land. If the request brought a real
+ * `next` (e.g. a deep link the user was trying to reach before login), honor
+ * it. Otherwise: coaches → /trainer/dashboard, members → /home. This keeps
+ * coaches from bouncing through the member home before navigating manually.
+ */
+async function postAuthRedirect(next: string | null): Promise<never> {
+  // Honor explicit deep links — except the bare defaults that callers pass
+  // when no specific destination was requested.
+  const isDefault = !next || next === "/home" || next === "/welcome";
+  if (!isDefault && next) {
+    redirect(next);
+  }
+  const trainer = await getTrainerForCurrentUser();
+  redirect(trainer ? "/trainer/dashboard" : (next ?? "/home"));
+}
 
 export async function signInAction(formData: FormData) {
   const email = String(formData.get("email") ?? "");
@@ -18,7 +36,7 @@ export async function signInAction(formData: FormData) {
   if (error) {
     redirect(`/login?error=${encodeURIComponent(error.message)}&next=${encodeURIComponent(next)}`);
   }
-  redirect(next);
+  await postAuthRedirect(next);
 }
 
 export async function signUpAction(formData: FormData) {
@@ -51,9 +69,12 @@ export async function signUpAction(formData: FormData) {
   const sb = createClient();
   const { error: signInErr } = await sb.auth.signInWithPassword({ email, password });
   if (signInErr) {
-    redirect(`/login?error=${encodeURIComponent(signInErr.message)}&next=/home`);
+    redirect(`/login?error=${encodeURIComponent(signInErr.message)}&next=/welcome`);
   }
-  redirect("/home");
+  // First-time signups land on /welcome — install instructions, push opt-in,
+  // and a brand-on tour. Returning logins still go straight to /home via
+  // the signInAction path above.
+  redirect("/welcome");
 }
 
 export async function signOutAction() {

@@ -11,12 +11,34 @@ export const metadata: Metadata = {
   title: "Element 78 — In My Element",
   description: "However you need to move, we got you. Lift, flow, run, recover — with elite coaches and a Studio of guided sessions. Tech-forward training, a gym, and a wardrobe — built in Atlanta for the Black women the wellness industry forgot.",
   manifest: "/manifest.webmanifest",
-  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "Element 78" },
-  icons: { icon: "/icons/icon-192.png", apple: "/icons/icon-192.png" },
+  applicationName: "Element 78",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Element 78",
+    startupImage: ["/icons/icon-1024.png"],
+  },
+  icons: {
+    icon: [
+      { url: "/icons/favicon-16.png", sizes: "16x16", type: "image/png" },
+      { url: "/icons/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icons/icon-192.png",   sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512.png",   sizes: "512x512", type: "image/png" },
+      { url: "/icons/icon.svg",       type: "image/svg+xml" },
+    ],
+    apple: [
+      { url: "/icons/apple-touch-icon-180.png", sizes: "180x180" },
+      { url: "/icons/apple-touch-icon-167.png", sizes: "167x167" },
+      { url: "/icons/apple-touch-icon-152.png", sizes: "152x152" },
+      { url: "/icons/apple-touch-icon-120.png", sizes: "120x120" },
+    ],
+  },
+  formatDetection: { telephone: false, email: false, address: false },
 };
 
 export const viewport: Viewport = {
   themeColor: "#0A0E14",
+  colorScheme: "dark",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,

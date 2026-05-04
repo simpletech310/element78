@@ -1,17 +1,32 @@
 {
   "name": "Element 78",
   "short_name": "Element 78",
-  "description": "Pilates with the windows down. A gym, a wardrobe, and an AI studio — built for the Black women who never saw themselves in this space.",
-  "start_url": "/home",
+  "description": "Pilates with the windows down. A gym, a wardrobe, and an AI studio — built for the Black women the wellness industry forgot.",
+  "id": "/?source=pwa-member",
+  "start_url": "/home?source=pwa",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "orientation": "portrait",
   "background_color": "#0A0E14",
   "theme_color": "#0A0E14",
   "categories": ["fitness", "lifestyle", "health"],
+  "lang": "en",
+  "dir": "ltr",
+  "prefer_related_applications": false,
   "icons": [
-    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    { "src": "/icons/icon.svg",              "sizes": "any",       "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icons/icon-192.png",          "sizes": "192x192",   "type": "image/png",     "purpose": "any" },
+    { "src": "/icons/icon-512.png",          "sizes": "512x512",   "type": "image/png",     "purpose": "any" },
+    { "src": "/icons/icon-1024.png",         "sizes": "1024x1024", "type": "image/png",     "purpose": "any" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512",   "type": "image/png",     "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Train",    "short_name": "Train",    "url": "/train",            "description": "Studio + group sessions",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Sessions", "short_name": "Sessions", "url": "/account/sessions", "description": "Your bookings",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Trainers", "short_name": "Trainers", "url": "/trainers",         "description": "Browse coaches",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }] }
   ]
 }

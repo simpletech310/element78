@@ -13,3 +13,4 @@ supabase/.temp
 # Anchored to repo root so it doesn't accidentally match public/assets/ on
 # case-insensitive filesystems (macOS).
 /Assets/
+.claude/worktrees/

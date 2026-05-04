@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { StatusBar, HomeIndicator } from "@/components/chrome/StatusBar";
 import { TabBar } from "@/components/chrome/TabBar";
 import { Navbar } from "@/components/site/Navbar";
@@ -6,6 +7,7 @@ import { Photo } from "@/components/ui/Photo";
 import { Icon } from "@/components/ui/Icon";
 import { listUserEnrollments, listUserBookings, listEnrollmentCompletions, listProducts, listPosts } from "@/lib/data/queries";
 import { getUser } from "@/lib/auth";
+import { getTrainerForCurrentUser } from "@/lib/trainer-auth";
 import { createClient } from "@/lib/supabase/server";
 
 function greeting(d = new Date()) {
@@ -21,6 +23,12 @@ function fmtPrice(cents: number) {
 }
 
 export default async function HomeScreen() {
+  // Coaches landing on /home (e.g. via the PWA member shortcut, or because
+  // they typed it) get bounced to /trainer/dashboard. The member home is
+  // shopping/feed-flavored — coaches need their inbox + roster up front.
+  const trainer = await getTrainerForCurrentUser();
+  if (trainer) redirect("/trainer/dashboard");
+
   const [products, posts, user] = await Promise.all([
     listProducts(),
     listPosts(),
