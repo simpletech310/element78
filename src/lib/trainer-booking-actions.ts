@@ -11,6 +11,7 @@ import {
   notifyTrainerOfBooking,
   notifyClientOfBookingDecision,
   notifyPaymentReceived,
+  notifyLiveCallStarted,
 } from "@/lib/notifications";
 import { getTrainerBooking, getTrainerSessionSettings } from "@/lib/data/queries";
 import { createPurchaseAndCheckout, refundPurchase } from "@/lib/purchases";
@@ -570,6 +571,24 @@ export async function initiateCallAction(formData: FormData) {
       .update({ live_started_at: liveStartedAt, updated_at: liveStartedAt })
       .eq("id", booking.session_id);
   }
+
+  // Durable notification for the member — pairs with the in-tab realtime
+  // IncomingCallAlert. For 1-on-1 there's exactly one recipient.
+  let sessionTitle: string | null = null;
+  if (booking.session_id) {
+    const { data: sess } = await sb
+      .from("trainer_sessions")
+      .select("title")
+      .eq("id", booking.session_id)
+      .maybeSingle();
+    sessionTitle = (sess as { title: string | null } | null)?.title ?? null;
+  }
+  await notifyLiveCallStarted({
+    userId: booking.user_id,
+    bookingId: booking.id,
+    trainerName: trainer.name,
+    sessionTitle,
+  });
 
   revalidatePath(`/booking/${bookingId}`);
   revalidatePath(`/account/sessions`);

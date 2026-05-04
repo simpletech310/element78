@@ -57,7 +57,17 @@ export type GenerateSlotsInput = {
 
 export function generateSlots(input: GenerateSlotsInput): GeneratedSlot[] {
   const { rules, blocks, existingBookings, existingSessions, settings, fromUtc, toUtc, preferredMode } = input;
-  const tz = input.trainerTimezone || "America/New_York";
+  // Validate the trainer's timezone once. A bad value (typo, legacy null,
+  // some browser-supplied string Intl can't parse) used to bubble up as a
+  // RangeError from Intl.DateTimeFormat and 500 the booking page. Falling
+  // back to America/New_York keeps the page usable; the warning lets us
+  // notice and clean up the underlying record.
+  const requestedTz = input.trainerTimezone || "America/New_York";
+  const tz = isValidTimeZone(requestedTz) ? requestedTz : (() => {
+    // eslint-disable-next-line no-console
+    console.warn(`[trainer-availability] invalid trainer timezone "${requestedTz}", falling back to America/New_York`);
+    return "America/New_York";
+  })();
   if (rules.length === 0) return [];
 
   const slotMs = settings.duration_min * 60 * 1000;
@@ -74,14 +84,16 @@ export function generateSlots(input: GenerateSlotsInput): GeneratedSlot[] {
 
   for (let i = 0; i <= totalDays; i++) {
     const local = addDaysLocal(fromLocal, i);
-    const weekday = weekdayOfLocal(local, tz);
+    const weekday = safeWeekdayOfLocal(local, tz);
+    if (weekday < 0) continue;
     const dayRules = rules.filter(r => r.is_active && r.weekday === weekday);
     if (dayRules.length === 0) continue;
 
     for (const rule of dayRules) {
       const ruleModes = expandRuleModes(rule.mode);
-      const winStartMs = localWallToUtcMs(local.year, local.month, local.day, rule.start_minute, tz);
-      const winEndMs = localWallToUtcMs(local.year, local.month, local.day, rule.end_minute, tz);
+      const winStartMs = safeLocalWallToUtcMs(local.year, local.month, local.day, rule.start_minute, tz);
+      const winEndMs = safeLocalWallToUtcMs(local.year, local.month, local.day, rule.end_minute, tz);
+      if (winStartMs == null || winEndMs == null) continue;
 
       let slotStart = winStartMs;
       while (slotStart + slotMs <= winEndMs) {
@@ -234,4 +246,54 @@ function localWallToUtcMs(year: number, month: number, day: number, minuteOfDay:
   );
   // offset = reported - naive  ⇒  realUtc = naive - offset = 2*naive - reported.
   return 2 * naive - reported;
+}
+
+/**
+ * Defensive wrappers — a malformed `tz` (typo, null bleeding through, legacy
+ * row) used to throw RangeError out of Intl and crash the whole booking page.
+ * The top-level `generateSlots` now validates and falls back, but if some
+ * other code path slips through, treat the bad rule as if it were anchored
+ * to America/New_York instead of nuking the entire response.
+ */
+function isValidTimeZone(tz: string): boolean {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function safeLocalWallToUtcMs(
+  year: number,
+  month: number,
+  day: number,
+  minuteOfDay: number,
+  tz: string,
+): number | null {
+  try {
+    return localWallToUtcMs(year, month, day, minuteOfDay, tz);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn(`[trainer-availability] localWallToUtcMs failed for tz="${tz}":`, err);
+    try {
+      return localWallToUtcMs(year, month, day, minuteOfDay, "America/New_York");
+    } catch {
+      return null;
+    }
+  }
+}
+
+function safeWeekdayOfLocal(local: LocalDate, tz: string): number {
+  try {
+    return weekdayOfLocal(local, tz);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn(`[trainer-availability] weekdayOfLocal failed for tz="${tz}":`, err);
+    try {
+      return weekdayOfLocal(local, "America/New_York");
+    } catch {
+      return -1;
+    }
+  }
 }
