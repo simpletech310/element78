@@ -4,7 +4,7 @@ import { Navbar } from "@/components/site/Navbar";
 import { Icon } from "@/components/ui/Icon";
 import { getAdminForCurrentUser } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { banUserAction, unbanUserAction, setAdminAction, refundPurchaseAction } from "@/lib/admin-actions";
+import { banUserAction, unbanUserAction, setAdminAction, refundPurchaseAction, sendPasswordResetAction, forceLogoutAction, hardDeleteUserAction } from "@/lib/admin-actions";
 
 function fmt(c: number) { return `$${(c / 100).toFixed(2)}`; }
 
@@ -68,6 +68,28 @@ export default async function AdminUserDetailPage({ params }: { params: { id: st
               {profile.is_admin ? "REVOKE ADMIN" : "GRANT ADMIN"}
             </button>
           </form>
+          <form action={sendPasswordResetAction}>
+            <input type="hidden" name="user_id" value={profile.id} />
+            <button type="submit" className="btn" style={{ padding: "8px 14px", fontSize: 11, background: "transparent", color: "var(--bone)", border: "1px solid rgba(242,238,232,0.3)" }}>
+              SEND PASSWORD RESET
+            </button>
+          </form>
+          <form action={forceLogoutAction}>
+            <input type="hidden" name="user_id" value={profile.id} />
+            <button type="submit" className="btn" style={{ padding: "8px 14px", fontSize: 11, background: "transparent", color: "var(--bone)", border: "1px solid rgba(242,238,232,0.3)" }}>
+              FORCE LOGOUT
+            </button>
+          </form>
+          <details style={{ display: "inline-block" }}>
+            <summary className="e-mono" style={{ padding: "8px 14px", fontSize: 11, letterSpacing: "0.18em", borderRadius: 8, background: "transparent", color: "var(--rose)", border: "1px solid rgba(232,181,168,0.5)", cursor: "pointer", listStyle: "none" }}>
+              HARD DELETE
+            </summary>
+            <form action={hardDeleteUserAction} style={{ marginTop: 8, display: "flex", gap: 6, alignItems: "center" }}>
+              <input type="hidden" name="user_id" value={profile.id} />
+              <input name="confirm" placeholder="type DELETE" required className="ta-input" />
+              <button type="submit" className="btn" style={{ padding: "8px 14px", fontSize: 11, background: "var(--rose)", color: "var(--ink)", border: "none" }}>CONFIRM DELETE</button>
+            </form>
+          </details>
         </section>
 
         <Section title={`PURCHASES · ${purchases.length}`}>

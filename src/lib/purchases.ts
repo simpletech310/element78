@@ -19,7 +19,7 @@
 import Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getPaymentProvider } from "@/lib/payments/provider";
-import { platformFeeFor, getTrainerStripeAccountId } from "@/lib/connect";
+import { platformFeeFor, platformFeeBpsForTrainer, getTrainerStripeAccountId } from "@/lib/connect";
 
 export type PurchaseKind = "class_booking" | "program_enrollment" | "trainer_booking" | "shop_order" | "guest_pass" | "subscription" | "event_ticket";
 
@@ -80,7 +80,10 @@ export type CreatePurchaseInput = {
 export async function createPurchaseAndCheckout(input: CreatePurchaseInput): Promise<{ purchase: Purchase; checkoutUrl: string }> {
   const sb = createAdminClient();
 
-  const platformFee = input.trainerId ? platformFeeFor(input.amountCents) : 0;
+  // Per-trainer override (added in 0032) lets superadmins flip a coach to a
+  // better split — falls back to global PLATFORM_FEE_BPS when unset.
+  const splitBps = input.trainerId ? await platformFeeBpsForTrainer(input.trainerId) : null;
+  const platformFee = input.trainerId ? platformFeeFor(input.amountCents, splitBps) : 0;
 
   const { data, error } = await sb
     .from("purchases")

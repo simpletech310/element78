@@ -16,13 +16,28 @@ function stripeClient(): Stripe {
   return new Stripe(key);
 }
 
-export const PLATFORM_FEE_BPS = 2000; // 20.00%
+export const PLATFORM_FEE_BPS = 2000; // 20.00% global default
 
-export function platformFeeFor(amountCents: number): number {
-  return Math.round((amountCents * PLATFORM_FEE_BPS) / 10000);
+export function platformFeeFor(amountCents: number, splitBps?: number | null): number {
+  // splitBps overrides the global default per-trainer (set by superadmin).
+  const bps = typeof splitBps === "number" ? splitBps : PLATFORM_FEE_BPS;
+  return Math.round((amountCents * bps) / 10000);
 }
-export function trainerCutFor(amountCents: number): number {
-  return amountCents - platformFeeFor(amountCents);
+export function trainerCutFor(amountCents: number, splitBps?: number | null): number {
+  return amountCents - platformFeeFor(amountCents, splitBps);
+}
+
+/**
+ * Look up the per-coach platform fee in basis points. Returns the trainer's
+ * override if set, otherwise the global default. Used at checkout creation so
+ * each charge applies the right split to Stripe and the purchases ledger.
+ */
+export async function platformFeeBpsForTrainer(trainerId: string | null | undefined): Promise<number> {
+  if (!trainerId) return PLATFORM_FEE_BPS;
+  const sb = createAdminClient();
+  const { data } = await sb.from("trainers").select("payout_split_bps").eq("id", trainerId).maybeSingle();
+  const override = (data as { payout_split_bps: number | null } | null)?.payout_split_bps;
+  return typeof override === "number" ? override : PLATFORM_FEE_BPS;
 }
 
 export type CreateConnectAccountResult = {
@@ -96,9 +111,10 @@ export async function syncTrainerPayoutStatus(trainerId: string): Promise<void> 
 export function destinationChargeArgs(
   trainerStripeAccountId: string,
   amountCents: number,
+  splitBps?: number | null,
 ): { application_fee_amount: number; transfer_data: { destination: string } } {
   return {
-    application_fee_amount: platformFeeFor(amountCents),
+    application_fee_amount: platformFeeFor(amountCents, splitBps),
     transfer_data: { destination: trainerStripeAccountId },
   };
 }
