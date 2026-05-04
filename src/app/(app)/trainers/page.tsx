@@ -14,8 +14,11 @@ const aiAvatars = [
 ];
 
 export default async function TrainersPage() {
-  const [trainers, user] = await Promise.all([listTrainers(), getUser()]);
+  const [allTrainers, user] = await Promise.all([listTrainers(), getUser()]);
   const isAuthed = !!user;
+  // The "human team" rail is bookable coaches only. AI avatars are listed
+  // in the separate Studio section below via the `aiAvatars` constant.
+  const trainers = allTrainers.filter(t => !t.is_ai);
   const featured = trainers[0];
   const rest = trainers.slice(1);
   const filters = [{ l: "ALL", a: true }, { l: "PILATES" }, { l: "STRENGTH" }, { l: "YOGA" }, { l: "HIIT" }, { l: "1-ON-1" }, { l: "STUDIO" }];

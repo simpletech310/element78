@@ -9,7 +9,11 @@ import { listTrainers } from "@/lib/data/queries";
 import { getUser } from "@/lib/auth";
 
 export default async function HomePage() {
-  const [trainers, user] = await Promise.all([listTrainers(), getUser()]);
+  const [allTrainers, user] = await Promise.all([listTrainers(), getUser()]);
+  // The "WHO YOU TRAINING WITH" rail is human coaches only — AI avatars
+  // power the studio routines but aren't bookable as 1-on-1, so they don't
+  // belong in the team grid on the landing page.
+  const trainers = allTrainers.filter(t => !t.is_ai);
 
   const pillars = [
     {
