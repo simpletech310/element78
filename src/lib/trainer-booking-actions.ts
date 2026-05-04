@@ -596,6 +596,15 @@ export async function upsertAvailabilityRuleAction(formData: FormData) {
 
   if (endMinute <= startMinute) redirect("/trainer/availability?error=invalid_range");
 
+  // Guard: in-person rules require a configured gym location, otherwise the
+  // member booking page will render an in-person slot with no address.
+  if (mode === "in_person" || mode === "both") {
+    const settings = await getTrainerSessionSettings(trainer.id);
+    if (!settings?.in_person_location_id) {
+      redirect("/trainer/availability?error=in_person_needs_location");
+    }
+  }
+
   const sb = createClient();
   if (id) {
     await sb
@@ -629,6 +638,37 @@ export async function deleteAvailabilityRuleAction(formData: FormData) {
   redirect("/trainer/availability?deleted=1");
 }
 
+/**
+ * Flip a rule between active and paused without losing its config. Lets a
+ * coach pause a weekly slot for a quiet stretch and bring it back later.
+ */
+export async function toggleAvailabilityRuleAction(formData: FormData) {
+  const trainer = await getTrainerForCurrentUser();
+  if (!trainer) redirect("/login");
+  const id = String(formData.get("rule_id") ?? "").trim();
+  if (!id) redirect("/trainer/availability?error=missing_id");
+
+  const sb = createClient();
+  const { data: existing } = await sb
+    .from("trainer_availability_rules")
+    .select("id, is_active")
+    .eq("id", id)
+    .eq("trainer_id", trainer.id)
+    .maybeSingle();
+  const row = existing as { id: string; is_active: boolean } | null;
+  if (!row) redirect("/trainer/availability?error=not_found");
+
+  await sb
+    .from("trainer_availability_rules")
+    .update({ is_active: !row!.is_active })
+    .eq("id", row!.id)
+    .eq("trainer_id", trainer.id);
+
+  revalidatePath("/trainer/availability");
+  revalidatePath(`/trainers/${trainer.slug}/book`);
+  redirect("/trainer/availability?toggled=1");
+}
+
 /* -------------------------------------------------------------------------- */
 /*  Time-off blocks (one-off "I'm out" windows)                               */
 /* -------------------------------------------------------------------------- */
@@ -655,7 +695,76 @@ export async function createAvailabilityBlockAction(formData: FormData) {
     ends_at: endsAt,
     reason,
   });
+
+  // Cascade: any open/full/confirmed group sessions whose time range overlaps
+  // this block need to be cancelled — otherwise members could keep joining and
+  // the coach is double-booked. [starts_at, ends_at) overlaps [block.starts,
+  // block.ends) iff session.starts_at < block.ends_at AND session.ends_at >
+  // block.starts_at. Refund + tear down rooms the same way cancelGroupSessionAction does.
+  const admin = createAdminClient();
+  const { data: overlapping } = await sb
+    .from("trainer_sessions")
+    .select("id, video_room_name")
+    .eq("trainer_id", trainer.id)
+    .eq("is_group", true)
+    .in("status", ["open", "full", "confirmed"])
+    .lt("starts_at", endsAt)
+    .gt("ends_at", startsAt);
+
+  const sessionsToCancel = (overlapping as Array<{ id: string; video_room_name: string | null }>) ?? [];
+  for (const sess of sessionsToCancel) {
+    await sb
+      .from("trainer_sessions")
+      .update({ status: "cancelled", live_started_at: null, updated_at: new Date().toISOString() })
+      .eq("id", sess.id);
+
+    const { data: bookings } = await sb
+      .from("trainer_bookings")
+      .select("id, paid_status")
+      .eq("session_id", sess.id)
+      .in("status", ["pending_trainer", "confirmed"]);
+
+    for (const b of (bookings as Array<{ id: string; paid_status: string }>) ?? []) {
+      if (b.paid_status === "paid") {
+        const { data: purchase } = await admin
+          .from("purchases")
+          .select("id")
+          .eq("trainer_booking_id", b.id)
+          .maybeSingle();
+        if (purchase) {
+          try {
+            await refundPurchase((purchase as { id: string }).id, { reason: "requested_by_customer" });
+          } catch (e) {
+            // eslint-disable-next-line no-console
+            console.warn("[availability-block] refund failed", e);
+          }
+        }
+      }
+      await sb
+        .from("trainer_bookings")
+        .update({
+          status: "cancelled",
+          paid_status: b.paid_status === "paid" ? "refunded" : b.paid_status,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", b.id);
+    }
+
+    if (sess.video_room_name) {
+      try {
+        await getVideoProvider().destroyRoom(sess.video_room_name);
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.warn("[availability-block] room teardown failed", e);
+      }
+    }
+
+    revalidatePath(`/trainer/sessions/${sess.id}`);
+  }
+
   revalidatePath("/trainer/availability");
+  revalidatePath("/trainer/dashboard");
+  revalidatePath("/account/sessions");
   revalidatePath(`/trainers/${trainer.slug}/book`);
   redirect("/trainer/availability?block_added=1");
 }
@@ -685,6 +794,13 @@ export async function upsertSessionSettingsAction(formData: FormData) {
   const modes = modesRaw.length > 0 ? modesRaw : ["video", "in_person"];
   const inPersonLocation = String(formData.get("in_person_location_id") ?? "").trim() || null;
   const bio = String(formData.get("bio_for_1on1") ?? "").trim() || null;
+
+  // Guard: if the trainer is enabling in-person mode, they must have a gym
+  // location set first — otherwise the member booking page would render an
+  // in-person session with no address.
+  if (modes.includes("in_person") && !inPersonLocation) {
+    redirect("/trainer/availability?error=in_person_needs_location");
+  }
 
   const sb = createClient();
   await sb

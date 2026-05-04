@@ -11,6 +11,7 @@ import {
 import {
   upsertAvailabilityRuleAction,
   deleteAvailabilityRuleAction,
+  toggleAvailabilityRuleAction,
   upsertSessionSettingsAction,
   createAvailabilityBlockAction,
   deleteAvailabilityBlockAction,
@@ -22,7 +23,7 @@ const WEEKDAYS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 
 export const dynamic = "force-dynamic";
 
-export default async function CoachAvailabilityPage({ searchParams }: { searchParams: { saved?: string; deleted?: string; settings_saved?: string; error?: string } }) {
+export default async function CoachAvailabilityPage({ searchParams }: { searchParams: { saved?: string; deleted?: string; toggled?: string; settings_saved?: string; error?: string; block_added?: string; block_removed?: string } }) {
   const coach = await getTrainerForCurrentUser();
   if (!coach) redirect("/login?next=/trainer/availability");
 
@@ -41,13 +42,29 @@ export default async function CoachAvailabilityPage({ searchParams }: { searchPa
     grouped.get(r.weekday)!.push(r);
   }
 
+  const errorCopy = searchParams.error === "in_person_needs_location"
+    ? "SET A GYM LOCATION IN SETTINGS BEFORE ADDING IN-PERSON RULES"
+    : searchParams.error === "invalid_range"
+    ? "INVALID TIME RANGE"
+    : searchParams.error === "range_required"
+    ? "START AND END REQUIRED"
+    : searchParams.error === "missing_id"
+    ? "MISSING RULE ID"
+    : searchParams.error === "not_found"
+    ? "RULE NOT FOUND"
+    : searchParams.error
+    ? `ERROR: ${searchParams.error}`
+    : null;
+
   const flash = searchParams.saved ? "RULE SAVED"
               : searchParams.deleted ? "RULE DELETED"
+              : searchParams.toggled ? "RULE UPDATED"
               : searchParams.settings_saved ? "SETTINGS SAVED"
-              : (searchParams as { block_added?: string; block_removed?: string }).block_added ? "TIME OFF ADDED"
-              : (searchParams as { block_added?: string; block_removed?: string }).block_removed ? "TIME OFF REMOVED"
-              : searchParams.error ? `ERROR: ${searchParams.error}`
-              : null;
+              : searchParams.block_added ? "TIME OFF ADDED"
+              : searchParams.block_removed ? "TIME OFF REMOVED"
+              : errorCopy;
+  const isError = Boolean(searchParams.error);
+  const hasInPersonLocation = Boolean(settings?.in_person_location_id);
 
   return (
     <CoachShell coach={coach} pathname="/trainer/availability">
@@ -57,7 +74,19 @@ export default async function CoachAvailabilityPage({ searchParams }: { searchPa
       </p>
 
       {flash && (
-        <div className="e-mono" style={{ marginTop: 18, padding: "12px 14px", borderRadius: 12, background: "rgba(143,184,214,0.1)", border: "1px solid var(--sky)", color: "var(--sky)", fontSize: 11, letterSpacing: "0.18em" }}>
+        <div
+          className="e-mono"
+          style={{
+            marginTop: 18,
+            padding: "12px 14px",
+            borderRadius: 12,
+            background: isError ? "rgba(232,181,168,0.1)" : "rgba(143,184,214,0.1)",
+            border: `1px solid ${isError ? "var(--rose)" : "var(--sky)"}`,
+            color: isError ? "var(--rose)" : "var(--sky)",
+            fontSize: 11,
+            letterSpacing: "0.18em",
+          }}
+        >
           {flash}
         </div>
       )}
@@ -119,11 +148,37 @@ export default async function CoachAvailabilityPage({ searchParams }: { searchPa
                   {dayRules.length > 0 && (
                     <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 6 }}>
                       {dayRules.map(r => (
-                        <div key={r.id} style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                        <div
+                          key={r.id}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 10,
+                            flexWrap: "wrap",
+                            opacity: r.is_active ? 1 : 0.55,
+                          }}
+                        >
                           <span className="e-mono" style={{ fontSize: 12, color: r.is_active ? "var(--bone)" : "rgba(242,238,232,0.4)", letterSpacing: "0.12em" }}>
                             {fmtMinutes12(r.start_minute)} – {fmtMinutes12(r.end_minute)} · {r.mode.toUpperCase()}
-                            {!r.is_active ? " · DISABLED" : ""}
+                            {!r.is_active ? " · PAUSED" : ""}
                           </span>
+                          <form action={toggleAvailabilityRuleAction}>
+                            <input type="hidden" name="rule_id" value={r.id} />
+                            <button
+                              type="submit"
+                              className="btn e-mono"
+                              style={{
+                                padding: "5px 10px",
+                                fontSize: 10,
+                                letterSpacing: "0.16em",
+                                background: r.is_active ? "rgba(143,184,214,0.12)" : "transparent",
+                                color: r.is_active ? "var(--sky)" : "rgba(242,238,232,0.45)",
+                                border: `1px solid ${r.is_active ? "rgba(143,184,214,0.4)" : "rgba(242,238,232,0.18)"}`,
+                              }}
+                            >
+                              {r.is_active ? "ACTIVE" : "PAUSED"}
+                            </button>
+                          </form>
                           <form action={deleteAvailabilityRuleAction}>
                             <input type="hidden" name="id" value={r.id} />
                             <button type="submit" className="btn" style={{ padding: "5px 10px", fontSize: 10, background: "transparent", color: "var(--rose)", border: "1px solid rgba(232,181,168,0.3)" }}>
@@ -145,13 +200,18 @@ export default async function CoachAvailabilityPage({ searchParams }: { searchPa
                       END
                       <input type="time" name="end_time" defaultValue="11:00" required className="ta-input" style={{ marginLeft: 6 }} />
                     </label>
-                    <select name="mode" defaultValue="both" className="ta-input">
-                      <option value="both">BOTH</option>
+                    <select name="mode" defaultValue={hasInPersonLocation ? "both" : "video"} className="ta-input">
+                      <option value="both" disabled={!hasInPersonLocation}>BOTH{!hasInPersonLocation ? " (NEEDS LOCATION)" : ""}</option>
                       <option value="video">VIDEO</option>
-                      <option value="in_person">IN PERSON</option>
+                      <option value="in_person" disabled={!hasInPersonLocation}>IN PERSON{!hasInPersonLocation ? " (NEEDS LOCATION)" : ""}</option>
                     </select>
                     <button type="submit" className="btn btn-sky" style={{ padding: "8px 14px", fontSize: 11 }}>+ ADD</button>
                   </form>
+                  {!hasInPersonLocation && idx === 0 && (
+                    <p className="e-mono" style={{ marginTop: 10, fontSize: 10, color: "rgba(232,181,168,0.7)", letterSpacing: "0.14em" }}>
+                      SET A GYM LOCATION IN SETTINGS BEFORE ADDING IN-PERSON RULES.
+                    </p>
+                  )}
                 </div>
               );
             })}
