@@ -182,30 +182,53 @@ export function LiveSessionStage({
     });
   }, [coachSessionId, exerciseIdx, phase]);
 
-  // Subscribe to the parent session row in member mode and mirror state.
-  // Also hydrate from the current row on mount — without this, a member
-  // who joins after the coach has already advanced to exercise 3 starts at
-  // 0 and only ever sees the *next* change, never the current state.
-  // Dep is the stable session id (not the live object reference) so
-  // identity churn from the parent doesn't constantly re-subscribe.
+  // Mirror the parent session's routine_state into our local React state,
+  // for the member side of the call. Two paths:
+  //
+  //   1. **Realtime postgres_changes** — instantaneous when it works. We
+  //      subscribe to UPDATEs on the trainer_sessions row.
+  //   2. **2-second polling** — guaranteed catch-up if realtime is delayed,
+  //      cold-cache, or the WebSocket got dropped on a flaky cell. The
+  //      worst-case lag is the polling interval (2s), which is well below
+  //      the cadence at which a coach advances exercises.
+  //
+  // Both paths feed the same applyState() reducer, which only triggers a
+  // setState when the value actually changed (avoids re-render churn).
+  //
+  // sessionId dep is a stable string so a re-render of the parent doesn't
+  // tear down the subscription / interval.
   const sessionId = live?.mode === "follow" ? live.sessionId : null;
+  const [lastSyncAt, setLastSyncAt] = useState<number>(0);
   useEffect(() => {
     if (!sessionId) return;
     const sb = createClient();
     let cancelled = false;
+    let lastSeenJson = "";
 
-    // Initial hydrate
-    sb.from("trainer_sessions")
-      .select("routine_state")
-      .eq("id", sessionId)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (cancelled) return;
-        const s = (data as { routine_state: { exerciseIdx: number; phase: Phase } | null } | null)?.routine_state;
-        if (!s) return;
-        setExerciseIdx(s.exerciseIdx ?? 0);
-        setPhase(s.phase ?? "ready");
-      });
+    function applyState(s: { exerciseIdx?: number; phase?: Phase } | null | undefined) {
+      if (!s) return;
+      const json = JSON.stringify(s);
+      if (json === lastSeenJson) return;
+      lastSeenJson = json;
+      setExerciseIdx(s.exerciseIdx ?? 0);
+      setPhase(s.phase ?? "ready");
+      setLastSyncAt(Date.now());
+    }
+
+    async function poll() {
+      if (cancelled) return;
+      const { data } = await sb
+        .from("trainer_sessions")
+        .select("routine_state")
+        .eq("id", sessionId)
+        .maybeSingle();
+      const s = (data as { routine_state: { exerciseIdx?: number; phase?: Phase } | null } | null)?.routine_state;
+      applyState(s);
+    }
+
+    // Hydrate immediately, then keep polling as a fallback.
+    poll();
+    const interval = setInterval(poll, 2000);
 
     const channel = sb
       .channel(`stage-routine-${sessionId}`)
@@ -213,19 +236,18 @@ export function LiveSessionStage({
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "trainer_sessions", filter: `id=eq.${sessionId}` },
         (payload) => {
-          const row = payload.new as { routine_state: { exerciseIdx: number; phase: Phase } | null };
-          const s = row.routine_state;
-          if (!s) return;
-          setExerciseIdx(s.exerciseIdx ?? 0);
-          setPhase(s.phase ?? "ready");
+          const row = payload.new as { routine_state: { exerciseIdx?: number; phase?: Phase } | null };
+          applyState(row.routine_state);
         },
       )
       .subscribe((status) => {
         // eslint-disable-next-line no-console
         console.log(`[live-stage] follower subscription:`, status);
       });
+
     return () => {
       cancelled = true;
+      clearInterval(interval);
       sb.removeChannel(channel);
     };
   }, [sessionId]);
@@ -241,15 +263,27 @@ export function LiveSessionStage({
     }
   }, [current]);
 
+  // playing → start the demo; paused → halt it. We track whether play()
+  // was actually granted by the browser so we can surface a "tap to sync"
+  // overlay if iOS blocked autoplay (rare now that the video is muted,
+  // but the safety net keeps the member from getting stuck).
+  const [playBlocked, setPlayBlocked] = useState(false);
   useEffect(() => {
     const v = routineVideoRef.current;
     if (!v) return;
     if (playing) {
-      v.play().catch(() => { /* iOS may need a user gesture; coach taps PLAY */ });
+      v.play().then(() => setPlayBlocked(false)).catch(() => setPlayBlocked(true));
     } else {
       v.pause();
+      setPlayBlocked(false);
     }
   }, [playing]);
+
+  function manuallyResume() {
+    const v = routineVideoRef.current;
+    if (!v) return;
+    v.play().then(() => setPlayBlocked(false)).catch(() => {});
+  }
 
   /* ------------------------------------------------------------------ */
   /*  Coach controls                                                    */
@@ -502,6 +536,39 @@ export function LiveSessionStage({
             </span>
           </div>
 
+          {/* Member-side sync indicator — last update timestamp pulses
+              every time the realtime/poll path catches a new state. Helps
+              prove the sync is alive without opening DevTools. */}
+          {!isCoach && lastSyncAt > 0 && (
+            <SyncPill lastSyncAt={lastSyncAt} />
+          )}
+
+          {/* Autoplay safety net — if iOS rejected play() despite mute
+              (rare, but possible), we surface a one-tap resume overlay so
+              the member doesn't get stuck staring at a frozen frame. */}
+          {!isCoach && playBlocked && (
+            <button
+              type="button"
+              onClick={manuallyResume}
+              style={{
+                position: "absolute", inset: 0,
+                background: "rgba(10,14,20,0.55)",
+                color: "var(--bone)",
+                border: "none",
+                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                gap: 8, cursor: "pointer",
+                zIndex: 3,
+                fontFamily: "var(--font-mono)",
+                fontSize: 10,
+                letterSpacing: "0.25em",
+              }}
+              aria-label="Resume sync"
+            >
+              <span style={{ fontSize: 28 }}>▶</span>
+              <span>TAP TO SYNC</span>
+            </button>
+          )}
+
           {/* Coach controls overlay */}
           {isCoach && (
             <div style={controlsOverlayStyle}>
@@ -534,6 +601,46 @@ export function LiveSessionStage({
 /* -------------------------------------------------------------------- */
 /*  Helpers / leaf components                                           */
 /* -------------------------------------------------------------------- */
+
+/**
+ * SyncPill — small pulsing dot in the top-right of the workout card that
+ * shows when the member's stage last received a state update from the
+ * coach. Mostly a UX confidence cue ("yes, you're synced") and a quick
+ * dev signal that the realtime + polling path is alive.
+ */
+function SyncPill({ lastSyncAt }: { lastSyncAt: number }) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const ageS = Math.max(0, Math.floor((now - lastSyncAt) / 1000));
+  const fresh = ageS < 4;
+  return (
+    <div
+      style={{
+        position: "absolute", top: 10, right: 10,
+        display: "inline-flex", alignItems: "center", gap: 6,
+        padding: "4px 10px", borderRadius: 999,
+        background: "rgba(10,14,20,0.7)",
+        border: `1px solid ${fresh ? "var(--sky)" : "rgba(143,184,214,0.3)"}`,
+        zIndex: 2,
+      }}
+    >
+      <span
+        style={{
+          width: 6, height: 6, borderRadius: "50%",
+          background: fresh ? "var(--electric)" : "rgba(143,184,214,0.5)",
+          boxShadow: fresh ? "0 0 6px var(--electric)" : "none",
+          transition: "background .25s, box-shadow .25s",
+        }}
+      />
+      <span className="e-mono" style={{ fontSize: 9, letterSpacing: "0.22em", color: fresh ? "var(--sky)" : "rgba(242,238,232,0.55)" }}>
+        {fresh ? "SYNCED" : `${ageS}s AGO`}
+      </span>
+    </div>
+  );
+}
 
 function Header({ backHref, trainerName }: { backHref: string; trainerName: string }) {
   return (
