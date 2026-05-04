@@ -70,7 +70,14 @@ class DailyVideoProvider implements VideoProvider {
       },
       body: JSON.stringify({
         name,
-        privacy: "private",
+        // Public so the embed can join without a meeting token. Access is
+        // gated by the start (nbf) / end (exp) window, the unguessable name
+        // (e78-{first-8-of-booking-id}), and our own page-level auth check
+        // before we ever surface the room URL — i.e. only the trainer or the
+        // booked client see /train/session/[id]. If we ever need stricter
+        // gating we'll add Daily meeting tokens server-side and pass them
+        // into DailyIframe.createFrame.
+        privacy: "public",
         properties: {
           nbf,
           exp,

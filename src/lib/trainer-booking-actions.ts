@@ -576,12 +576,23 @@ export async function initiateCallAction(formData: FormData) {
     roomUrl = (sess as { video_room_url: string | null } | null)?.video_room_url ?? null;
   }
   if (!roomUrl) {
-    const room = await getVideoProvider().createRoom({
-      bookingId: booking.id,
-      startsAt: new Date(booking.starts_at),
-      endsAt: new Date(booking.ends_at),
-      label: `Element 78 1-on-1`,
-    });
+    let room: { provider: string; url: string; name: string };
+    try {
+      room = await getVideoProvider().createRoom({
+        bookingId: booking.id,
+        startsAt: new Date(booking.starts_at),
+        endsAt: new Date(booking.ends_at),
+        label: `Element 78 1-on-1`,
+      });
+    } catch (err) {
+      // Daily call out failed (bad key, network, room name conflict, etc).
+      // Don't crash the action — fall back to a mock room so the page still
+      // renders and the coach gets a clear "couldn't reach Daily" surface
+      // they can fix without losing the booking.
+      // eslint-disable-next-line no-console
+      console.warn(`[initiateCall] room provisioning failed: ${(err as Error).message}`);
+      room = { provider: "mock", url: `mock://e78-${booking.id.slice(0, 8)}`, name: `e78-${booking.id.slice(0, 8)}` };
+    }
     await sb
       .from("trainer_bookings")
       .update({

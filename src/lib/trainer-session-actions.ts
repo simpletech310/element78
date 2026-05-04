@@ -427,16 +427,29 @@ export async function startGroupSessionAction(formData: FormData) {
 
   const sb = createClient();
 
-  // Provision the Daily room if no attendee has triggered the lazy create yet.
+  // Provision the Daily room if no attendee has triggered the lazy create
+  // yet. Try/catch keeps a transient Daily outage / bad key from killing the
+  // whole START SESSION flow — fall back to a mock URL so the coach can see
+  // a clear placeholder and the realtime ping still goes out to attendees.
   let videoFields: { video_provider: string | null; video_room_url: string | null; video_room_name: string | null } | null = null;
   if (session.mode === "video" && !session.video_room_url) {
-    const room = await getVideoProvider().createRoom({
-      bookingId: session.id,
-      startsAt: new Date(session.starts_at),
-      endsAt: new Date(session.ends_at),
-      label: `Element 78 Group Session`,
-    });
-    videoFields = { video_provider: room.provider, video_room_url: room.url, video_room_name: room.name };
+    try {
+      const room = await getVideoProvider().createRoom({
+        bookingId: session.id,
+        startsAt: new Date(session.starts_at),
+        endsAt: new Date(session.ends_at),
+        label: `Element 78 Group Session`,
+      });
+      videoFields = { video_provider: room.provider, video_room_url: room.url, video_room_name: room.name };
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn(`[startGroupSession] room provisioning failed: ${(err as Error).message}`);
+      videoFields = {
+        video_provider: "mock",
+        video_room_url: `mock://e78-${session.id.slice(0, 8)}`,
+        video_room_name: `e78-${session.id.slice(0, 8)}`,
+      };
+    }
   }
 
   const liveStartedAt = new Date().toISOString();

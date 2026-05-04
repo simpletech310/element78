@@ -5,9 +5,10 @@ import { TabBar } from "@/components/chrome/TabBar";
 import { Navbar } from "@/components/site/Navbar";
 import { Photo } from "@/components/ui/Photo";
 import { Icon } from "@/components/ui/Icon";
-import { listUserEnrollments, listUserBookings, listEnrollmentCompletions, listProducts, listPosts } from "@/lib/data/queries";
+import { listUserEnrollments, listUserBookings, listEnrollmentCompletions, listProducts, listPosts, listClientTrainerBookings } from "@/lib/data/queries";
 import { getUser } from "@/lib/auth";
 import { getTrainerForCurrentUser } from "@/lib/trainer-auth";
+import { isSessionJoinable } from "@/lib/video/provider";
 import { createClient } from "@/lib/supabase/server";
 
 function greeting(d = new Date()) {
@@ -65,9 +66,22 @@ export default async function HomeScreen() {
 
   // Pull the user's active programs + upcoming bookings — drives the
   // personalized strips below the daily ritual.
-  const [enrollments, bookings] = user
-    ? await Promise.all([listUserEnrollments(user.id), listUserBookings(user.id)])
-    : [[], []];
+  const [enrollments, bookings, trainerBookings] = user
+    ? await Promise.all([
+        listUserEnrollments(user.id),
+        listUserBookings(user.id),
+        listClientTrainerBookings(user.id),
+      ])
+    : [[], [], [] as Awaited<ReturnType<typeof listClientTrainerBookings>>];
+
+  // Upcoming 1-on-1 + group attendee sessions (sorted ascending). We surface
+  // these in a dedicated rail above YOUR PROGRAMS — the "what's on the
+  // calendar with a coach" line of sight that members were missing before.
+  const nowMs = Date.now();
+  const upcomingTrainer = trainerBookings
+    .filter(({ booking }) => (booking.status === "confirmed" || booking.status === "pending_trainer")
+      && new Date(booking.ends_at).getTime() > nowMs - 30 * 60_000)
+    .sort((a, b) => new Date(a.booking.starts_at).getTime() - new Date(b.booking.starts_at).getTime());
   const activePrograms = enrollments.filter(e => e.enrollment.status === "active");
   const completedCounts: Record<string, number> = {};
   await Promise.all(activePrograms.map(async ({ enrollment }) => {
@@ -267,6 +281,79 @@ export default async function HomeScreen() {
                       <div className="e-mono" style={{ marginTop: 6, fontSize: 9, color: "var(--sky)", letterSpacing: "0.2em" }}>{priceLabel}</div>
                     </div>
                     <Icon name="chevron" size={18} />
+                  </Link>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        {/* YOUR UPCOMING SESSIONS — coach-led 1-on-1 + group attendees.
+            Sits above YOUR PROGRAMS so the next ring on the member's
+            calendar is the first thing they see when they open the app. */}
+        {upcomingTrainer.length > 0 && (
+          <>
+            <div style={{ padding: "28px 22px 12px", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+              <div>
+                <div className="e-display" style={{ fontSize: 22 }}>UPCOMING SESSIONS</div>
+                <div className="e-mono" style={{ color: "rgba(10,14,20,0.5)", fontSize: 9, marginTop: 2, letterSpacing: "0.18em" }}>
+                  {upcomingTrainer.length} {upcomingTrainer.length === 1 ? "BOOKED" : "BOOKED"} · WITH A COACH
+                </div>
+              </div>
+              <Link href="/account/sessions" className="e-mono" style={{ color: "var(--electric-deep)", fontSize: 10, letterSpacing: "0.2em", textDecoration: "none" }}>
+                ALL →
+              </Link>
+            </div>
+            <div className="no-scrollbar" style={{ display: "flex", gap: 10, padding: "0 22px", overflowX: "auto", paddingBottom: 4 }}>
+              {upcomingTrainer.slice(0, 8).map(({ booking, trainer }) => {
+                const dt = new Date(booking.starts_at);
+                const dateStr = dt.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "2-digit" }).toUpperCase();
+                const timeStr = dt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+                const joinable = isSessionJoinable(booking.starts_at, booking.ends_at);
+                const isPending = booking.status === "pending_trainer";
+                return (
+                  <Link
+                    key={booking.id}
+                    href={joinable ? `/train/session/${booking.id}` : `/booking/${booking.id}`}
+                    className="lift"
+                    style={{
+                      flexShrink: 0, width: 240, padding: 14, borderRadius: 16,
+                      background: "var(--paper)", border: "1px solid rgba(10,14,20,0.08)",
+                      color: "var(--ink)", textDecoration: "none",
+                      display: "flex", flexDirection: "column", gap: 8,
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                      <div className="e-mono" style={{ color: "var(--electric-deep)", fontSize: 9, letterSpacing: "0.2em" }}>{dateStr}</div>
+                      <div className="e-mono" style={{ color: "rgba(10,14,20,0.55)", fontSize: 9, letterSpacing: "0.18em" }}>
+                        {booking.mode === "video" ? "VIDEO" : "IN PERSON"}
+                      </div>
+                    </div>
+                    <div style={{ fontFamily: "var(--font-display)", fontSize: 26, lineHeight: 0.95 }}>{timeStr}</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 2 }}>
+                      <div style={{
+                        width: 28, height: 28, borderRadius: "50%", overflow: "hidden",
+                        background: "var(--haze)",
+                        backgroundImage: trainer.avatar_url ? `url(${trainer.avatar_url})` : undefined,
+                        backgroundSize: "cover", backgroundPosition: "center",
+                        border: "1px solid rgba(10,14,20,0.12)", flexShrink: 0,
+                      }} />
+                      <div className="e-mono" style={{ fontSize: 10, letterSpacing: "0.16em", color: "rgba(10,14,20,0.65)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        WITH {trainer.name.toUpperCase()}
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "auto", gap: 8 }}>
+                      <span className="e-mono" style={{
+                        fontSize: 9, padding: "4px 9px", borderRadius: 999, letterSpacing: "0.18em",
+                        background: isPending ? "rgba(232,181,168,0.18)" : (joinable ? "rgba(46,127,176,0.16)" : "rgba(46,127,176,0.08)"),
+                        color: isPending ? "var(--rose)" : "var(--electric-deep)",
+                      }}>
+                        {isPending ? "PENDING COACH" : (joinable ? "LIVE NOW" : "CONFIRMED")}
+                      </span>
+                      <span className="e-mono" style={{ fontSize: 11, color: "var(--ink)", fontFamily: "var(--font-display)" }}>
+                        {joinable ? "JOIN →" : "DETAILS →"}
+                      </span>
+                    </div>
                   </Link>
                 );
               })}
