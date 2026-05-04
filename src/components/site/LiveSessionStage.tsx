@@ -60,12 +60,17 @@ export function LiveSessionStage({
   /* ------------------------------------------------------------------ */
   const callRef = useRef<DailyCall | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
+  const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
   const [hasRemote, setHasRemote] = useState(false);
   const [audioOn, setAudioOn] = useState(true);
   const [videoOn, setVideoOn] = useState(true);
   const [callJoinState, setCallJoinState] = useState<"idle" | "joining" | "joined" | "error">("idle");
   const [callError, setCallError] = useState<string | null>(null);
+  // Self-view card minimize state — when minimized, the card collapses to a
+  // tiny chip in the corner so the remote (background) takes the whole
+  // screen plus just the workout card. Tap the chip to expand.
+  const [selfMinimized, setSelfMinimized] = useState(false);
 
   useEffect(() => {
     if (isMock) return;
@@ -91,10 +96,12 @@ export function LiveSessionStage({
     function refresh() {
       if (cleaned || !callRef.current) return;
       const ps = callRef.current.participants();
+      const local = ps.local;
       const remoteIds = Object.keys(ps).filter(k => k !== "local");
       const remote: DailyParticipant | undefined = remoteIds.length > 0 ? ps[remoteIds[0]] : undefined;
       setHasRemote(!!remote);
       attachVideo(remoteVideoRef.current, remote);
+      attachVideo(localVideoRef.current, local);
       attachAudio(remoteAudioRef.current, remote);
     }
 
@@ -290,37 +297,106 @@ export function LiveSessionStage({
       {/* Audio sink — keeps remote audio playing across DOM reflows */}
       <audio ref={remoteAudioRef} autoPlay playsInline />
 
+      {/* Background — full-screen view of the remote person (the one you
+          called). Sits at z-index 0 so the workout card, self-view chip,
+          header, and controls all layer above it. */}
+      <video
+        ref={remoteVideoRef}
+        autoPlay
+        playsInline
+        muted
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100%", height: "100%",
+          objectFit: "cover",
+          background: "#000",
+          zIndex: 0,
+        }}
+      />
+
+      {/* Empty / error states for the call land in the center of the
+          background instead of sitting in the small card. */}
+      {(!hasRemote || callJoinState === "error") && (
+        <div style={backgroundOverlayStyle}>
+          {callJoinState === "error" && callError ? (
+            <>
+              <div className="e-mono" style={{ color: "var(--rose)", fontSize: 11, letterSpacing: "0.25em" }}>CALL ERROR</div>
+              <p style={{ marginTop: 14, fontSize: 14, color: "rgba(242,238,232,0.85)", maxWidth: 460, lineHeight: 1.55, textAlign: "center" }}>{callError}</p>
+            </>
+          ) : (
+            <>
+              <div className="e-mono" style={{ color: "var(--sky)", fontSize: 11, letterSpacing: "0.28em" }}>
+                {callJoinState === "joining" ? "JOINING…" : `WAITING FOR ${isCoach ? "MEMBER" : trainerName.toUpperCase()}`}
+              </div>
+              {callJoinState === "joined" && (
+                <div className="e-mono" style={{ marginTop: 10, color: "rgba(242,238,232,0.55)", fontSize: 9, letterSpacing: "0.22em" }}>
+                  THEY&apos;LL DROP IN ANY SECOND
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
       {/* Header */}
       <Header backHref={backHref} trainerName={trainerName} />
 
-      {/* Caller card — top-left, under the LEAVE chip */}
-      <div style={callerCardStyle}>
-        <video
-          ref={remoteVideoRef}
-          autoPlay
-          playsInline
-          muted
-          style={{ width: "100%", height: "100%", objectFit: "cover", background: "#000", display: "block" }}
-        />
-        {!hasRemote && (
-          <div style={cardOverlayStyle}>
-            <div className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.22em" }}>
-              {callJoinState === "joining" ? "JOINING…" : `WAITING FOR ${isCoach ? "MEMBER" : trainerName.toUpperCase()}`}
+      {/* Self-view card — top-left, under the LEAVE chip. Mirrored, with a
+          minimize button so the call surface can collapse to just the
+          background + workout when the user wants. */}
+      {!selfMinimized ? (
+        <div style={callerCardStyle}>
+          <video
+            ref={localVideoRef}
+            autoPlay
+            playsInline
+            muted
+            style={{
+              width: "100%", height: "100%", objectFit: "cover",
+              background: "#000", display: "block",
+              transform: "scaleX(-1)",  // self-view mirrored, FaceTime-style
+            }}
+          />
+          {!videoOn && (
+            <div style={cardOverlayStyle}>
+              <div className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.22em" }}>
+                CAMERA OFF
+              </div>
             </div>
-          </div>
-        )}
-        {callJoinState === "error" && callError && (
-          <div style={cardOverlayStyle}>
-            <div className="e-mono" style={{ color: "var(--rose)", fontSize: 9, letterSpacing: "0.22em" }}>CALL ERROR</div>
-            <div style={{ marginTop: 6, fontSize: 11, color: "rgba(242,238,232,0.85)", lineHeight: 1.4, padding: "0 8px" }}>{callError}</div>
-          </div>
-        )}
-        <div style={cardLabelStyle}>{isCoach ? "MEMBER" : trainerName.toUpperCase()}</div>
-      </div>
+          )}
+          <div style={cardLabelStyle}>YOU</div>
+          <button
+            type="button"
+            aria-label="Minimize self-view"
+            onClick={() => setSelfMinimized(true)}
+            style={selfMinimizeBtnStyle}
+          >
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+          </button>
+        </div>
+      ) : (
+        // Minimized: tiny chip in the top-left, tap to expand.
+        <button
+          type="button"
+          aria-label="Show self-view"
+          onClick={() => setSelfMinimized(false)}
+          style={selfChipStyle}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M23 7l-7 5 7 5V7z" />
+            <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+          </svg>
+          <span className="e-mono" style={{ fontSize: 9, letterSpacing: "0.22em" }}>YOU</span>
+        </button>
+      )}
 
-      {/* Status — center top, what's playing */}
+      {/* Status — center top, what's playing. When the self-view is
+          minimized the strip slides left to fill the freed space. */}
       {routine && current && (
-        <div style={statusStripStyle}>
+        <div style={selfMinimized ? statusStripExpandedStyle : statusStripStyle}>
           <div className="e-mono" style={{ color: "var(--sky)", fontSize: 10, letterSpacing: "0.28em" }}>
             EXERCISE {exerciseIdx + 1} / {routine.exercises.length}
           </div>
@@ -570,7 +646,8 @@ const chipStyle: React.CSSProperties = {
   letterSpacing: "0.24em",
 };
 
-// Caller (remote face) — top-left under the LEAVE chip.
+// Self-view card — top-left under the LEAVE chip, mirrored, with a
+// minimize button. The background of the stage is the *remote* person.
 const callerCardStyle: React.CSSProperties = {
   position: "absolute",
   top: "calc(env(safe-area-inset-top, 0px) + 70px)",
@@ -583,6 +660,53 @@ const callerCardStyle: React.CSSProperties = {
   boxShadow: "0 14px 30px rgba(0,0,0,0.5)",
   background: "#000",
   zIndex: 5,
+};
+
+// Tiny floating chip when the self-view is minimized — taps to expand.
+const selfChipStyle: React.CSSProperties = {
+  position: "absolute",
+  top: "calc(env(safe-area-inset-top, 0px) + 70px)",
+  left: 16,
+  zIndex: 5,
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 6,
+  padding: "8px 12px",
+  borderRadius: 999,
+  background: "rgba(10,14,20,0.7)",
+  backdropFilter: "blur(12px)",
+  border: "1px solid rgba(143,184,214,0.35)",
+  color: "var(--sky)",
+  cursor: "pointer",
+};
+
+// Minimize button overlaid on the self-view card.
+const selfMinimizeBtnStyle: React.CSSProperties = {
+  position: "absolute",
+  top: 6,
+  right: 6,
+  width: 22, height: 22, borderRadius: "50%",
+  background: "rgba(10,14,20,0.65)",
+  color: "var(--bone)",
+  border: "1px solid rgba(143,184,214,0.4)",
+  display: "flex", alignItems: "center", justifyContent: "center",
+  cursor: "pointer",
+  padding: 0,
+};
+
+// Center overlay for joining / waiting / error states on the background.
+const backgroundOverlayStyle: React.CSSProperties = {
+  position: "absolute",
+  inset: 0,
+  background: "rgba(10,14,20,0.6)",
+  backdropFilter: "blur(4px)",
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  justifyContent: "center",
+  textAlign: "center",
+  padding: 22,
+  zIndex: 1,
 };
 
 const cardOverlayStyle: React.CSSProperties = {
@@ -609,8 +733,8 @@ const cardLabelStyle: React.CSSProperties = {
   letterSpacing: "0.22em",
 };
 
-// Workout video — bottom-right, 16:9 — bigger than the caller card so the
-// demo is the visual anchor for both participants.
+// Workout video — bottom-right, 16:9 — sits above the background remote
+// video so the demo is always visible while the call streams behind.
 const workoutCardStyle: React.CSSProperties = {
   position: "absolute",
   bottom: "calc(env(safe-area-inset-bottom, 0px) + 88px)",
@@ -625,6 +749,7 @@ const workoutCardStyle: React.CSSProperties = {
   zIndex: 5,
 };
 
+
 const controlsOverlayStyle: React.CSSProperties = {
   position: "absolute",
   bottom: 10, left: 0, right: 0,
@@ -636,15 +761,32 @@ const controlsOverlayStyle: React.CSSProperties = {
   zIndex: 2,
 };
 
-// Status — center top of the dark middle, exercise name + cue.
-const statusStripStyle: React.CSSProperties = {
+// Status strip — exercise name + cue. Sits next to the self-view card by
+// default; slides left when the self-view is minimized so the title can
+// breathe. Pulled into its own background pill so text stays legible
+// against the live remote video underneath.
+const statusStripBase: React.CSSProperties = {
   position: "absolute",
   top: "calc(env(safe-area-inset-top, 0px) + 70px)",
-  left: "calc(min(36vw, 220px) + 32px)",
   right: 16,
   display: "flex",
   flexDirection: "column",
   alignItems: "flex-start",
+  zIndex: 5,
+  padding: "10px 14px",
+  borderRadius: 12,
+  background: "rgba(10,14,20,0.55)",
+  backdropFilter: "blur(10px)",
+  border: "1px solid rgba(143,184,214,0.18)",
+  pointerEvents: "none",
+};
+const statusStripStyle: React.CSSProperties = {
+  ...statusStripBase,
+  left: "calc(min(36vw, 220px) + 32px)",
+};
+const statusStripExpandedStyle: React.CSSProperties = {
+  ...statusStripBase,
+  left: 80,
 };
 
 // Mic + cam pills — bottom-left, opposite the workout card.
