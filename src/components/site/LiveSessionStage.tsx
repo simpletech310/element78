@@ -156,14 +156,15 @@ export function LiveSessionStage({
   // {exerciseIdx, phase} shape (the existing routine_state schema), with
   // setIdx pinned to 0 so the existing RoutinePlayer-side consumers keep
   // working on the regular meta page.
+  const coachSessionId = live?.mode === "coach" ? live.sessionId : null;
   const lastPushedRef = useRef<string>("");
   useEffect(() => {
-    if (!live || live.mode !== "coach") return;
+    if (!coachSessionId) return;
     const key = `${exerciseIdx}|${phase}`;
     if (lastPushedRef.current === key) return;
     lastPushedRef.current = key;
     const fd = new FormData();
-    fd.set("session_id", live.sessionId);
+    fd.set("session_id", coachSessionId);
     fd.set("exercise_idx", String(exerciseIdx));
     fd.set("set_idx", "0");
     fd.set("phase", phase);
@@ -172,28 +173,55 @@ export function LiveSessionStage({
       // eslint-disable-next-line no-console
       console.warn("[live-stage] routine push failed:", err.message);
     });
-  }, [live, exerciseIdx, phase]);
+  }, [coachSessionId, exerciseIdx, phase]);
 
   // Subscribe to the parent session row in member mode and mirror state.
+  // Also hydrate from the current row on mount — without this, a member
+  // who joins after the coach has already advanced to exercise 3 starts at
+  // 0 and only ever sees the *next* change, never the current state.
+  // Dep is the stable session id (not the live object reference) so
+  // identity churn from the parent doesn't constantly re-subscribe.
+  const sessionId = live?.mode === "follow" ? live.sessionId : null;
   useEffect(() => {
-    if (!live || live.mode !== "follow") return;
+    if (!sessionId) return;
     const sb = createClient();
+    let cancelled = false;
+
+    // Initial hydrate
+    sb.from("trainer_sessions")
+      .select("routine_state")
+      .eq("id", sessionId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (cancelled) return;
+        const s = (data as { routine_state: { exerciseIdx: number; phase: Phase } | null } | null)?.routine_state;
+        if (!s) return;
+        setExerciseIdx(s.exerciseIdx ?? 0);
+        setPhase(s.phase ?? "ready");
+      });
+
     const channel = sb
-      .channel(`stage-routine-${live.sessionId}`)
+      .channel(`stage-routine-${sessionId}`)
       .on(
         "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "trainer_sessions", filter: `id=eq.${live.sessionId}` },
+        { event: "UPDATE", schema: "public", table: "trainer_sessions", filter: `id=eq.${sessionId}` },
         (payload) => {
           const row = payload.new as { routine_state: { exerciseIdx: number; phase: Phase } | null };
           const s = row.routine_state;
           if (!s) return;
-          setExerciseIdx(s.exerciseIdx);
-          setPhase(s.phase);
+          setExerciseIdx(s.exerciseIdx ?? 0);
+          setPhase(s.phase ?? "ready");
         },
       )
-      .subscribe();
-    return () => { sb.removeChannel(channel); };
-  }, [live]);
+      .subscribe((status) => {
+        // eslint-disable-next-line no-console
+        console.log(`[live-stage] follower subscription:`, status);
+      });
+    return () => {
+      cancelled = true;
+      sb.removeChannel(channel);
+    };
+  }, [sessionId]);
 
   // Sync the <video> element to the playing state + current exercise URL.
   useEffect(() => {
@@ -232,12 +260,12 @@ export function LiveSessionStage({
   }, []);
   const onStop = useCallback(() => {
     setPhase("done");
-    if (live?.mode === "coach") {
+    if (coachSessionId) {
       const fd = new FormData();
-      fd.set("session_id", live.sessionId);
+      fd.set("session_id", coachSessionId);
       clearRoutineStateAction(fd).catch(() => {});
     }
-  }, [live]);
+  }, [coachSessionId]);
 
   /* ------------------------------------------------------------------ */
   /*  Render                                                            */
@@ -313,8 +341,12 @@ export function LiveSessionStage({
           <video
             ref={routineVideoRef}
             playsInline
-            muted={false}
-            preload="metadata"
+            // Muted so iOS Safari allows autoplay when the coach hits PLAY
+            // and pushes phase=working — without this, the member's video
+            // silently stays paused. Voice cues come from the Daily call,
+            // so the demo's own audio isn't needed.
+            muted
+            preload="auto"
             crossOrigin="anonymous"
             poster={current?.poster_url}
             style={{ width: "100%", height: "100%", objectFit: "cover", background: "#000", display: "block" }}
