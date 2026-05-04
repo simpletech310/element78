@@ -4,7 +4,8 @@ import { CoachShell, CoachSection, CoachEmpty } from "@/components/site/CoachShe
 import { Time } from "@/components/site/Time";
 import { AutoRefresh } from "@/components/site/AutoRefresh";
 import { getTrainerForCurrentUser } from "@/lib/trainer-auth";
-import { listTrainerInbox, listProfilesByIds, listTrainerOwnedSessions, getTrainerEarnings } from "@/lib/data/queries";
+import { listTrainerInbox, listProfilesByIds, listTrainerOwnedSessions, getTrainerEarnings, getTrainerSessionSettings } from "@/lib/data/queries";
+import { createClient } from "@/lib/supabase/server";
 import { isSessionJoinable } from "@/lib/video/provider";
 import {
   acceptTrainerBookingAction,
@@ -23,13 +24,33 @@ export default async function CoachDashboardPage({ searchParams }: { searchParam
   const coach = await getTrainerForCurrentUser();
   if (!coach) redirect("/login?next=/trainer/dashboard");
 
-  const [all, groupSessions, earnings] = await Promise.all([
+  const [all, groupSessions, earnings, sessionSettings, availabilityCount] = await Promise.all([
     listTrainerInbox(coach.id),
     listTrainerOwnedSessions(coach.id),
     getTrainerEarnings(coach.id),
+    getTrainerSessionSettings(coach.id),
+    (async () => {
+      const sb = createClient();
+      const { count } = await sb
+        .from("trainer_availability_rules")
+        .select("id", { count: "exact", head: true })
+        .eq("trainer_id", coach.id)
+        .eq("is_active", true);
+      return count ?? 0;
+    })(),
   ]);
   const userIds = Array.from(new Set(all.map(b => b.user_id)));
   const profiles = await listProfilesByIds(userIds);
+
+  // Onboarding checklist gates: payout active, has at least one active
+  // weekly availability rule, and 1-on-1 settings priced (price_cents > 0).
+  // The block hides itself entirely once all three are satisfied.
+  const onboarding = {
+    payoutActive: coach.payout_status === "active",
+    hasAvailability: availabilityCount > 0,
+    hasPricing: !!sessionSettings && sessionSettings.price_cents > 0,
+  };
+  const onboardingComplete = onboarding.payoutActive && onboarding.hasAvailability && onboarding.hasPricing;
 
   const now = Date.now();
   const pending = all.filter(b => b.status === "pending_trainer");
@@ -50,6 +71,14 @@ export default async function CoachDashboardPage({ searchParams }: { searchParam
         <div className="e-mono" style={{ marginBottom: 24, padding: "12px 14px", borderRadius: 12, background: "rgba(143,184,214,0.1)", border: "1px solid var(--sky)", color: "var(--sky)", fontSize: 11, letterSpacing: "0.18em" }}>
           ✓ {flash}
         </div>
+      )}
+
+      {!onboardingComplete && (
+        <OnboardingChecklist
+          payoutActive={onboarding.payoutActive}
+          hasAvailability={onboarding.hasAvailability}
+          hasPricing={onboarding.hasPricing}
+        />
       )}
 
       {/* HERO STATS */}
@@ -113,6 +142,62 @@ export default async function CoachDashboardPage({ searchParams }: { searchParam
   );
 }
 
+function OnboardingChecklist({ payoutActive, hasAvailability, hasPricing }: { payoutActive: boolean; hasAvailability: boolean; hasPricing: boolean }) {
+  const items = [
+    { done: payoutActive, label: "STRIPE CONNECT · VERIFIED FOR PAYOUTS", href: "/trainer/onboarding/connect" },
+    { done: hasAvailability, label: "WEEKLY AVAILABILITY · AT LEAST ONE RULE", href: "/trainer/availability" },
+    { done: hasPricing, label: "1-ON-1 PRICING · SET YOUR RATE", href: "/trainer/profile" },
+  ];
+  return (
+    <section style={{ marginBottom: 26, padding: 18, borderRadius: 14, background: "linear-gradient(135deg, rgba(143,184,214,0.14), rgba(46,127,176,0.04))", border: "1px solid rgba(143,184,214,0.32)" }}>
+      <div className="e-mono" style={{ color: "var(--sky)", fontSize: 10, letterSpacing: "0.22em" }}>
+        FINISH ONBOARDING
+      </div>
+      <div style={{ marginTop: 6, fontFamily: "var(--font-display)", fontSize: 22, lineHeight: 1.1 }}>
+        A few steps before members can book.
+      </div>
+      <ul style={{ listStyle: "none", padding: 0, margin: "16px 0 0", display: "flex", flexDirection: "column", gap: 8 }}>
+        {items.map(item => (
+          <li key={item.label}>
+            <Link
+              href={item.href}
+              className="lift"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                padding: "12px 14px",
+                borderRadius: 12,
+                background: "var(--haze)",
+                border: "1px solid rgba(143,184,214,0.18)",
+                color: "var(--bone)",
+                textDecoration: "none",
+              }}
+            >
+              <span
+                aria-hidden="true"
+                style={{
+                  width: 14,
+                  height: 14,
+                  borderRadius: 999,
+                  flexShrink: 0,
+                  background: item.done ? "var(--sky)" : "transparent",
+                  border: item.done ? "1px solid var(--sky)" : "1px solid rgba(143,184,214,0.45)",
+                  boxShadow: item.done ? "0 0 8px rgba(143,184,214,0.55)" : "none",
+                }}
+              />
+              <span className="e-mono" style={{ flex: 1, fontSize: 11, letterSpacing: "0.18em", color: item.done ? "rgba(242,238,232,0.55)" : "var(--bone)" }}>
+                {item.label}
+              </span>
+              <span className="e-mono" style={{ color: "var(--sky)", fontSize: 12, letterSpacing: "0.2em" }}>→</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 function Stat({ label, value, sub }: { label: string; value: string; sub: string }) {
   return (
     <div style={{ padding: 18, borderRadius: 14, background: "var(--haze)", border: "1px solid rgba(143,184,214,0.18)" }}>
@@ -139,6 +224,7 @@ function ActionTile({ href, label, hint }: { href: string; label: string; hint: 
 
 function PendingRow({ booking, clientName }: { booking: TrainerBooking; clientName: string }) {
   const routine = booking.routine_slug ? routines.find(r => r.slug === booking.routine_slug) : null;
+  const durationMin = Math.round((new Date(booking.ends_at).getTime() - new Date(booking.starts_at).getTime()) / 60000);
   return (
     <div style={{
       padding: 16, borderRadius: 14,
@@ -164,11 +250,54 @@ function PendingRow({ booking, clientName }: { booking: TrainerBooking; clientNa
       {booking.client_goals && (
         <p style={{ marginTop: 10, fontSize: 14, color: "rgba(242,238,232,0.8)", lineHeight: 1.6 }}>"{booking.client_goals}"</p>
       )}
-      <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap" }}>
-        <form action={acceptTrainerBookingAction}>
-          <input type="hidden" name="booking_id" value={booking.id} />
-          <button type="submit" className="btn btn-sky" style={{ padding: "10px 18px" }}>ACCEPT</button>
-        </form>
+      <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-start" }}>
+        {/* Two-step accept: <details> opens to a recap + final CONFIRM. Pure
+            HTML so it works without client JS. The summary acts as the
+            initial trigger and the inner form holds the actual submit. */}
+        <details style={{ flex: "1 1 auto", minWidth: 220 }}>
+          <summary
+            className="btn btn-sky e-mono"
+            style={{ padding: "10px 18px", listStyle: "none", cursor: "pointer", display: "inline-block", letterSpacing: "0.18em", fontSize: 11 }}
+          >
+            ACCEPT
+          </summary>
+          <div style={{ marginTop: 12, padding: 14, borderRadius: 12, background: "var(--haze)", border: "1px solid rgba(143,184,214,0.25)" }}>
+            <div className="e-mono" style={{ color: "var(--sky)", fontSize: 10, letterSpacing: "0.22em" }}>
+              CONFIRM ACCEPT
+            </div>
+            <dl style={{ margin: "12px 0 0", display: "grid", gridTemplateColumns: "auto 1fr", gap: "6px 14px", fontSize: 12 }}>
+              <dt className="e-mono" style={{ color: "rgba(242,238,232,0.55)", letterSpacing: "0.14em", fontSize: 10 }}>WHEN</dt>
+              <dd style={{ margin: 0 }}><Time iso={booking.starts_at} format="datetime" /></dd>
+              <dt className="e-mono" style={{ color: "rgba(242,238,232,0.55)", letterSpacing: "0.14em", fontSize: 10 }}>DURATION</dt>
+              <dd style={{ margin: 0 }}>{fmtDurationMin(durationMin)}</dd>
+              <dt className="e-mono" style={{ color: "rgba(242,238,232,0.55)", letterSpacing: "0.14em", fontSize: 10 }}>MODE</dt>
+              <dd style={{ margin: 0 }}>{booking.mode === "video" ? "Video call" : "In person"}</dd>
+              <dt className="e-mono" style={{ color: "rgba(242,238,232,0.55)", letterSpacing: "0.14em", fontSize: 10 }}>PRICE</dt>
+              <dd style={{ margin: 0 }}>{fmtDollars(booking.price_cents)} · {booking.paid_status.toUpperCase()}</dd>
+              {routine && (
+                <>
+                  <dt className="e-mono" style={{ color: "rgba(242,238,232,0.55)", letterSpacing: "0.14em", fontSize: 10 }}>ROUTINE</dt>
+                  <dd style={{ margin: 0 }}>{routine.name} · {routine.duration_min}M</dd>
+                </>
+              )}
+              {booking.client_goals && (
+                <>
+                  <dt className="e-mono" style={{ color: "rgba(242,238,232,0.55)", letterSpacing: "0.14em", fontSize: 10 }}>GOALS</dt>
+                  <dd style={{ margin: 0, lineHeight: 1.5 }}>"{booking.client_goals}"</dd>
+                </>
+              )}
+            </dl>
+            <div style={{ marginTop: 14, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+              <form action={acceptTrainerBookingAction}>
+                <input type="hidden" name="booking_id" value={booking.id} />
+                <button type="submit" className="btn btn-sky" style={{ padding: "10px 18px" }}>CONFIRM ACCEPT</button>
+              </form>
+              <span className="e-mono" style={{ color: "rgba(242,238,232,0.5)", fontSize: 10, letterSpacing: "0.18em" }}>
+                ← TAP "ACCEPT" ABOVE TO BACK OUT
+              </span>
+            </div>
+          </div>
+        </details>
         <form action={rejectTrainerBookingAction} style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
           <input type="hidden" name="booking_id" value={booking.id} />
           <input

@@ -98,6 +98,20 @@ export async function requestTrainerBookingAction(formData: FormData) {
     redirect(`/trainers/${trainerSlug}?error=${encodeURIComponent("This trainer isn't accepting 1-on-1 yet")}`);
   }
 
+  // Stripe Connect gate: paid bookings require the coach's payout account to
+  // be 'active'. Free sessions still go through.
+  if (settings.price_cents > 0) {
+    const { data: payoutRow } = await sb
+      .from("trainers")
+      .select("payout_status")
+      .eq("id", trainerId)
+      .maybeSingle();
+    const payoutStatus = (payoutRow as { payout_status: string | null } | null)?.payout_status ?? null;
+    if (payoutStatus !== "active") {
+      redirect(`/trainers/${trainerSlug}/book?error=coach_not_ready_for_payments`);
+    }
+  }
+
   const requiresPayment = settings.price_cents > 0;
   const paid_status = requiresPayment ? "pending" : "free";
 
