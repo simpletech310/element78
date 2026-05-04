@@ -15,7 +15,10 @@ export default async function HomePage() {
   // belong in the team grid on the landing page.
   const trainers = allTrainers.filter(t => !t.is_ai);
 
-  const pillars = [
+  const pillars: Array<{
+    num: string; t: string; sub: string; desc: string;
+    img: string; imgPos?: string; cta: string; href: string;
+  }> = [
     {
       num: "I", t: "THE GYM", sub: "24/7 floor · AI on the mat · real coaches",
       desc: "Reformers, free weights, treadmills, mat rooms, recovery. AI coaches cue your form right on the floor. Real trainers in the booths when you want a person. Walk in at 4am — the work meets you whenever you show up.",
@@ -24,7 +27,8 @@ export default async function HomePage() {
     {
       num: "II", t: "THE STUDIO", sub: "Guided sessions, anywhere you train",
       desc: "Pilates, HIIT, strength, mobility, yoga, conditioning. Studio sessions in your living room, live coaches on the gym booths — same playbook, same standard, pick your tempo.",
-      img: "/assets/editorial-2.png", cta: "TRY A SESSION", href: "/train",
+      img: "/assets/editorial-2.png", imgPos: "center top",
+      cta: "TRY A SESSION", href: "/train",
     },
     {
       num: "III", t: "THE STORE", sub: "Wear, gear, fuel",
@@ -80,11 +84,11 @@ export default async function HomePage() {
           </div>
 
           <p className="reveal reveal-d3" style={{ marginTop: 36, fontSize: "clamp(22px, 4vw, 32px)", fontFamily: "var(--font-serif)", fontStyle: "italic", lineHeight: 1.15, color: "var(--bone)", maxWidth: 520, marginBottom: 0 }}>
-            However you need to move — we got you.
+            However you move — we got you.
           </p>
 
-          <p className="reveal reveal-d3" style={{ marginTop: 14, fontSize: 15, color: "rgba(242,238,232,0.7)", maxWidth: 480, lineHeight: 1.6, fontWeight: 300 }}>
-            A 24/7 floor — reformers, weights, recovery — with AI coaches on the mat next to you and real trainers when you want a person. Walk in solo at 4am or book ahead. Show up, grind, shine. Built for the women the wellness industry forgot.
+          <p className="reveal reveal-d3" style={{ marginTop: 14, fontSize: 15, color: "rgba(242,238,232,0.7)", maxWidth: 460, lineHeight: 1.6, fontWeight: 300 }}>
+            AI coaches on the mat. Real trainers when you want a person. Doors open 24/7 — show up, grind, shine. Built for the women the wellness industry forgot.
           </p>
 
           <div className="reveal reveal-d4" style={{ marginTop: "auto", paddingTop: 36, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
@@ -146,7 +150,7 @@ export default async function HomePage() {
               minHeight: 480, display: "block", color: "var(--bone)", textDecoration: "none",
               border: "1px solid rgba(143,184,214,0.08)",
             }}>
-              <Photo src={p.img} alt={p.t} className="zoom-on-hover" style={{ position: "absolute", inset: 0 }} />
+              <Photo src={p.img} alt={p.t} className="zoom-on-hover" style={{ position: "absolute", inset: 0, backgroundPosition: p.imgPos ?? "center" }} />
               <div style={{
                 position: "absolute", inset: 0,
                 background: reversed
