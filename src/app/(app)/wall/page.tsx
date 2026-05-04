@@ -5,10 +5,9 @@ import { Photo } from "@/components/ui/Photo";
 import { Icon } from "@/components/ui/Icon";
 import { getUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentWallChallenge, listHighlights, listPosts } from "@/lib/data/queries";
+import { getCurrentWallChallenge, listPosts } from "@/lib/data/queries";
 import { ComposeBar } from "./_components/ComposeBar";
 import { FilterChips } from "./_components/FilterChips";
-import { StoriesRail } from "./_components/StoriesRail";
 import { PostCard } from "./_components/PostCard";
 
 export const dynamic = "force-dynamic";
@@ -45,9 +44,8 @@ export default async function WallScreen({
   const filterParam = (searchParams?.filter ?? "ALL").toUpperCase();
   const kinds = KIND_MAP[filterParam] ?? [];
 
-  const [posts, highlights, pinnedChallenge] = await Promise.all([
+  const [posts, pinnedChallenge] = await Promise.all([
     listPosts({ kinds, currentUserId: user?.id ?? null }),
-    listHighlights(),
     getCurrentWallChallenge(),
   ]);
   const pinnedDaysLeft = pinnedChallenge
@@ -69,9 +67,6 @@ export default async function WallScreen({
             <ComposeBar variant="header" meAvatarUrl={me.avatar_url} />
           </div>
         </div>
-
-        {/* Stories rail */}
-        <StoriesRail highlights={highlights} me={me} />
 
         {/* Filter chips */}
         <FilterChips active={filterParam} />
