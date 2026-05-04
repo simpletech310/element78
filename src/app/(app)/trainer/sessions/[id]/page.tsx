@@ -4,18 +4,19 @@ import { Icon } from "@/components/ui/Icon";
 import { Photo } from "@/components/ui/Photo";
 import { CoachShell, CoachSection, CoachEmpty } from "@/components/site/CoachShell";
 import { Time } from "@/components/site/Time";
+import { DateTimeField } from "@/components/site/DateTimeField";
 import { getTrainerForCurrentUser } from "@/lib/trainer-auth";
 import { getTrainerSessionRow, listGroupSessionRoster } from "@/lib/data/queries";
 import { isSessionJoinable } from "@/lib/video/provider";
-import { cancelGroupSessionAction, completeGroupSessionAction, startGroupSessionAction } from "@/lib/trainer-session-actions";
+import { cancelGroupSessionAction, completeGroupSessionAction, editGroupSessionAction, startGroupSessionAction } from "@/lib/trainer-session-actions";
 import { fmtDollars, fmtDurationMin } from "@/lib/format";
 import { SessionVideoFrame, SessionLocked, SessionInPersonPanel } from "@/components/site/SessionVideoFrame";
 import { RoutinePlayer } from "@/components/site/RoutinePlayer";
-import { getRoutine } from "@/lib/data/routines";
+import { getRoutine, routines } from "@/lib/data/routines";
 
 export const dynamic = "force-dynamic";
 
-export default async function CoachGroupSessionPage({ params }: { params: { id: string } }) {
+export default async function CoachGroupSessionPage({ params, searchParams }: { params: { id: string }; searchParams: { edited?: string; error?: string } }) {
   const coach = await getTrainerForCurrentUser();
   if (!coach) redirect(`/login?next=/trainer/sessions/${params.id}`);
 
@@ -24,6 +25,9 @@ export default async function CoachGroupSessionPage({ params }: { params: { id: 
   if (session.trainer_id !== coach.id) redirect("/trainer/dashboard?error=unauthorized");
 
   const roster = await listGroupSessionRoster(session.id);
+  const activeAttendees = roster.filter(r => r.booking.status === "pending_trainer" || r.booking.status === "confirmed").length;
+  const hasAttendees = activeAttendees > 0;
+  const canEdit = session.is_group && session.status !== "cancelled" && session.status !== "completed";
   const durationMin = Math.round((new Date(session.ends_at).getTime() - new Date(session.starts_at).getTime()) / 60_000);
   const joinable = isSessionJoinable(session.starts_at, session.ends_at);
   const canComplete = ["open", "full", "confirmed"].includes(session.status);
@@ -44,6 +48,17 @@ export default async function CoachGroupSessionPage({ params }: { params: { id: 
       </div>
       {session.description && (
         <p style={{ marginTop: 14, fontSize: 14, color: "rgba(242,238,232,0.75)", lineHeight: 1.6, maxWidth: 640 }}>{session.description}</p>
+      )}
+
+      {searchParams.edited && (
+        <div className="e-mono" style={{ marginTop: 14, padding: "12px 14px", borderRadius: 12, background: "rgba(143,184,214,0.1)", border: "1px solid var(--sky)", color: "var(--sky)", fontSize: 11, letterSpacing: "0.18em" }}>
+          ✓ SESSION UPDATED
+        </div>
+      )}
+      {searchParams.error && (
+        <div className="e-mono" style={{ marginTop: 14, padding: "12px 14px", borderRadius: 12, background: "rgba(232,181,168,0.12)", border: "1px solid rgba(232,181,168,0.4)", color: "var(--rose)", fontSize: 11, letterSpacing: "0.16em" }}>
+          {searchParams.error}
+        </div>
       )}
 
       {/* Live call surface — embedded Daily room (or in-person info) so the
@@ -103,6 +118,99 @@ export default async function CoachGroupSessionPage({ params }: { params: { id: 
         )}
       </div>
 
+      {canEdit && (
+        <details
+          style={{
+            marginTop: 28,
+            padding: 18,
+            borderRadius: 14,
+            background: "var(--haze)",
+            border: "1px solid rgba(143,184,214,0.2)",
+          }}
+        >
+          <summary
+            className="e-mono"
+            style={{ cursor: "pointer", color: "var(--sky)", letterSpacing: "0.22em", fontSize: 11, listStyle: "none" }}
+          >
+            EDIT SESSION {hasAttendees ? `· ${activeAttendees} ATTENDEE${activeAttendees === 1 ? "" : "S"} · SOME FIELDS LOCKED` : "· NO ATTENDEES YET"}
+          </summary>
+
+          <form action={editGroupSessionAction} style={{ marginTop: 18, display: "flex", flexDirection: "column", gap: 14 }}>
+            <input type="hidden" name="session_id" value={session.id} />
+
+            <Field label="TITLE">
+              <input name="title" defaultValue={session.title ?? ""} placeholder="MORNING POWER · GROUP" className="ta-input" />
+            </Field>
+            <Field label="DESCRIPTION">
+              <textarea name="description" rows={3} defaultValue={session.description ?? ""} placeholder="What this group session covers" className="ta-input" style={{ resize: "vertical" }} />
+            </Field>
+
+            <DateTimeField name="starts_at" label={hasAttendees ? "STARTS AT · LOCKED (HAS ATTENDEES)" : "STARTS AT"} defaultValue={session.starts_at} />
+            <DateTimeField name="ends_at" label={hasAttendees ? "ENDS AT · LOCKED (HAS ATTENDEES)" : "ENDS AT"} defaultValue={session.ends_at} />
+            {hasAttendees && (
+              <div className="e-mono" style={{ fontSize: 9, color: "rgba(242,238,232,0.45)", letterSpacing: "0.18em" }}>
+                Time edits ignored while attendees are booked. Cancel the session to reschedule.
+              </div>
+            )}
+
+            <Field label={hasAttendees ? "MODE · LOCKED (HAS ATTENDEES)" : "MODE"}>
+              <select name="mode" defaultValue={session.mode} disabled={hasAttendees} className="ta-input">
+                <option value="video">Video</option>
+                <option value="in_person">In Person</option>
+              </select>
+            </Field>
+
+            <Field label={`CAPACITY · MIN ${Math.max(2, activeAttendees)} (CURRENT ATTENDEES: ${activeAttendees})`}>
+              <input
+                name="capacity"
+                type="number"
+                min={Math.max(2, activeAttendees)}
+                max={50}
+                defaultValue={session.capacity}
+                className="ta-input"
+              />
+            </Field>
+
+            <Field label={hasAttendees ? "PRICE · USD · LOCKED (HAS ATTENDEES)" : "PRICE PER PERSON · USD (0 = FREE)"}>
+              <input
+                name="price_dollars"
+                type="number"
+                min={0}
+                step="0.01"
+                defaultValue={(session.price_cents / 100).toFixed(2)}
+                disabled={hasAttendees}
+                className="ta-input"
+                placeholder="25.00"
+              />
+            </Field>
+
+            <Field label="ROUTINE">
+              <select name="routine_slug" defaultValue={session.routine_slug ?? ""} className="ta-input">
+                <option value="">— LET TRAINER CHOOSE —</option>
+                {routines.map(r => (
+                  <option key={r.slug} value={r.slug}>
+                    {r.name} · {r.duration_min}M · {r.intensity}
+                  </option>
+                ))}
+              </select>
+            </Field>
+
+            <div style={{ marginTop: 4 }}>
+              <button type="submit" className="btn btn-sky" style={{ padding: "12px 22px" }}>
+                SAVE CHANGES
+              </button>
+            </div>
+          </form>
+
+          <style>{`
+            details > summary::-webkit-details-marker { display: none; }
+            .ta-input { padding: 11px 13px; border-radius: 10px; background: rgba(10,14,20,0.4); border: 1px solid rgba(143,184,214,0.25); color: var(--bone); font-family: var(--font-body); font-size: 14px; width: 100%; }
+            .ta-input:focus { outline: none; border-color: var(--sky); }
+            .ta-input:disabled { opacity: 0.45; cursor: not-allowed; }
+          `}</style>
+        </details>
+      )}
+
       <CoachSection title={`ROSTER · ${roster.length}/${session.capacity}`}>
         {roster.length === 0 ? (
           <CoachEmpty body="No attendees yet." />
@@ -142,5 +250,14 @@ export default async function CoachGroupSessionPage({ params }: { params: { id: 
         )}
       </CoachSection>
     </CoachShell>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="e-mono" style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 9, color: "rgba(242,238,232,0.6)", letterSpacing: "0.2em" }}>
+      {label}
+      {children}
+    </label>
   );
 }

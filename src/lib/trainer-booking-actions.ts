@@ -337,6 +337,13 @@ export async function rejectTrainerBookingAction(formData: FormData) {
 
 /**
  * Either side can cancel. Refund-on-cancel for paid bookings.
+ *
+ * Disambiguation by parent session:
+ *   - 1-on-1 (capacity=1, is_group=false): cancel booking + parent session +
+ *     destroy the shared Daily room.
+ *   - Group attendee (is_group=true): booking-only cancel. The parent session
+ *     stays alive for the rest of the roster, and we flip its status from
+ *     'full' back to 'open' so a new member can grab the freed seat.
  */
 export async function cancelTrainerBookingAction(formData: FormData) {
   const bookingId = String(formData.get("booking_id") ?? "");
@@ -355,18 +362,24 @@ export async function cancelTrainerBookingAction(formData: FormData) {
   if (!isOwner && !isTrainer) redirect(`${returnTo}?error=unauthorized`);
 
   const wasPaid = (booking as { paid_status: string }).paid_status === "paid";
-  // Prefer the session-level room (post-Phase 3 source of truth); fall back
-  // to the legacy per-booking column for rows created before migration 0009.
   const sessionId = (booking as { session_id: string | null }).session_id;
-  let roomName: string | null = null;
+
+  // Pull the parent session row up front so we can branch on is_group/capacity.
+  type ParentRow = { id: string; is_group: boolean; capacity: number; status: string; video_room_name: string | null };
+  let parent: ParentRow | null = null;
   if (sessionId) {
     const { data: sessRow } = await sb
       .from("trainer_sessions")
-      .select("video_room_name")
+      .select("id, is_group, capacity, status, video_room_name")
       .eq("id", sessionId)
       .maybeSingle();
-    roomName = (sessRow as { video_room_name: string | null } | null)?.video_room_name ?? null;
+    parent = (sessRow as ParentRow | null) ?? null;
   }
+  const isGroupAttendee = !!parent && parent.is_group === true;
+
+  // Legacy/private bookings: prefer the session-level room (post-Phase 3
+  // source of truth), fall back to the per-booking column for pre-0009 rows.
+  let roomName: string | null = parent?.video_room_name ?? null;
   if (!roomName) {
     roomName = (booking as { video_room_name: string | null }).video_room_name;
   }
@@ -389,14 +402,37 @@ export async function cancelTrainerBookingAction(formData: FormData) {
     }
   }
 
-  // Tear down any provisioned video room so we don't leave a zombie sitting
-  // in Daily until exp passes.
-  if (roomName) {
-    await getVideoProvider().destroyRoom(roomName);
+  if (isGroupAttendee && parent) {
+    // Group seat freed up — flip 'full' back to 'open' so the booking page
+    // re-lists this session. Don't touch parent if it's already in some
+    // terminal state (cancelled/completed). Use admin client because RLS on
+    // trainer_sessions only lets the trainer themselves write.
+    if (parent.status === "full") {
+      const admin = createAdminClient();
+      await admin
+        .from("trainer_sessions")
+        .update({ status: "open", updated_at: new Date().toISOString() })
+        .eq("id", parent.id);
+    }
+    // DO NOT destroy the shared Daily room — other attendees still need it.
+  } else {
+    // 1-on-1 (or legacy orphan): kill the parent session (if present) and
+    // tear down the Daily room so we don't leave a zombie sitting in Daily.
+    if (sessionId) {
+      const admin = createAdminClient();
+      await admin
+        .from("trainer_sessions")
+        .update({ status: "cancelled", updated_at: new Date().toISOString() })
+        .eq("id", sessionId);
+    }
+    if (roomName) {
+      await getVideoProvider().destroyRoom(roomName);
+    }
   }
 
   revalidatePath("/trainer/dashboard");
   revalidatePath("/account/sessions");
+  if (sessionId) revalidatePath(`/trainer/sessions/${sessionId}`);
   redirect(`${returnTo}?cancelled=${bookingId}`);
 }
 
