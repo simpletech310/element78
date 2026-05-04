@@ -15,24 +15,40 @@ export default async function NewProductPage({ searchParams }: { searchParams: {
           {searchParams.error}
         </div>
       )}
-      <form action={createProductAction} style={{ maxWidth: 720, display: "flex", flexDirection: "column", gap: 14, padding: 22, borderRadius: 16, background: "var(--haze)", border: "1px solid rgba(143,184,214,0.2)" }}>
+      <form action={createProductAction} encType="multipart/form-data" style={{ maxWidth: 720, display: "flex", flexDirection: "column", gap: 14, padding: 22, borderRadius: 16, background: "var(--haze)", border: "1px solid rgba(143,184,214,0.2)" }}>
         <Field label="NAME *"><input name="name" required className="ta-input" placeholder="ELEMENT 78 HOODIE" /></Field>
-        <Field label="SLUG"><input name="slug" className="ta-input" placeholder="optional" /></Field>
+        <Field label="SLUG"><input name="slug" className="ta-input" placeholder="optional · auto-generated" /></Field>
         <Field label="SUBTITLE"><input name="subtitle" className="ta-input" placeholder="Heavyweight cotton" /></Field>
-        <Field label="CATEGORY"><input name="category" className="ta-input" placeholder="apparel · gear · supplements" /></Field>
+        <Field label="CATEGORY"><input name="category" className="ta-input" placeholder="wear · gear · accessories" /></Field>
         <Field label="DESCRIPTION"><textarea name="description" rows={3} className="ta-input" style={{ resize: "vertical" }} /></Field>
-        <Field label="HERO IMAGE URL"><input name="hero_image" className="ta-input" placeholder="/assets/foo.jpg or full URL" /></Field>
+        <Field label="HERO IMAGE · UPLOAD">
+          <input type="file" name="hero_image_file" accept="image/*" className="ta-input" />
+        </Field>
+        <Field label="OR HERO IMAGE URL (use if you already have one hosted)">
+          <input name="hero_image" className="ta-input" placeholder="https://… or /assets/foo.jpg" />
+        </Field>
+        <Field label="GALLERY · UP TO 4 EXTRA PHOTOS">
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            <input type="file" name="gallery_1_file" accept="image/*" className="ta-input" />
+            <input type="file" name="gallery_2_file" accept="image/*" className="ta-input" />
+            <input type="file" name="gallery_3_file" accept="image/*" className="ta-input" />
+            <input type="file" name="gallery_4_file" accept="image/*" className="ta-input" />
+          </div>
+        </Field>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <Field label="PRICE · USD *"><input name="price_dollars" type="number" min={0} step="0.01" required className="ta-input" placeholder="0.00" /></Field>
-          <Field label="COMPARE AT · USD"><input name="compare_at_dollars" type="number" min={0} step="0.01" className="ta-input" placeholder="optional" /></Field>
+          <Field label="COMPARE AT · USD (strikethrough)"><input name="compare_at_dollars" type="number" min={0} step="0.01" className="ta-input" placeholder="optional" /></Field>
         </div>
         <Field label="TAG"><input name="tag" className="ta-input" placeholder="NEW · LIMITED · STAFF PICK" /></Field>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+          <Field label="STOCK QTY (BLANK = UNLIMITED)">
+            <input name="stock_qty" type="number" min={0} className="ta-input" placeholder="e.g. 50" />
+          </Field>
           <Field label="SORT ORDER"><input name="sort_order" type="number" defaultValue={0} className="ta-input" /></Field>
           <label className="e-mono" style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 9, color: "rgba(242,238,232,0.6)", letterSpacing: "0.2em" }}>
-            IN STOCK
+            ACTIVE
             <label style={{ display: "flex", alignItems: "center", gap: 8, padding: "11px 13px", borderRadius: 10, background: "rgba(10,14,20,0.4)", border: "1px solid rgba(143,184,214,0.25)" }}>
-              <input type="checkbox" name="in_stock" defaultChecked /> AVAILABLE
+              <input type="checkbox" name="in_stock" defaultChecked /> SHOW IN SHOP
             </label>
           </label>
         </div>

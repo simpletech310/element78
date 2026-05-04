@@ -28,24 +28,53 @@ export default async function AdminProductDetail({ params, searchParams }: { par
         </div>
       )}
 
-      <form action={updateProductAction} style={{ maxWidth: 720, display: "flex", flexDirection: "column", gap: 14, padding: 22, borderRadius: 16, background: "var(--haze)", border: "1px solid rgba(143,184,214,0.2)" }}>
+      {/* Current photos preview */}
+      {(p.hero_image || (p.gallery && p.gallery.length > 0)) && (
+        <div style={{ marginBottom: 18, display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {p.hero_image && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={p.hero_image} alt="" style={{ width: 120, height: 120, objectFit: "cover", borderRadius: 12, border: "1px solid rgba(143,184,214,0.2)" }} />
+          )}
+          {(p.gallery ?? []).filter(g => g !== p.hero_image).slice(0, 6).map((g, i) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img key={i} src={g} alt="" style={{ width: 80, height: 80, objectFit: "cover", borderRadius: 12, border: "1px solid rgba(143,184,214,0.2)" }} />
+          ))}
+        </div>
+      )}
+
+      <form action={updateProductAction} encType="multipart/form-data" style={{ maxWidth: 720, display: "flex", flexDirection: "column", gap: 14, padding: 22, borderRadius: 16, background: "var(--haze)", border: "1px solid rgba(143,184,214,0.2)" }}>
         <input type="hidden" name="product_id" value={p.id} />
+        <input type="hidden" name="slug" value={p.slug} />
         <Field label="NAME *"><input name="name" required defaultValue={p.name} className="ta-input" /></Field>
         <Field label="SUBTITLE"><input name="subtitle" defaultValue={p.subtitle ?? ""} className="ta-input" /></Field>
         <Field label="CATEGORY"><input name="category" defaultValue={p.category ?? ""} className="ta-input" /></Field>
         <Field label="DESCRIPTION"><textarea name="description" rows={3} defaultValue={p.description ?? ""} className="ta-input" style={{ resize: "vertical" }} /></Field>
-        <Field label="HERO IMAGE URL"><input name="hero_image" defaultValue={p.hero_image ?? ""} className="ta-input" /></Field>
+        <Field label="REPLACE HERO IMAGE · UPLOAD">
+          <input type="file" name="hero_image_file" accept="image/*" className="ta-input" />
+        </Field>
+        <Field label="OR HERO IMAGE URL"><input name="hero_image" defaultValue={p.hero_image ?? ""} className="ta-input" /></Field>
+        <Field label="ADD MORE GALLERY PHOTOS">
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            <input type="file" name="gallery_1_file" accept="image/*" className="ta-input" />
+            <input type="file" name="gallery_2_file" accept="image/*" className="ta-input" />
+            <input type="file" name="gallery_3_file" accept="image/*" className="ta-input" />
+            <input type="file" name="gallery_4_file" accept="image/*" className="ta-input" />
+          </div>
+        </Field>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <Field label="PRICE · USD *"><input name="price_dollars" type="number" min={0} step="0.01" defaultValue={(p.price_cents / 100).toFixed(2)} required className="ta-input" /></Field>
           <Field label="COMPARE AT · USD"><input name="compare_at_dollars" type="number" min={0} step="0.01" defaultValue={p.compare_at_cents != null ? (p.compare_at_cents / 100).toFixed(2) : ""} className="ta-input" /></Field>
         </div>
         <Field label="TAG"><input name="tag" defaultValue={p.tag ?? ""} className="ta-input" /></Field>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+          <Field label="STOCK QTY (BLANK = UNLIMITED)">
+            <input name="stock_qty" type="number" min={0} defaultValue={p.stock_qty ?? ""} className="ta-input" />
+          </Field>
           <Field label="SORT ORDER"><input name="sort_order" type="number" defaultValue={p.sort_order} className="ta-input" /></Field>
           <label className="e-mono" style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 9, color: "rgba(242,238,232,0.6)", letterSpacing: "0.2em" }}>
-            IN STOCK
+            ACTIVE
             <label style={{ display: "flex", alignItems: "center", gap: 8, padding: "11px 13px", borderRadius: 10, background: "rgba(10,14,20,0.4)", border: "1px solid rgba(143,184,214,0.25)" }}>
-              <input type="checkbox" name="in_stock" defaultChecked={p.in_stock} /> AVAILABLE
+              <input type="checkbox" name="in_stock" defaultChecked={p.in_stock} /> SHOW IN SHOP
             </label>
           </label>
         </div>

@@ -96,6 +96,8 @@ export type Product = {
   tag: string | null;
   in_stock: boolean;
   sort_order: number;
+  /** Inventory count. NULL = untracked / unlimited; 0 = sold out. (0033) */
+  stock_qty: number | null;
 };
 
 export type ProductVariant = {

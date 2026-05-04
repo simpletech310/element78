@@ -33,22 +33,35 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
             NO PRODUCTS YET.
           </div>
         ) : (
-          products.map(p => (
-            <Link key={p.id} href={`/admin/products/${p.id}`} style={{ display: "flex", gap: 14, alignItems: "center", padding: "14px 16px", borderRadius: 14, background: "var(--haze)", border: "1px solid rgba(143,184,214,0.2)", textDecoration: "none", color: "var(--bone)" }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: "var(--font-display)", fontSize: 18 }}>{p.name}</div>
-                <div className="e-mono" style={{ fontSize: 10, color: "rgba(242,238,232,0.55)", letterSpacing: "0.16em", marginTop: 4 }}>
-                  /{p.slug} · {p.category ?? "uncategorized"}
+          products.map(p => {
+            const trackedOut = p.stock_qty != null && p.stock_qty <= 0;
+            const lowStock = p.stock_qty != null && p.stock_qty > 0 && p.stock_qty <= 5;
+            const stockLabel = p.stock_qty == null ? "UNLIMITED" : `${p.stock_qty} ON HAND`;
+            const visible = p.in_stock && !trackedOut;
+            return (
+              <Link key={p.id} href={`/admin/products/${p.id}`} style={{ display: "flex", gap: 14, alignItems: "center", padding: "14px 16px", borderRadius: 14, background: "var(--haze)", border: "1px solid rgba(143,184,214,0.2)", textDecoration: "none", color: "var(--bone)" }}>
+                {p.hero_image && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={p.hero_image} alt="" style={{ width: 56, height: 56, objectFit: "cover", borderRadius: 10, flexShrink: 0 }} />
+                )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontFamily: "var(--font-display)", fontSize: 18 }}>{p.name}</div>
+                  <div className="e-mono" style={{ fontSize: 10, color: "rgba(242,238,232,0.55)", letterSpacing: "0.16em", marginTop: 4 }}>
+                    /{p.slug} · {p.category ?? "uncategorized"}
+                  </div>
                 </div>
-              </div>
-              <div className="e-mono" style={{ fontSize: 10, letterSpacing: "0.18em", color: p.in_stock ? "var(--sky)" : "var(--rose)" }}>
-                {p.in_stock ? "IN STOCK" : "OUT OF STOCK"}
-              </div>
-              <div className="e-mono" style={{ fontSize: 10, letterSpacing: "0.18em", color: "rgba(242,238,232,0.7)" }}>
-                ${(p.price_cents / 100).toFixed(2)}
-              </div>
-            </Link>
-          ))
+                <div className="e-mono" style={{ fontSize: 10, letterSpacing: "0.18em", color: trackedOut ? "var(--rose)" : lowStock ? "var(--rose)" : "rgba(242,238,232,0.7)" }}>
+                  {stockLabel}
+                </div>
+                <div className="e-mono" style={{ fontSize: 10, letterSpacing: "0.18em", color: visible ? "var(--sky)" : "var(--rose)" }}>
+                  {visible ? "ACTIVE" : "HIDDEN"}
+                </div>
+                <div className="e-mono" style={{ fontSize: 10, letterSpacing: "0.18em", color: "rgba(242,238,232,0.7)" }}>
+                  ${(p.price_cents / 100).toFixed(2)}
+                </div>
+              </Link>
+            );
+          })
         )}
       </div>
     </AdminShell>

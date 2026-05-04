@@ -45,7 +45,10 @@ export async function listProducts(): Promise<Product[]> {
   const sb = createClient();
   const { data } = await sb.from("products").select("*").order("sort_order", { ascending: true });
   const rows = (data as Product[]) ?? fallbackProducts;
-  return rows.filter(p => !HIDDEN_PRODUCT_SLUGS.has(p.slug));
+  // Hide admin-deactivated rows + legacy slugs we never want shown to members.
+  // Tracked-out-of-stock products (stock_qty = 0) still appear, but the detail
+  // page renders them as SOLD OUT instead of hiding them entirely.
+  return rows.filter(p => p.in_stock && !HIDDEN_PRODUCT_SLUGS.has(p.slug));
 }
 
 export async function getProduct(slug: string): Promise<{ product: Product; variants: ProductVariant[] } | null> {

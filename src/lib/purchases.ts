@@ -216,6 +216,45 @@ export async function fulfillPurchase(
             checkout_at: new Date().toISOString(),
           })
           .eq("id", purchase.order_id);
+        // Decrement inventory for each line item. Tracks only when the product
+        // has a non-null stock_qty — null/unlimited products are left alone.
+        const { data: items } = await sb
+          .from("order_items")
+          .select("variant_id, qty")
+          .eq("order_id", purchase.order_id);
+        const lines = (items as Array<{ variant_id: string | null; qty: number | null }> | null) ?? [];
+        if (lines.length > 0) {
+          const variantIds = lines.map(l => l.variant_id).filter((x): x is string => !!x);
+          if (variantIds.length > 0) {
+            const { data: variantRows } = await sb
+              .from("product_variants")
+              .select("id, product_id")
+              .in("id", variantIds);
+            const variantToProduct = new Map<string, string>();
+            for (const v of (variantRows as Array<{ id: string; product_id: string }> | null) ?? []) {
+              variantToProduct.set(v.id, v.product_id);
+            }
+            // Aggregate qty per product so a multi-variant order only hits the
+            // products row once.
+            const decrementByProduct = new Map<string, number>();
+            for (const l of lines) {
+              const pid = l.variant_id ? variantToProduct.get(l.variant_id) : null;
+              if (!pid) continue;
+              decrementByProduct.set(pid, (decrementByProduct.get(pid) ?? 0) + (l.qty ?? 0));
+            }
+            for (const [productId, qty] of decrementByProduct) {
+              const { data: p } = await sb
+                .from("products")
+                .select("stock_qty")
+                .eq("id", productId)
+                .maybeSingle();
+              const cur = (p as { stock_qty: number | null } | null)?.stock_qty;
+              if (cur == null) continue; // untracked / unlimited
+              const next = Math.max(0, cur - qty);
+              await sb.from("products").update({ stock_qty: next, in_stock: next > 0 }).eq("id", productId);
+            }
+          }
+        }
       }
       break;
 

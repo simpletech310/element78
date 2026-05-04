@@ -132,6 +132,28 @@ export function AddToBagFull({ product, variants }: { product: Product; variants
           </div>
         </div>
       )}
+      <SubmitButton product={product} />
+    </form>
+  );
+}
+
+function SubmitButton({ product }: { product: Product }) {
+  const trackedOut = product.stock_qty != null && product.stock_qty <= 0;
+  const lowStock = product.stock_qty != null && product.stock_qty > 0 && product.stock_qty <= 5;
+  if (trackedOut) {
+    return (
+      <button
+        type="button"
+        disabled
+        className="btn btn-ink"
+        style={{ marginTop: 22, width: "100%", padding: "18px 22px", opacity: 0.5, cursor: "not-allowed" }}
+      >
+        SOLD OUT
+      </button>
+    );
+  }
+  return (
+    <>
       <button
         type="submit"
         className="btn btn-ink"
@@ -140,6 +162,11 @@ export function AddToBagFull({ product, variants }: { product: Product; variants
         <Icon name="bag" size={14} />
         ADD TO BAG · ${(product.price_cents / 100).toFixed(0)}
       </button>
-    </form>
+      {lowStock && (
+        <div className="e-mono" style={{ marginTop: 8, fontSize: 10, letterSpacing: "0.16em", color: "var(--rose)", textAlign: "center" }}>
+          ONLY {product.stock_qty} LEFT
+        </div>
+      )}
+    </>
   );
 }

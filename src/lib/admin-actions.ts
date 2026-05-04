@@ -5,6 +5,23 @@ import { revalidatePath } from "next/cache";
 import { getAdminForCurrentUser, logAdminAction } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { refundPurchase } from "@/lib/purchases";
+import { uploadImageToBucket } from "@/lib/supabase/storage";
+
+/** Resolve a product image: prefer an uploaded file, fall back to a URL field. */
+async function resolveProductImage(
+  formData: FormData,
+  userId: string,
+  fileField = "hero_image_file",
+  urlField = "hero_image",
+): Promise<string | null | undefined> {
+  const f = formData.get(fileField);
+  if (f instanceof File && f.size > 0) {
+    const { url } = await uploadImageToBucket("program-images", f, userId);
+    return url;
+  }
+  const u = String(formData.get(urlField) ?? "").trim();
+  return u || undefined;
+}
 
 async function gate() {
   const admin = await getAdminForCurrentUser();
@@ -243,7 +260,6 @@ export async function createProductAction(formData: FormData) {
   const subtitle = String(formData.get("subtitle") ?? "").trim() || null;
   const category = String(formData.get("category") ?? "").trim() || null;
   const description = String(formData.get("description") ?? "").trim() || null;
-  const heroImage = String(formData.get("hero_image") ?? "").trim() || null;
   const priceDollars = Number(formData.get("price_dollars") ?? 0);
   const priceCents = Math.round(Math.max(0, priceDollars) * 100);
   const compareDollarsRaw = String(formData.get("compare_at_dollars") ?? "").trim();
@@ -252,20 +268,47 @@ export async function createProductAction(formData: FormData) {
   const inStock = formData.get("in_stock") !== "false";
   const sortOrderRaw = String(formData.get("sort_order") ?? "").trim();
   const sortOrder = sortOrderRaw ? Number(sortOrderRaw) : 0;
+  const stockQtyRaw = String(formData.get("stock_qty") ?? "").trim();
+  const stockQty = stockQtyRaw === "" ? null : Math.max(0, Math.floor(Number(stockQtyRaw)));
+
+  let heroImage: string | null = null;
+  try {
+    const resolved = await resolveProductImage(formData, admin.id);
+    heroImage = resolved ?? null;
+  } catch (err) {
+    redirect(`/admin/products/new?error=${encodeURIComponent((err as Error).message)}`);
+  }
+
+  // Optional gallery: up to 4 additional file uploads.
+  const galleryUrls: string[] = heroImage ? [heroImage] : [];
+  for (let i = 1; i <= 4; i++) {
+    const f = formData.get(`gallery_${i}_file`);
+    if (f instanceof File && f.size > 0) {
+      try {
+        const { url } = await uploadImageToBucket("program-images", f, admin.id);
+        galleryUrls.push(url);
+      } catch { /* ignore individual gallery upload failures */ }
+    }
+  }
 
   const sb = createAdminClient();
   const { data: created, error } = await sb
     .from("products")
     .insert({
-      name, slug, subtitle, category, description, hero_image: heroImage,
+      name, slug, subtitle, category, description,
+      hero_image: heroImage,
+      gallery: galleryUrls,
       price_cents: priceCents, compare_at_cents: compareCents, tag,
-      in_stock: inStock, sort_order: sortOrder, gallery: [],
+      in_stock: inStock, sort_order: sortOrder,
+      stock_qty: stockQty,
     })
     .select("id, slug")
     .maybeSingle();
   if (error || !created) redirect(`/admin/products/new?error=${encodeURIComponent(error?.message ?? "create_failed")}`);
   const newId = (created as { id: string }).id;
-  await logAdminAction({ adminUserId: admin.id, action: "create_product", targetType: "product", targetId: newId, details: { name, slug } });
+  await logAdminAction({ adminUserId: admin.id, action: "create_product", targetType: "product", targetId: newId, details: { name, slug, stockQty } });
+  revalidatePath("/admin/products");
+  revalidatePath("/shop");
   redirect(`/admin/products/${newId}?created=1`);
 }
 
@@ -282,8 +325,16 @@ export async function updateProductAction(formData: FormData) {
   setText("subtitle");
   setText("category");
   setText("description");
-  setText("hero_image");
   setText("tag");
+
+  // Hero image: file upload wins, then URL field, else leave column alone.
+  try {
+    const resolved = await resolveProductImage(formData, admin.id);
+    if (resolved !== undefined) patch.hero_image = resolved;
+  } catch (err) {
+    redirect(`/admin/products/${id}?error=${encodeURIComponent((err as Error).message)}`);
+  }
+
   if (formData.get("price_dollars") !== null) {
     patch.price_cents = Math.round(Math.max(0, Number(formData.get("price_dollars") ?? 0)) * 100);
   }
@@ -294,10 +345,35 @@ export async function updateProductAction(formData: FormData) {
   if (formData.get("sort_order") !== null) {
     patch.sort_order = Number(formData.get("sort_order") ?? 0);
   }
+  if (formData.get("stock_qty") !== null) {
+    const raw = String(formData.get("stock_qty") ?? "").trim();
+    patch.stock_qty = raw === "" ? null : Math.max(0, Math.floor(Number(raw)));
+  }
   patch.in_stock = formData.get("in_stock") === "on";
+
+  // Optional appended gallery uploads — append to existing array.
   const sb = createAdminClient();
+  const newGalleryUrls: string[] = [];
+  for (let i = 1; i <= 4; i++) {
+    const f = formData.get(`gallery_${i}_file`);
+    if (f instanceof File && f.size > 0) {
+      try {
+        const { url } = await uploadImageToBucket("program-images", f, admin.id);
+        newGalleryUrls.push(url);
+      } catch { /* ignore */ }
+    }
+  }
+  if (newGalleryUrls.length > 0) {
+    const { data: existing } = await sb.from("products").select("gallery").eq("id", id).maybeSingle();
+    const existingGallery = ((existing as { gallery: string[] | null } | null)?.gallery ?? []) as string[];
+    patch.gallery = [...existingGallery, ...newGalleryUrls];
+  }
+
   await sb.from("products").update(patch).eq("id", id);
   await logAdminAction({ adminUserId: admin.id, action: "update_product", targetType: "product", targetId: id, details: patch });
+  revalidatePath("/admin/products");
+  revalidatePath("/shop");
+  revalidatePath(`/shop/${String(formData.get("slug") ?? "")}`);
   redirect(`/admin/products/${id}?updated=1`);
 }
 
