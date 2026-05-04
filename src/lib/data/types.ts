@@ -33,6 +33,10 @@ export type Trainer = {
   payout_status?: "unverified" | "pending" | "active" | "rejected" | "paused";
   /** Linked auth user — populated for coaches who can log in. */
   auth_user_id?: string | null;
+  /** IANA timezone the coach's wall-clock availability rules are anchored to.
+   *  Defaults to 'America/New_York' (the gym). Required for slot generation
+   *  to produce correct UTC instants regardless of where the server runs. */
+  timezone?: string;
 };
 
 export type ClassRow = {
@@ -258,6 +262,9 @@ export type TrainerBooking = {
   video_room_name: string | null;
   duration_actual_min: number | null;
   rejected_reason: string | null;
+  /** Set when the coach hits START SESSION. Drives the realtime incoming-
+   *  call alert on the member's side. Cleared when the session completes. */
+  live_started_at?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -295,6 +302,10 @@ export type TrainerSessionRow = {
   trainer_notes: string | null;
   duration_actual_min: number | null;
   rejected_reason: string | null;
+  /** Set when the coach hits START SESSION on a group. Mirrored to every
+   *  attendee's trainer_bookings.live_started_at so members can subscribe to
+   *  a single table for incoming-call alerts. */
+  live_started_at?: string | null;
   created_at: string;
   updated_at: string;
 };

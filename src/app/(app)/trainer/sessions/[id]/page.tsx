@@ -7,7 +7,7 @@ import { Time } from "@/components/site/Time";
 import { getTrainerForCurrentUser } from "@/lib/trainer-auth";
 import { getTrainerSessionRow, listGroupSessionRoster } from "@/lib/data/queries";
 import { isSessionJoinable } from "@/lib/video/provider";
-import { cancelGroupSessionAction, completeGroupSessionAction } from "@/lib/trainer-session-actions";
+import { cancelGroupSessionAction, completeGroupSessionAction, startGroupSessionAction } from "@/lib/trainer-session-actions";
 import { fmtDollars, fmtDurationMin } from "@/lib/format";
 import { SessionVideoFrame, SessionLocked, SessionInPersonPanel } from "@/components/site/SessionVideoFrame";
 import { RoutinePlayer } from "@/components/site/RoutinePlayer";
@@ -75,10 +75,22 @@ export default async function CoachGroupSessionPage({ params }: { params: { id: 
       )}
 
       <div style={{ marginTop: 22, display: "flex", gap: 10, flexWrap: "wrap" }}>
+        {/* START SESSION fires the realtime ping so every attendee gets the
+            IncomingCallAlert — also (re)provisions the Daily room if needed. */}
+        {isLive && joinable && session.mode === "video" && (
+          <form action={startGroupSessionAction}>
+            <input type="hidden" name="session_id" value={session.id} />
+            <button type="submit" className="btn btn-sky" style={{ padding: "12px 22px" }}>
+              {session.live_started_at ? "RE-RING ATTENDEES" : "START SESSION · CALL EVERYONE"}
+            </button>
+          </form>
+        )}
         {canComplete && (
           <form action={completeGroupSessionAction}>
             <input type="hidden" name="session_id" value={session.id} />
-            <button type="submit" className="btn btn-sky" style={{ padding: "12px 22px" }}>MARK COMPLETE</button>
+            <button type="submit" className="btn btn-sky" style={{ padding: "12px 22px" }}>
+              {session.live_started_at ? "END SESSION · MARK COMPLETE" : "MARK COMPLETE"}
+            </button>
           </form>
         )}
         {canCancel && (

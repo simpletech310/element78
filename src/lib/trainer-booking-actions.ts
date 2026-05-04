@@ -404,6 +404,7 @@ export async function completeTrainerBookingAction(formData: FormData) {
       status: "completed",
       duration_actual_min: durationRaw ? Number(durationRaw) : null,
       trainer_notes: notes,
+      live_started_at: null,
       updated_at: new Date().toISOString(),
     })
     .eq("id", bookingId);
@@ -553,6 +554,21 @@ export async function initiateCallAction(formData: FormData) {
         .eq("id", booking.session_id);
     }
     await notifyClientOfBookingDecision({ ...booking, status: "confirmed" });
+  }
+
+  // Stamp the live_started_at timestamp — this is what the member's
+  // realtime IncomingCallAlert subscription is watching for. The trainer
+  // also gets a fresh row update so any open coach UI re-renders.
+  const liveStartedAt = new Date().toISOString();
+  await sb
+    .from("trainer_bookings")
+    .update({ live_started_at: liveStartedAt, updated_at: liveStartedAt })
+    .eq("id", bookingId);
+  if (booking.session_id) {
+    await sb
+      .from("trainer_sessions")
+      .update({ live_started_at: liveStartedAt, updated_at: liveStartedAt })
+      .eq("id", booking.session_id);
   }
 
   revalidatePath(`/booking/${bookingId}`);

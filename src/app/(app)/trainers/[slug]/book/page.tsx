@@ -84,6 +84,7 @@ export default async function TrainerBookingPage({
     fromUtc: now,
     toUtc: windowEnd,
     preferredMode: requestedMode,
+    trainerTimezone: trainer.timezone,
   });
 
   // Group slots by day for the picker.

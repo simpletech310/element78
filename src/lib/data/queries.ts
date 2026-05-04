@@ -418,6 +418,72 @@ export async function listTrainerInbox(
 }
 
 /**
+ * Pre-fetch the metadata IncomingCallAlert needs (one row per upcoming
+ * confirmed booking the viewer has) so the realtime payload can be matched
+ * against trainer name + session title + routine name without a follow-up
+ * fetch from the client. Bounded to bookings within the next 12 hours plus
+ * any that already started but haven't been completed yet — the realistic
+ * window in which a START SESSION ping could land.
+ */
+export async function listMemberUpcomingForAlert(
+  userId: string,
+): Promise<Array<{
+  id: string;
+  starts_at: string;
+  ends_at: string;
+  trainer_name: string;
+  session_title: string | null;
+  routine_name: string | null;
+  mode: "video" | "in_person";
+  live_started_at: string | null;
+}>> {
+  if (!isConfigured()) return [];
+  const sb = createClient();
+  const horizonMs = Date.now() + 12 * 60 * 60 * 1000;
+  const lookbackMs = Date.now() - 2 * 60 * 60 * 1000;
+
+  const { data } = await sb
+    .from("trainer_bookings")
+    .select("id, starts_at, ends_at, mode, routine_slug, live_started_at, status, trainer:trainers(name), parent:trainer_sessions(title)")
+    .eq("user_id", userId)
+    .in("status", ["confirmed"])
+    .gte("starts_at", new Date(lookbackMs).toISOString())
+    .lte("starts_at", new Date(horizonMs).toISOString())
+    .order("starts_at");
+
+  type Row = {
+    id: string;
+    starts_at: string;
+    ends_at: string;
+    mode: "video" | "in_person";
+    routine_slug: string | null;
+    live_started_at: string | null;
+    status: string;
+    // Supabase returns nested selects as arrays even for single-row joins.
+    trainer: Array<{ name: string }> | { name: string } | null;
+    parent: Array<{ title: string | null }> | { title: string | null } | null;
+  };
+  const { routines } = await import("@/lib/data/routines");
+  const byRoutine = new Map(routines.map(r => [r.slug, r.name] as const));
+
+  function unwrap<T>(v: T[] | T | null | undefined): T | null {
+    if (!v) return null;
+    return Array.isArray(v) ? (v[0] ?? null) : v;
+  }
+
+  return ((data as unknown as Row[]) ?? []).map(r => ({
+    id: r.id,
+    starts_at: r.starts_at,
+    ends_at: r.ends_at,
+    mode: r.mode,
+    trainer_name: unwrap(r.trainer)?.name ?? "Coach",
+    session_title: unwrap(r.parent)?.title ?? null,
+    routine_name: r.routine_slug ? (byRoutine.get(r.routine_slug) ?? null) : null,
+    live_started_at: r.live_started_at,
+  }));
+}
+
+/**
  * Lightweight profile lookup so the trainer dashboard can show client names
  * next to bookings. Service-role wouldn't be needed if we relied on the
  * profiles RLS policy ("public read profiles") which is already in place.

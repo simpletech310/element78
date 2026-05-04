@@ -11,6 +11,7 @@ import {
   rejectTrainerBookingAction,
   cancelTrainerBookingAction,
   completeTrainerBookingAction,
+  initiateCallAction,
 } from "@/lib/trainer-booking-actions";
 import { routines } from "@/lib/data/routines";
 import { fmtDollars, fmtDurationMin } from "@/lib/format";
@@ -209,7 +210,17 @@ function UpcomingRow({ booking, clientName }: { booking: TrainerBooking; clientN
         </div>
       </div>
       <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-        {joinable ? (
+        {joinable && booking.mode === "video" ? (
+          // Posting through initiateCallAction stamps live_started_at on the
+          // booking, which fires the member's IncomingCallAlert in realtime.
+          // The action then redirects the coach into the session room.
+          <form action={initiateCallAction}>
+            <input type="hidden" name="booking_id" value={booking.id} />
+            <button type="submit" className="btn btn-sky" style={{ padding: "8px 14px", fontSize: 11 }}>
+              {booking.live_started_at ? "RE-RING & JOIN →" : "START SESSION →"}
+            </button>
+          </form>
+        ) : joinable ? (
           <Link href={`/train/session/${booking.id}`} className="btn btn-sky" style={{ padding: "8px 14px", fontSize: 11 }}>
             JOIN →
           </Link>

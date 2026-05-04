@@ -12,25 +12,29 @@ import type {
  * Expand recurring weekly availability rules into concrete bookable slots,
  * minus any blocks and any active bookings.
  *
- * Notes on time:
- * - `start_minute` / `end_minute` on a rule are interpreted as the trainer's
- *   *local wall-clock* minutes from midnight. We anchor to the local timezone
- *   of the runtime here — fine for V1 since the gym is in Atlanta and the
- *   server runs in UTC for Vercel, but we apply the offset using the Date
- *   constructor in local time. When trainers in other zones come online we'll
- *   add a `timezone` column on `trainers` and use Intl.DateTimeFormat.
+ * Time / timezone model:
+ * - `start_minute` / `end_minute` on a rule are wall-clock minutes from
+ *   midnight in the *trainer's* IANA timezone (e.g. "America/New_York").
+ *   That timezone comes in as `trainerTimezone`. A LA coach setting
+ *   "Mon 10:00–13:00" means 10am Pacific — emitted as the correct UTC
+ *   instant regardless of where the server runs or the member views.
+ * - The day cursor walks calendar days in the *trainer's* timezone, so DST
+ *   transitions and near-midnight UTC don't drop or duplicate days.
+ * - Output `starts_at` / `ends_at` are canonical UTC ISO strings. The viewer
+ *   sees them in their own local timezone via the <Time> client component.
  *
- * - The slot generator emits a candidate every `SLOT_STEP_MIN` minutes (30
- *   by default — half-hour increments), each lasting `settings.duration_min`
- *   (60 by default). Adjacent candidate starts overlap; the generator filters
- *   any candidate whose [start, end) range collides with existing bookings,
- *   group sessions, or blocks. So if two members back-to-back book 1:30–2:30
- *   and 2:30–3:30, the 2:00 candidate disappears (it would overlap 1:30) and
- *   the 3:00 candidate is also gone (overlaps 2:30) — the next available
- *   start is 3:30. `buffer_min` is no longer used and is left intact for
- *   back-compat / future per-coach overrides.
+ * Slotting:
+ * - Emits a candidate every `SLOT_STEP_MIN` minutes (30 — half-hour
+ *   increments), each lasting `settings.duration_min` (default 60).
+ *   Adjacent candidates overlap; we filter any that collide with existing
+ *   bookings, group sessions, or blocks. So if two members back-to-back
+ *   book 1:30–2:30 and 2:30–3:30, the 2:00 candidate is gone (overlaps
+ *   1:30) and the 3:00 candidate is gone (overlaps 2:30) — next available
+ *   start is 3:30. `buffer_min` is no longer used; left intact in the
+ *   schema for back-compat / future per-coach overrides.
  */
 const SLOT_STEP_MIN = 30;
+
 export type GenerateSlotsInput = {
   rules: TrainerAvailabilityRule[];
   blocks: TrainerAvailabilityBlock[];
@@ -45,41 +49,44 @@ export type GenerateSlotsInput = {
   /** Filter: 'video' only shows video slots, 'in_person' only shows in-person.
    * Pass undefined to include both.  */
   preferredMode?: TrainerSessionMode;
+  /** IANA timezone the trainer's wall-clock rules are anchored to.
+   *  Defaults to America/New_York (the gym) for back-compat with callers
+   *  that haven't been updated yet. */
+  trainerTimezone?: string;
 };
 
 export function generateSlots(input: GenerateSlotsInput): GeneratedSlot[] {
   const { rules, blocks, existingBookings, existingSessions, settings, fromUtc, toUtc, preferredMode } = input;
+  const tz = input.trainerTimezone || "America/New_York";
   if (rules.length === 0) return [];
 
   const slotMs = settings.duration_min * 60 * 1000;
   const stepMs = SLOT_STEP_MIN * 60 * 1000;
   const out: GeneratedSlot[] = [];
 
-  // Walk day-by-day across the window.
-  const cursor = new Date(fromUtc);
-  cursor.setHours(0, 0, 0, 0);
-  const endMs = toUtc.getTime();
+  // Walk one calendar day at a time, *in the trainer's timezone*. We start
+  // from the local date that contains `fromUtc` and step until we pass
+  // `toUtc`. For each local date we ask: what UTC instant corresponds to
+  // 00:00 of that local date?
+  const fromLocal = decomposeInTz(fromUtc, tz);
+  const toLocal = decomposeInTz(toUtc, tz);
+  const totalDays = daysBetween(fromLocal, toLocal) + 1;
 
-  while (cursor.getTime() <= endMs) {
-    const weekday = cursor.getDay();
+  for (let i = 0; i <= totalDays; i++) {
+    const local = addDaysLocal(fromLocal, i);
+    const weekday = weekdayOfLocal(local, tz);
     const dayRules = rules.filter(r => r.is_active && r.weekday === weekday);
+    if (dayRules.length === 0) continue;
 
     for (const rule of dayRules) {
       const ruleModes = expandRuleModes(rule.mode);
+      const winStartMs = localWallToUtcMs(local.year, local.month, local.day, rule.start_minute, tz);
+      const winEndMs = localWallToUtcMs(local.year, local.month, local.day, rule.end_minute, tz);
 
-      // Anchor the wall-clock minutes onto this calendar day.
-      const dayStart = new Date(cursor);
-      dayStart.setHours(0, 0, 0, 0);
-      const winStart = new Date(dayStart.getTime() + rule.start_minute * 60_000);
-      const winEnd = new Date(dayStart.getTime() + rule.end_minute * 60_000);
-
-      // Emit candidate every `stepMs`, each lasting `slotMs`. Trailing
-      // candidates whose end exceeds the rule window are dropped.
-      let slotStart = winStart.getTime();
-      while (slotStart + slotMs <= winEnd.getTime()) {
+      let slotStart = winStartMs;
+      while (slotStart + slotMs <= winEndMs) {
         const slotEnd = slotStart + slotMs;
 
-        // Skip past slots; honor "from".
         if (slotEnd <= fromUtc.getTime()) {
           slotStart += stepMs;
           continue;
@@ -100,12 +107,8 @@ export function generateSlots(input: GenerateSlotsInput): GeneratedSlot[] {
         slotStart += stepMs;
       }
     }
-
-    // Next day.
-    cursor.setDate(cursor.getDate() + 1);
   }
 
-  // Stable sort by time.
   out.sort((a, b) => a.starts_at.localeCompare(b.starts_at));
   return out;
 }
@@ -140,4 +143,95 @@ function overlapsSession(startMs: number, endMs: number, sessions: TrainerSessio
     if (startMs < se && endMs > ss) return true;
   }
   return false;
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Timezone helpers                                                          */
+/*                                                                            */
+/*  Tiny self-contained set of utilities so we can convert between a          */
+/*  trainer's local wall-clock (year/month/day/minute) and the corresponding  */
+/*  UTC instant — without pulling in luxon or date-fns-tz. The trick: ask     */
+/*  Intl what local time a "naive UTC" instant displays as in the target     */
+/*  zone, then back out the offset.                                           */
+/* -------------------------------------------------------------------------- */
+
+type LocalDate = { year: number; month: number; day: number };
+
+function decomposeInTz(d: Date, tz: string): LocalDate {
+  const dtf = new Intl.DateTimeFormat("en-US", {
+    timeZone: tz,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const parts = dtf.formatToParts(d);
+  const map: Record<string, string> = {};
+  for (const p of parts) map[p.type] = p.value;
+  return {
+    year: Number(map.year),
+    month: Number(map.month),
+    day: Number(map.day),
+  };
+}
+
+function addDaysLocal(local: LocalDate, days: number): LocalDate {
+  // Anchor at noon UTC to dodge DST midnight ambiguity, add days, decompose.
+  const base = Date.UTC(local.year, local.month - 1, local.day, 12, 0, 0);
+  const next = new Date(base + days * 24 * 60 * 60 * 1000);
+  return {
+    year: next.getUTCFullYear(),
+    month: next.getUTCMonth() + 1,
+    day: next.getUTCDate(),
+  };
+}
+
+function daysBetween(a: LocalDate, b: LocalDate): number {
+  const ams = Date.UTC(a.year, a.month - 1, a.day);
+  const bms = Date.UTC(b.year, b.month - 1, b.day);
+  return Math.round((bms - ams) / (24 * 60 * 60 * 1000));
+}
+
+function weekdayOfLocal(local: LocalDate, tz: string): number {
+  // Use a noon-UTC anchor, formatted in tz, to get the day-of-week.
+  const noonUtc = new Date(Date.UTC(local.year, local.month - 1, local.day, 12, 0, 0));
+  const w = new Intl.DateTimeFormat("en-US", { timeZone: tz, weekday: "short" }).format(noonUtc);
+  // "Sun"=0, "Mon"=1, ... "Sat"=6 (matches JS Date.prototype.getDay()).
+  return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(w);
+}
+
+/**
+ * Convert a wall-clock time ("year-month-day, `minutes` from midnight") in
+ * the named IANA timezone into the corresponding UTC milliseconds.
+ *
+ * Method: pretend the wall-clock fields are UTC fields ("naive UTC"), then
+ * ask Intl what local time that naive instant appears as in `tz`. The delta
+ * between assumed and reported is the timezone offset. Subtract it from the
+ * naive instant to get the real UTC. Robust across DST and historic offsets;
+ * undefined for the one-hour gap on spring-forward (we resolve to the later
+ * instant deterministically, which is the conservative choice for booking).
+ */
+function localWallToUtcMs(year: number, month: number, day: number, minuteOfDay: number, tz: string): number {
+  const hours = Math.floor(minuteOfDay / 60);
+  const minutes = minuteOfDay % 60;
+  const naive = Date.UTC(year, month - 1, day, hours, minutes, 0);
+
+  const dtf = new Intl.DateTimeFormat("en-US", {
+    timeZone: tz,
+    hourCycle: "h23",
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+  });
+  const parts = dtf.formatToParts(new Date(naive));
+  const map: Record<string, string> = {};
+  for (const p of parts) map[p.type] = p.value;
+  const reported = Date.UTC(
+    Number(map.year),
+    Number(map.month) - 1,
+    Number(map.day),
+    Number(map.hour) % 24,
+    Number(map.minute),
+    Number(map.second),
+  );
+  // offset = reported - naive  ⇒  realUtc = naive - offset = 2*naive - reported.
+  return 2 * naive - reported;
 }

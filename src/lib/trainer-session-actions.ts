@@ -259,6 +259,64 @@ export async function joinGroupSessionAction(formData: FormData) {
 }
 
 /**
+ * Trainer hits START SESSION on a group. Provisions the Daily room if it
+ * isn't already there, stamps `live_started_at = now()` on the parent and
+ * fans the same timestamp out to every attendee booking — that's the signal
+ * the member's IncomingCallAlert is subscribed to. Idempotent: if a session
+ * was already started, just refreshes the timestamp without resetting room
+ * state. Redirects the coach into the embedded session room.
+ */
+export async function startGroupSessionAction(formData: FormData) {
+  const trainer = await getTrainerForCurrentUser();
+  if (!trainer) redirect("/login?next=/trainer/dashboard");
+
+  const sessionId = String(formData.get("session_id") ?? "");
+  if (!sessionId) redirect("/trainer/dashboard?error=missing_id");
+
+  const session = await getTrainerSessionRow(sessionId);
+  if (!session || session.trainer_id !== trainer.id) {
+    redirect("/trainer/dashboard?error=unauthorized");
+  }
+
+  const sb = createClient();
+
+  // Provision the Daily room if no attendee has triggered the lazy create yet.
+  let videoFields: { video_provider: string | null; video_room_url: string | null; video_room_name: string | null } | null = null;
+  if (session.mode === "video" && !session.video_room_url) {
+    const room = await getVideoProvider().createRoom({
+      bookingId: session.id,
+      startsAt: new Date(session.starts_at),
+      endsAt: new Date(session.ends_at),
+      label: `Element 78 Group Session`,
+    });
+    videoFields = { video_provider: room.provider, video_room_url: room.url, video_room_name: room.name };
+  }
+
+  const liveStartedAt = new Date().toISOString();
+  await sb
+    .from("trainer_sessions")
+    .update({
+      live_started_at: liveStartedAt,
+      updated_at: liveStartedAt,
+      ...(videoFields ?? {}),
+    })
+    .eq("id", sessionId);
+
+  // Fan out the start timestamp to every active attendee so members
+  // subscribed to trainer_bookings get the realtime alert.
+  await sb
+    .from("trainer_bookings")
+    .update({ live_started_at: liveStartedAt, updated_at: liveStartedAt })
+    .eq("session_id", sessionId)
+    .in("status", ["confirmed", "pending_trainer"]);
+
+  revalidatePath("/trainer/dashboard");
+  revalidatePath(`/trainer/sessions/${sessionId}`);
+  revalidatePath("/account/sessions");
+  redirect(`/trainer/sessions/${sessionId}`);
+}
+
+/**
  * Trainer marks a group session complete. Flips parent session + every
  * attendee booking to completed, bridges program progress for any 1-on-1
  * program-session links, and tears down the Daily room.
@@ -280,7 +338,7 @@ export async function completeGroupSessionAction(formData: FormData) {
 
   await sb
     .from("trainer_sessions")
-    .update({ status: "completed", updated_at: new Date().toISOString() })
+    .update({ status: "completed", live_started_at: null, updated_at: new Date().toISOString() })
     .eq("id", sessionId);
 
   const { data: bookings } = await sb
@@ -292,7 +350,7 @@ export async function completeGroupSessionAction(formData: FormData) {
   for (const b of (bookings as Array<{ id: string; user_id: string; trainer_id: string; program_session_id: string | null }>) ?? []) {
     await sb
       .from("trainer_bookings")
-      .update({ status: "completed", updated_at: new Date().toISOString() })
+      .update({ status: "completed", live_started_at: null, updated_at: new Date().toISOString() })
       .eq("id", b.id);
 
     // Bridge to program completions (mirrors completeTrainerBookingAction).
