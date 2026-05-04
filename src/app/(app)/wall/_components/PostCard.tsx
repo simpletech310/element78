@@ -60,8 +60,16 @@ export function PostCard({ post }: { post: HydratedPost }) {
       )}
 
       {post.media_url && post.media_type === "image" && (
-        <div style={{ height: 220, position: "relative" }}>
-          <Photo src={post.media_url} alt="" style={{ position: "absolute", inset: 0 }} />
+        <div style={{ position: "relative", background: "#000" }}>
+          {/* Real <img> so the natural aspect ratio is preserved instead of
+              being cropped by a background-image cover. Capped to 70dvh so
+              ridiculously tall screenshots don't dominate the feed. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={post.media_url}
+            alt=""
+            style={{ display: "block", width: "100%", height: "auto", maxHeight: "70dvh", objectFit: "contain", background: "#000" }}
+          />
           {eventTag && (
             <div style={{ position: "absolute", left: 12, right: 12, bottom: 12, padding: 10, borderRadius: 10, background: "rgba(10,14,20,0.7)", backdropFilter: "blur(12px)", display: "flex", alignItems: "center", gap: 10 }}>
               <span className="e-tag" style={{ color: "var(--sky)" }}>{eventTag}</span>
@@ -76,13 +84,13 @@ export function PostCard({ post }: { post: HydratedPost }) {
       )}
 
       {post.media_url && post.media_type === "video" && (
-        <div style={{ height: 220, position: "relative", background: "#000" }}>
+        <div style={{ position: "relative", background: "#000" }}>
           <video
             src={post.media_url}
             controls
             playsInline
             preload="metadata"
-            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", background: "#000" }}
+            style={{ display: "block", width: "100%", height: "auto", maxHeight: "70dvh", background: "#000" }}
           />
         </div>
       )}
