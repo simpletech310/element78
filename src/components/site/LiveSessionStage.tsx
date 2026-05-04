@@ -293,7 +293,70 @@ export function LiveSessionStage({
   }
 
   return (
-    <div style={shellStyle}>
+    <div style={shellStyle} className="e78-live-stage">
+      {/*
+        Orientation-aware sizing. Inline styles can't do media queries, so
+        the size-sensitive layers (self-view, workout, status strip, mic /
+        cam pills) carry e78-live-* classes and the rules live in this
+        scoped <style> tag. Cards stay in the same screen quadrant in both
+        orientations; widths use vmin so they scale to the shorter axis,
+        which keeps the visual mass comparable rotated either way.
+      */}
+      <style>{`
+        .e78-live-stage .e78-self-view,
+        .e78-live-stage .e78-self-chip {
+          top: calc(env(safe-area-inset-top, 0px) + 70px);
+          left: 16px;
+        }
+        .e78-live-stage .e78-self-view {
+          width: min(36vw, 220px);
+        }
+        .e78-live-stage .e78-status {
+          top: calc(env(safe-area-inset-top, 0px) + 70px);
+          right: 16px;
+          left: calc(min(36vw, 220px) + 32px);
+        }
+        .e78-live-stage .e78-status[data-self-min="1"] {
+          left: 80px;
+        }
+        .e78-live-stage .e78-workout {
+          width: min(58vw, 380px);
+          bottom: calc(env(safe-area-inset-bottom, 0px) + 88px);
+          right: 16px;
+        }
+        .e78-live-stage .e78-call-controls {
+          bottom: calc(env(safe-area-inset-bottom, 0px) + 22px);
+          left: 16px;
+        }
+
+        @media (orientation: landscape) {
+          .e78-live-stage .e78-self-view {
+            /* Cap the self-view at a comfortable thumb-sized tile when the
+               phone rotates — vmin keeps it relative to the shorter axis. */
+            width: min(24vmin, 200px);
+          }
+          .e78-live-stage .e78-status {
+            left: calc(min(24vmin, 200px) + 24px);
+          }
+          .e78-live-stage .e78-workout {
+            /* Bump up since landscape gives us more horizontal room for
+               the demo to land at a readable size. */
+            width: min(38vmin, 360px);
+            bottom: calc(env(safe-area-inset-bottom, 0px) + 76px);
+          }
+          .e78-live-stage .e78-call-controls {
+            bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+          }
+        }
+
+        /* Tablet / desktop — give every layer some breathing room */
+        @media (min-width: 900px) {
+          .e78-live-stage .e78-self-view { width: min(20vw, 280px); }
+          .e78-live-stage .e78-status    { left: calc(min(20vw, 280px) + 40px); }
+          .e78-live-stage .e78-workout   { width: min(34vw, 480px); }
+        }
+      `}</style>
+
       {/* Audio sink — keeps remote audio playing across DOM reflows */}
       <audio ref={remoteAudioRef} autoPlay playsInline />
 
@@ -346,7 +409,7 @@ export function LiveSessionStage({
           minimize button so the call surface can collapse to just the
           background + workout when the user wants. */}
       {!selfMinimized ? (
-        <div style={callerCardStyle}>
+        <div className="e78-self-view" style={callerCardStyle}>
           <video
             ref={localVideoRef}
             autoPlay
@@ -382,6 +445,7 @@ export function LiveSessionStage({
         <button
           type="button"
           aria-label="Show self-view"
+          className="e78-self-chip"
           onClick={() => setSelfMinimized(false)}
           style={selfChipStyle}
         >
@@ -393,10 +457,10 @@ export function LiveSessionStage({
         </button>
       )}
 
-      {/* Status — center top, what's playing. When the self-view is
-          minimized the strip slides left to fill the freed space. */}
+      {/* Status — center top, what's playing. The CSS rules above slide it
+          left when the self-view collapses (data-self-min). */}
       {routine && current && (
-        <div style={selfMinimized ? statusStripExpandedStyle : statusStripStyle}>
+        <div className="e78-status" data-self-min={selfMinimized ? "1" : "0"} style={statusStripBase}>
           <div className="e-mono" style={{ color: "var(--sky)", fontSize: 10, letterSpacing: "0.28em" }}>
             EXERCISE {exerciseIdx + 1} / {routine.exercises.length}
           </div>
@@ -413,7 +477,7 @@ export function LiveSessionStage({
 
       {/* Workout card — bottom-right, 16:9 */}
       {routine && (
-        <div style={workoutCardStyle}>
+        <div className="e78-workout" style={workoutCardStyle}>
           <video
             ref={routineVideoRef}
             playsInline
@@ -455,7 +519,7 @@ export function LiveSessionStage({
       )}
 
       {/* Bottom mic / cam toggle for both sides — small, unobtrusive */}
-      <div style={callControlsStyle}>
+      <div className="e78-call-controls" style={callControlsStyle}>
         <ControlPill off={!audioOn} onClick={toggleAudio} aria-label={audioOn ? "Mute" : "Unmute"}>
           <MicIcon muted={!audioOn} />
         </ControlPill>
@@ -646,13 +710,11 @@ const chipStyle: React.CSSProperties = {
   letterSpacing: "0.24em",
 };
 
-// Self-view card — top-left under the LEAVE chip, mirrored, with a
-// minimize button. The background of the stage is the *remote* person.
+// Self-view card. Position + width come from the e78-self-view CSS class
+// so orientation media queries can override; only the look-and-feel lives
+// here in inline styles.
 const callerCardStyle: React.CSSProperties = {
   position: "absolute",
-  top: "calc(env(safe-area-inset-top, 0px) + 70px)",
-  left: 16,
-  width: "min(36vw, 220px)",
   aspectRatio: "16 / 9",
   borderRadius: 16,
   overflow: "hidden",
@@ -663,10 +725,9 @@ const callerCardStyle: React.CSSProperties = {
 };
 
 // Tiny floating chip when the self-view is minimized — taps to expand.
+// Position comes from the e78-self-chip CSS class.
 const selfChipStyle: React.CSSProperties = {
   position: "absolute",
-  top: "calc(env(safe-area-inset-top, 0px) + 70px)",
-  left: 16,
   zIndex: 5,
   display: "inline-flex",
   alignItems: "center",
@@ -733,13 +794,10 @@ const cardLabelStyle: React.CSSProperties = {
   letterSpacing: "0.22em",
 };
 
-// Workout video — bottom-right, 16:9 — sits above the background remote
-// video so the demo is always visible while the call streams behind.
+// Workout video. Position + width come from the e78-workout CSS class so
+// orientation media queries can override; look-and-feel only here.
 const workoutCardStyle: React.CSSProperties = {
   position: "absolute",
-  bottom: "calc(env(safe-area-inset-bottom, 0px) + 88px)",
-  right: 16,
-  width: "min(58vw, 380px)",
   aspectRatio: "16 / 9",
   borderRadius: 18,
   overflow: "hidden",
@@ -761,14 +819,11 @@ const controlsOverlayStyle: React.CSSProperties = {
   zIndex: 2,
 };
 
-// Status strip — exercise name + cue. Sits next to the self-view card by
-// default; slides left when the self-view is minimized so the title can
-// breathe. Pulled into its own background pill so text stays legible
-// against the live remote video underneath.
+// Status strip — exercise name + cue. Position comes from the e78-status
+// CSS class (with [data-self-min="1"] for the slide-left when the self-view
+// is collapsed). Look-and-feel only here.
 const statusStripBase: React.CSSProperties = {
   position: "absolute",
-  top: "calc(env(safe-area-inset-top, 0px) + 70px)",
-  right: 16,
   display: "flex",
   flexDirection: "column",
   alignItems: "flex-start",
@@ -780,20 +835,11 @@ const statusStripBase: React.CSSProperties = {
   border: "1px solid rgba(143,184,214,0.18)",
   pointerEvents: "none",
 };
-const statusStripStyle: React.CSSProperties = {
-  ...statusStripBase,
-  left: "calc(min(36vw, 220px) + 32px)",
-};
-const statusStripExpandedStyle: React.CSSProperties = {
-  ...statusStripBase,
-  left: 80,
-};
 
-// Mic + cam pills — bottom-left, opposite the workout card.
+// Mic + cam pills — bottom-left, opposite the workout card. Position
+// comes from the e78-call-controls CSS class.
 const callControlsStyle: React.CSSProperties = {
   position: "absolute",
-  bottom: "calc(env(safe-area-inset-bottom, 0px) + 22px)",
-  left: 16,
   display: "flex",
   gap: 10,
   zIndex: 6,
