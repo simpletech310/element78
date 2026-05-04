@@ -145,7 +145,10 @@ export function LiveSessionStage({
           {isMock ? (
             <MockCallPanel />
           ) : (
-            <DailyEmbed url={dailyUrl ?? ""} label={isCoach ? "COACH" : "MEMBER"} />
+            // fill={true} so Daily takes the full layer dimensions instead
+            // of enforcing its default 16:9 card. Without this the call
+            // sits at the top of the layer with empty space below.
+            <DailyEmbed url={dailyUrl ?? ""} label={isCoach ? "COACH" : "MEMBER"} fill />
           )}
         </div>
         {primary !== "call" && <PipBadge label={isCoach ? "MEMBER" : trainerName.toUpperCase()} />}

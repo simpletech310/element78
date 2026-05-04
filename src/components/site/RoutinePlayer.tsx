@@ -330,11 +330,16 @@ export function RoutinePlayer({
         </>
       )}
 
-      {/* Video stage — explicit 16:9 ratio so the video scales cleanly on
-          every viewport and the playlist below it stays scroll-friendly.
-          minHeight ensures the stage doesn't collapse on tall narrow screens. */}
-      <div style={{ flexShrink: 0, padding: "4px 22px 0", display: "flex", flexDirection: "column" }}>
-        <div style={{ position: "relative", borderRadius: 22, overflow: "hidden", background: "#000", width: "100%", aspectRatio: "16 / 9", minHeight: 220, maxHeight: "60vh" }}>
+      {/* Video stage — full chrome uses an explicit 16:9 ratio so the video
+          scales cleanly with the playlist below it. Compact mode (live
+          session stage) fills its parent so the routine demo can be either
+          the primary surface or a tightly-cropped PIP without dead space. */}
+      <div style={isCompact
+        ? { flex: 1, padding: 0, display: "flex", flexDirection: "column", minHeight: 0 }
+        : { flexShrink: 0, padding: "4px 22px 0", display: "flex", flexDirection: "column" }}>
+        <div style={isCompact
+          ? { position: "relative", borderRadius: 0, overflow: "hidden", background: "#000", width: "100%", height: "100%", flex: 1 }
+          : { position: "relative", borderRadius: 22, overflow: "hidden", background: "#000", width: "100%", aspectRatio: "16 / 9", minHeight: 220, maxHeight: "60vh" }}>
           <video
             ref={videoRef}
             playsInline

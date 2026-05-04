@@ -12,7 +12,7 @@ import DailyIframe, { type DailyCall } from "@daily-co/daily-js";
  * the call object exists works consistently across desktop, Android Chrome,
  * and iOS Safari.
  */
-export function DailyEmbed({ url, label }: { url: string; label?: string }) {
+export function DailyEmbed({ url, label, fill = false }: { url: string; label?: string; fill?: boolean }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const callRef = useRef<DailyCall | null>(null);
   const [initError, setInitError] = useState<string | null>(null);
@@ -104,7 +104,14 @@ export function DailyEmbed({ url, label }: { url: string; label?: string }) {
   }
 
   return (
-    <div style={{ position: "relative", aspectRatio: "16/9", borderRadius: 18, overflow: "hidden", border: "1px solid rgba(143,184,214,0.3)", background: "var(--ink)" }}>
+    <div
+      style={fill
+        // Fill mode: parent (LiveSessionStage layer) controls dimensions.
+        // Drop the 16:9 + radius/border so the iframe goes edge-to-edge.
+        ? { position: "absolute", inset: 0, background: "var(--ink)", overflow: "hidden" }
+        // Default: card-style 16:9 with brand chrome — used in stacked layouts.
+        : { position: "relative", aspectRatio: "16/9", borderRadius: 18, overflow: "hidden", border: "1px solid rgba(143,184,214,0.3)", background: "var(--ink)" }}
+    >
       {/* Branded chrome strip — points up that the call is hosted in-app. */}
       <div
         style={{
