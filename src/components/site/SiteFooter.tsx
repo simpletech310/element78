@@ -31,6 +31,7 @@ const cols: { h: string; items: { label: string; href: string }[] }[] = [
   {
     h: "CO.",
     items: [
+      { label: "FAQ", href: "/faq" },
       { label: "Contact", href: "/contact" },
       { label: "Locations", href: "/locations" },
       { label: "Careers", href: "/contact" },

@@ -5,15 +5,10 @@ import { Navbar } from "@/components/site/Navbar";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { FloatingTabBar } from "@/components/site/FloatingTabBar";
 import { FilmTrigger } from "@/components/site/FilmTrigger";
-import { listTrainers } from "@/lib/data/queries";
 import { getUser } from "@/lib/auth";
 
 export default async function HomePage() {
-  const [allTrainers, user] = await Promise.all([listTrainers(), getUser()]);
-  // The "WHO YOU TRAINING WITH" rail is human coaches only — AI avatars
-  // power the studio routines but aren't bookable as 1-on-1, so they don't
-  // belong in the team grid on the landing page.
-  const trainers = allTrainers.filter(t => !t.is_ai);
+  const user = await getUser();
 
   const pillars: Array<{
     num: string; t: string; sub: string; desc: string;
@@ -21,7 +16,7 @@ export default async function HomePage() {
   }> = [
     {
       num: "I", t: "THE GYM", sub: "24/7 floor · AI on the mat · real coaches",
-      desc: "Reformers, free weights, treadmills, mat rooms, recovery. AI coaches cue your form right on the floor. Real trainers in the booths when you want a person. Walk in at 4am — the work meets you whenever you show up.",
+      desc: "Reformers, free weights, treadmills, mat rooms, recovery. AI coaches cue your form on the floor. Real trainers in the booths when you want a person. Reformer + HIIT classes daily — walk in or sign up.",
       img: "/assets/blue-hair-gym.jpg", cta: "TOUR THE FLOOR", href: "/locations",
     },
     {
@@ -44,7 +39,6 @@ export default async function HomePage() {
   ];
 
   const stats = [
-    { v: "1,408", l: "Women in" },
     { v: "78", l: "Signature flows" },
     { v: "4.9", l: "Avg rating" },
     { v: "24/7", l: "Doors open" },
@@ -98,7 +92,7 @@ export default async function HomePage() {
           </div>
 
           {/* Proof bar */}
-          <div className="reveal reveal-d4" style={{ marginTop: 40, paddingTop: 28, borderTop: "1px solid rgba(242,238,232,0.12)", display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, textAlign: "center" }}>
+          <div className="reveal reveal-d4" style={{ marginTop: 40, paddingTop: 28, borderTop: "1px solid rgba(242,238,232,0.12)", display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, textAlign: "center" }}>
             {stats.map(s => (
               <div key={s.l} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                 <div style={{ fontFamily: "var(--font-display)", fontSize: "clamp(22px, 5vw, 32px)", color: "var(--sky)", lineHeight: 1 }}>{s.v}</div>
@@ -239,10 +233,19 @@ export default async function HomePage() {
           <p style={{ fontSize: 15, lineHeight: 1.7, color: "rgba(10,14,20,0.75)", maxWidth: 580 }}>
             Lifters, runners, dancers, beginners — the whole spectrum, on one floor. 78 is the atomic number of platinum: soft enough to bend, dense enough not to break. That&rsquo;s the body we&rsquo;re building. The shimmer comes from the work — show up, grind, claim everything that&rsquo;s owed to you. That&rsquo;s the woman we&rsquo;re building it for.
           </p>
+          <Link
+            href="/faq"
+            className="e-mono"
+            style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 22, color: "var(--electric-deep)", fontSize: 11, letterSpacing: "0.2em", textDecoration: "none", borderBottom: "1px solid rgba(46,127,176,0.4)", paddingBottom: 4 }}
+          >
+            GOT QUESTIONS? <Icon name="arrowUpRight" size={12} />
+          </Link>
         </div>
       </section>
 
-      {/* TEAM */}
+      {/* TEAM — AI coaches lead the rail; the human network gets a tight
+          callout below so members know they can pull a real person any
+          time without us turning the section into two lists. */}
       <section style={{ padding: "96px 22px 36px", background: "var(--ink)" }}>
         <div style={{ maxWidth: 1180, margin: "0 auto" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 16 }}>
@@ -251,6 +254,9 @@ export default async function HomePage() {
               <h2 className="e-display" style={{ fontSize: "clamp(40px, 8vw, 72px)", marginTop: 14, lineHeight: 0.95, marginBottom: 0 }}>
                 WHO YOU<br/>TRAINING WITH.
               </h2>
+              <p style={{ marginTop: 18, color: "rgba(242,238,232,0.7)", fontSize: 15, lineHeight: 1.6, maxWidth: 520, fontWeight: 300 }}>
+                Three AI coaches, each their own lane. Pull them up on the app, follow along on the gym floor — pick up the next set wherever you left off.
+              </p>
             </div>
             <Link href="/trainers" className="e-mono" style={{ color: "var(--sky)", display: "inline-flex", alignItems: "center", gap: 6 }}>
               MEET EVERYONE <Icon name="arrowUpRight" size={14} />
@@ -258,25 +264,31 @@ export default async function HomePage() {
           </div>
 
           <div style={{ marginTop: 40, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 18 }}>
-            {trainers.slice(0, 6).map((t, i) => (
-              <Link key={t.id} href={`/trainers/${t.slug}`} className="lift" style={{
+            {[
+              { slug: "zuri",  name: "ZURI",  spec: "REFORMER · PILATES · MOBILITY",  note: "Slow tempo, hard work — long lines.",    img: "/assets/blue-set-rooftop.jpg", num: "01" },
+              { slug: "mari",  name: "MARI",  spec: "HIIT · FUNCTIONAL · CONDITIONING", note: "Heavy basics, quick rounds, no mercy.", img: "/assets/dumbbell-street.jpg",  num: "02" },
+              { slug: "leila", name: "LEILA", spec: "YOGA · BREATH · RECOVERY",         note: "Breath-led flows. Soft tempo, deeper holds.", img: "/assets/pilates-pink.jpg",     num: "03" },
+            ].map((c) => (
+              <Link key={c.slug} href={`/trainers/${c.slug}`} className="lift" style={{
                 display: "block", borderRadius: 18, overflow: "hidden",
                 color: "var(--bone)", textDecoration: "none",
                 background: "var(--haze)",
                 border: "1px solid rgba(143,184,214,0.1)",
               }}>
                 <div style={{ position: "relative", aspectRatio: "0.78", overflow: "hidden" }}>
-                  <Photo src={t.hero_image ?? t.avatar_url ?? ""} alt={t.name} className="zoom-on-hover" style={{ position: "absolute", inset: 0 }} />
+                  <Photo src={c.img} alt={c.name} className="zoom-on-hover" style={{ position: "absolute", inset: 0 }} />
                   <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, transparent 35%, rgba(10,14,20,0.95) 100%)" }} />
                   <div style={{ position: "absolute", top: 16, left: 16, display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 10px", borderRadius: 999, background: "rgba(10,14,20,0.55)", backdropFilter: "blur(10px)" }}>
                     <span style={{ width: 5, height: 5, borderRadius: "50%", background: "var(--sky)" }} />
-                    <span className="e-mono" style={{ fontSize: 9, color: "var(--sky)" }}>0{i + 1}</span>
+                    <span className="e-mono" style={{ fontSize: 9, color: "var(--sky)" }}>{c.num} · AI COACH</span>
                   </div>
                   <div style={{ position: "absolute", left: 20, right: 20, bottom: 20 }}>
-                    <div className="e-mono" style={{ color: "var(--sky)", fontSize: 10 }}>★ {t.rating} · TRAINER</div>
-                    <div className="e-display" style={{ fontSize: 30, lineHeight: 0.95, marginTop: 6 }}>{t.name.toUpperCase()}</div>
-                    <div className="e-mono" style={{ color: "rgba(242,238,232,0.6)", fontSize: 9, marginTop: 8 }}>
-                      {t.specialties.slice(0, 2).join(" · ").toUpperCase()}
+                    <div className="e-display" style={{ fontSize: 30, lineHeight: 0.95 }}>{c.name}</div>
+                    <div className="e-mono" style={{ color: "var(--sky)", fontSize: 9, marginTop: 8, letterSpacing: "0.18em" }}>
+                      {c.spec}
+                    </div>
+                    <div style={{ marginTop: 10, fontSize: 13, color: "rgba(242,238,232,0.78)", lineHeight: 1.5, fontFamily: "var(--font-serif)", fontStyle: "italic" }}>
+                      {c.note}
                     </div>
                   </div>
                   <div style={{ position: "absolute", top: 14, right: 14, width: 38, height: 38, borderRadius: "50%", background: "rgba(10,14,20,0.55)", backdropFilter: "blur(10px)", color: "var(--bone)", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid rgba(143,184,214,0.25)" }}>
@@ -285,6 +297,26 @@ export default async function HomePage() {
                 </div>
               </Link>
             ))}
+          </div>
+
+          {/* Human-network callout — tight, two lines, links to /trainers
+              where members can browse the full roster + book a 1-on-1. */}
+          <div style={{
+            marginTop: 24, padding: "22px 24px", borderRadius: 18,
+            background: "linear-gradient(135deg, rgba(143,184,214,0.18), rgba(46,127,176,0.04))",
+            border: "1px solid rgba(143,184,214,0.28)",
+            display: "flex", justifyContent: "space-between", alignItems: "center",
+            gap: 16, flexWrap: "wrap",
+          }}>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div className="e-mono" style={{ color: "var(--sky)", fontSize: 10, letterSpacing: "0.22em" }}>OR PULL IN A REAL PERSON</div>
+              <p style={{ marginTop: 8, fontSize: 14, color: "rgba(242,238,232,0.85)", lineHeight: 1.55, maxWidth: 560 }}>
+                Real coaches from across the country. Book one in the app or on the gym floor — same playbook, same kind of attention.
+              </p>
+            </div>
+            <Link href="/trainers" className="btn btn-sky" style={{ padding: "12px 22px", whiteSpace: "nowrap" }}>
+              BROWSE COACHES →
+            </Link>
           </div>
         </div>
       </section>
