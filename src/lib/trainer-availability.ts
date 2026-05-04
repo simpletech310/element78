@@ -20,12 +20,17 @@ import type {
  *   constructor in local time. When trainers in other zones come online we'll
  *   add a `timezone` column on `trainers` and use Intl.DateTimeFormat.
  *
- * - The slot generator produces non-overlapping `duration_min`-sized chunks
- *   inside each rule window, separated by `buffer_min` gaps. If a chunk
- *   doesn't fit cleanly (e.g. 90 min window with 45 min slots + 15 buffer →
- *   first slot 0-45, gap 45-60, second slot 60-105 doesn't fit so stop), the
- *   trailing fragment is dropped.
+ * - The slot generator emits a candidate every `SLOT_STEP_MIN` minutes (30
+ *   by default — half-hour increments), each lasting `settings.duration_min`
+ *   (60 by default). Adjacent candidate starts overlap; the generator filters
+ *   any candidate whose [start, end) range collides with existing bookings,
+ *   group sessions, or blocks. So if two members back-to-back book 1:30–2:30
+ *   and 2:30–3:30, the 2:00 candidate disappears (it would overlap 1:30) and
+ *   the 3:00 candidate is also gone (overlaps 2:30) — the next available
+ *   start is 3:30. `buffer_min` is no longer used and is left intact for
+ *   back-compat / future per-coach overrides.
  */
+const SLOT_STEP_MIN = 30;
 export type GenerateSlotsInput = {
   rules: TrainerAvailabilityRule[];
   blocks: TrainerAvailabilityBlock[];
@@ -47,7 +52,7 @@ export function generateSlots(input: GenerateSlotsInput): GeneratedSlot[] {
   if (rules.length === 0) return [];
 
   const slotMs = settings.duration_min * 60 * 1000;
-  const bufferMs = settings.buffer_min * 60 * 1000;
+  const stepMs = SLOT_STEP_MIN * 60 * 1000;
   const out: GeneratedSlot[] = [];
 
   // Walk day-by-day across the window.
@@ -68,14 +73,15 @@ export function generateSlots(input: GenerateSlotsInput): GeneratedSlot[] {
       const winStart = new Date(dayStart.getTime() + rule.start_minute * 60_000);
       const winEnd = new Date(dayStart.getTime() + rule.end_minute * 60_000);
 
-      // March slot-by-slot through the rule window.
+      // Emit candidate every `stepMs`, each lasting `slotMs`. Trailing
+      // candidates whose end exceeds the rule window are dropped.
       let slotStart = winStart.getTime();
       while (slotStart + slotMs <= winEnd.getTime()) {
         const slotEnd = slotStart + slotMs;
 
         // Skip past slots; honor "from".
         if (slotEnd <= fromUtc.getTime()) {
-          slotStart = slotEnd + bufferMs;
+          slotStart += stepMs;
           continue;
         }
         if (slotStart >= toUtc.getTime()) break;
@@ -91,7 +97,7 @@ export function generateSlots(input: GenerateSlotsInput): GeneratedSlot[] {
             mode,
           });
         }
-        slotStart = slotEnd + bufferMs;
+        slotStart += stepMs;
       }
     }
 

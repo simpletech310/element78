@@ -367,7 +367,16 @@ export async function listClientTrainerBookings(
 }
 
 /**
- * Trainer-facing inbox of bookings on them. Optional status filter.
+ * Trainer-facing inbox of 1-on-1 bookings. Group session attendees live in the
+ * GROUP SESSIONS surface (`listTrainerOwnedSessions` + roster) and must be
+ * excluded here — otherwise every group join would render as a phantom 1-on-1
+ * request alongside the actual group roster.
+ *
+ * Implementation: every booking has a parent `trainer_sessions` row (1-on-1s
+ * get a capacity=1 session created in `requestTrainerBookingAction`), so we
+ * can't use `session_id IS NULL`. Instead we inner-join on the parent and
+ * filter by `is_group=false`. Bookings with no parent session at all (legacy
+ * data, before Phase 3) are loaded separately and merged.
  */
 export async function listTrainerInbox(
   trainerId: string,
@@ -375,10 +384,37 @@ export async function listTrainerInbox(
 ): Promise<TrainerBooking[]> {
   if (!isConfigured()) return [];
   const sb = createClient();
-  let q = sb.from("trainer_bookings").select("*").eq("trainer_id", trainerId);
+
+  // 1-on-1s: bookings whose parent trainer_sessions row is NOT a group.
+  let q = sb
+    .from("trainer_bookings")
+    .select("*, parent_session:trainer_sessions!inner(is_group)")
+    .eq("trainer_id", trainerId)
+    .eq("parent_session.is_group", false);
   if (statuses && statuses.length > 0) q = q.in("status", statuses);
-  const { data } = await q.order("starts_at", { ascending: true });
-  return (data as TrainerBooking[]) ?? [];
+  const { data: joined } = await q.order("starts_at", { ascending: true });
+
+  // Legacy: bookings without a parent session at all. Should be empty in
+  // production but kept for back-compat with pre-Phase 3 rows.
+  let qOrphan = sb
+    .from("trainer_bookings")
+    .select("*")
+    .eq("trainer_id", trainerId)
+    .is("session_id", null);
+  if (statuses && statuses.length > 0) qOrphan = qOrphan.in("status", statuses);
+  const { data: orphans } = await qOrphan.order("starts_at", { ascending: true });
+
+  const fromJoin = ((joined as Array<TrainerBooking & { parent_session: unknown }>) ?? []).map(({ parent_session: _ps, ...rest }) => rest as TrainerBooking);
+  const fromOrphans = (orphans as TrainerBooking[]) ?? [];
+  const seen = new Set<string>();
+  const merged: TrainerBooking[] = [];
+  for (const b of [...fromJoin, ...fromOrphans]) {
+    if (seen.has(b.id)) continue;
+    seen.add(b.id);
+    merged.push(b);
+  }
+  merged.sort((a, b) => a.starts_at.localeCompare(b.starts_at));
+  return merged;
 }
 
 /**
