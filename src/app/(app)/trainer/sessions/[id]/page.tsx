@@ -12,11 +12,12 @@ import { cancelGroupSessionAction, completeGroupSessionAction, editGroupSessionA
 import { fmtDollars, fmtDurationMin } from "@/lib/format";
 import { SessionVideoFrame, SessionLocked, SessionInPersonPanel } from "@/components/site/SessionVideoFrame";
 import { RoutinePlayer } from "@/components/site/RoutinePlayer";
+import { LiveSessionStage } from "@/components/site/LiveSessionStage";
 import { getRoutine, routines } from "@/lib/data/routines";
 
 export const dynamic = "force-dynamic";
 
-export default async function CoachGroupSessionPage({ params, searchParams }: { params: { id: string }; searchParams: { edited?: string; error?: string } }) {
+export default async function CoachGroupSessionPage({ params, searchParams }: { params: { id: string }; searchParams: { edited?: string; error?: string; manage?: string } }) {
   const coach = await getTrainerForCurrentUser();
   if (!coach) redirect(`/login?next=/trainer/sessions/${params.id}`);
 
@@ -34,6 +35,26 @@ export default async function CoachGroupSessionPage({ params, searchParams }: { 
   const canCancel = ["open", "full", "confirmed"].includes(session.status);
   const routine = session.routine_slug ? getRoutine(session.routine_slug) : undefined;
   const isLive = session.status !== "completed" && session.status !== "cancelled";
+
+  // Live + video + joinable + the coach has actually pressed START SESSION
+  // (live_started_at is set) → take over the whole viewport with the
+  // immersive LiveSessionStage (Daily + synced routine, swappable PIP).
+  // ?manage=1 escape hatch lets the coach pop out to the regular page
+  // (roster, mark-complete, cancel) without triggering the loop.
+  const stageMode = isLive && joinable && session.mode === "video" && !!session.live_started_at && searchParams.manage !== "1";
+  if (stageMode) {
+    return (
+      <LiveSessionStage
+        dailyUrl={session.video_room_url}
+        videoProvider={session.video_provider}
+        routine={routine ?? null}
+        live={{ mode: "coach", sessionId: session.id }}
+        backHref={`/trainer/sessions/${session.id}?manage=1`}
+        trainerName={coach.name}
+        isCoach={true}
+      />
+    );
+  }
 
   return (
     <CoachShell coach={coach} pathname="/trainer/sessions">

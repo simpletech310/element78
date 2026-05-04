@@ -38,15 +38,28 @@ export type RoutinePlayerProgramContext = {
   programSlug: string;
 };
 
+/**
+ * "compact" hides the top nav header, the duration progress bar, the MOVE
+ * title + cue, the set/rep/rest stat chips, and the playlist — what's left
+ * is the video stage, the phase pill, and the transport. Designed for the
+ * LiveSessionStage where the player is one of two swappable surfaces.
+ * "full" (default) is everything — used in /train/routine, /train/player,
+ * etc.
+ */
+export type RoutinePlayerChrome = "full" | "compact";
+
 export function RoutinePlayer({
   routine,
   programContext,
   live = { mode: "solo" } as RoutineLiveControl,
+  chrome = "full",
 }: {
   routine: Routine;
   programContext?: RoutinePlayerProgramContext;
   live?: RoutineLiveControl;
+  chrome?: RoutinePlayerChrome;
 }) {
+  const isCompact = chrome === "compact";
   const totalSets = useMemo(() => routine.exercises.reduce((n, e) => n + e.sets, 0), [routine]);
   const [exerciseIdx, setExerciseIdx] = useState(0);
   const [setIdx, setSetIdx] = useState(0); // 0-based; setIdx === sets means done with this exercise
@@ -284,32 +297,38 @@ export function RoutinePlayer({
 
   return (
     // Don't use the `app` class here — it sets overflow:hidden which clips
-    // the playlist. Plain scrolling div keeps everything reachable.
-    <div style={{ minHeight: "100dvh", background: "var(--ink)", color: "var(--bone)", display: "flex", flexDirection: "column" }}>
-      {/* Top bar */}
-      <div style={{ flexShrink: 0, padding: "20px 22px 10px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <Link href="/train" aria-label="Back" style={{ width: 42, height: 42, borderRadius: 999, background: "rgba(143,184,214,0.06)", color: "var(--bone)", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid rgba(143,184,214,0.25)", textDecoration: "none" }}>
-          <span style={{ transform: "rotate(180deg)", display: "inline-flex" }}><Icon name="chevron" size={16} /></span>
-        </Link>
-        <div style={{ textAlign: "center", flex: 1 }}>
-          <div className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.25em" }}>STUDIO · {routine.trainer_name}</div>
-          <div style={{ fontFamily: "var(--font-display)", fontSize: 18, lineHeight: 1, marginTop: 4, letterSpacing: "0.02em" }}>{routine.name}</div>
-        </div>
-        <div style={{ width: 42 }} aria-hidden />
-      </div>
+    // the playlist. Plain scrolling div keeps everything reachable. In
+    // compact mode the wrapper drops the dvh height so the player composes
+    // cleanly inside the LiveSessionStage's PIP/primary layers.
+    <div style={{ minHeight: isCompact ? undefined : "100dvh", height: isCompact ? "100%" : undefined, background: "var(--ink)", color: "var(--bone)", display: "flex", flexDirection: "column" }}>
+      {!isCompact && (
+        <>
+          {/* Top bar */}
+          <div style={{ flexShrink: 0, padding: "20px 22px 10px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <Link href="/train" aria-label="Back" style={{ width: 42, height: 42, borderRadius: 999, background: "rgba(143,184,214,0.06)", color: "var(--bone)", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid rgba(143,184,214,0.25)", textDecoration: "none" }}>
+              <span style={{ transform: "rotate(180deg)", display: "inline-flex" }}><Icon name="chevron" size={16} /></span>
+            </Link>
+            <div style={{ textAlign: "center", flex: 1 }}>
+              <div className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.25em" }}>STUDIO · {routine.trainer_name}</div>
+              <div style={{ fontFamily: "var(--font-display)", fontSize: 18, lineHeight: 1, marginTop: 4, letterSpacing: "0.02em" }}>{routine.name}</div>
+            </div>
+            <div style={{ width: 42 }} aria-hidden />
+          </div>
 
-      {/* Overall routine progress */}
-      <div style={{ flexShrink: 0, padding: "0 22px 12px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
-          <span className="e-mono" style={{ color: "rgba(242,238,232,0.55)", fontSize: 9, letterSpacing: "0.2em" }}>
-            EXERCISE {exerciseIdx + 1} / {routine.exercises.length} · SET {setIdx + (phase === "done" ? 0 : 1)} / {current.sets}
-          </span>
-          <span className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.2em" }}>{overallPct}%</span>
-        </div>
-        <div style={{ height: 4, borderRadius: 2, background: "rgba(143,184,214,0.18)", overflow: "hidden" }}>
-          <div style={{ width: `${overallPct}%`, height: "100%", background: "var(--sky)", boxShadow: "0 0 6px rgba(143,184,214,0.55)", transition: "width .35s ease" }} />
-        </div>
-      </div>
+          {/* Overall routine progress */}
+          <div style={{ flexShrink: 0, padding: "0 22px 12px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+              <span className="e-mono" style={{ color: "rgba(242,238,232,0.55)", fontSize: 9, letterSpacing: "0.2em" }}>
+                EXERCISE {exerciseIdx + 1} / {routine.exercises.length} · SET {setIdx + (phase === "done" ? 0 : 1)} / {current.sets}
+              </span>
+              <span className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.2em" }}>{overallPct}%</span>
+            </div>
+            <div style={{ height: 4, borderRadius: 2, background: "rgba(143,184,214,0.18)", overflow: "hidden" }}>
+              <div style={{ width: `${overallPct}%`, height: "100%", background: "var(--sky)", boxShadow: "0 0 6px rgba(143,184,214,0.55)", transition: "width .35s ease" }} />
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Video stage — explicit 16:9 ratio so the video scales cleanly on
           every viewport and the playlist below it stays scroll-friendly.
@@ -350,27 +369,31 @@ export function RoutinePlayer({
         </div>
 
         {/* Move title + cue · sits BELOW the video so the full frame stays
-            visible. Keeps the same display-font + serif-italic treatment
-            the overlay used. */}
-        <div style={{ marginTop: 14 }}>
-          <div className="e-mono" style={{ color: "var(--sky)", fontSize: 10, letterSpacing: "0.25em" }}>
-            MOVE {(exerciseIdx + 1).toString().padStart(2, "0")} / {routine.exercises.length}
+            visible. Hidden in compact mode where the LiveSessionStage owns
+            the framing. */}
+        {!isCompact && (
+          <div style={{ marginTop: 14 }}>
+            <div className="e-mono" style={{ color: "var(--sky)", fontSize: 10, letterSpacing: "0.25em" }}>
+              MOVE {(exerciseIdx + 1).toString().padStart(2, "0")} / {routine.exercises.length}
+            </div>
+            <div style={{ fontFamily: "var(--font-display)", fontSize: 28, lineHeight: 0.95, marginTop: 6, letterSpacing: "0.02em" }}>
+              {current.name}
+            </div>
+            <div style={{ fontSize: 13, lineHeight: 1.5, color: "rgba(242,238,232,0.78)", marginTop: 10, fontStyle: "italic", fontFamily: "var(--font-serif)" }}>
+              {current.cue}
+            </div>
           </div>
-          <div style={{ fontFamily: "var(--font-display)", fontSize: 28, lineHeight: 0.95, marginTop: 6, letterSpacing: "0.02em" }}>
-            {current.name}
-          </div>
-          <div style={{ fontSize: 13, lineHeight: 1.5, color: "rgba(242,238,232,0.78)", marginTop: 10, fontStyle: "italic", fontFamily: "var(--font-serif)" }}>
-            {current.cue}
-          </div>
-        </div>
+        )}
       </div>
 
-      {/* Set/rep target chips */}
-      <div style={{ flexShrink: 0, padding: "16px 22px 6px", display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
-        <Stat label="SETS" value={`${setIdx}/${current.sets}`} />
-        <Stat label={current.reps ? "REPS" : "HOLD"} value={current.reps ? String(current.reps) : `${current.hold_seconds ?? 0}S`} />
-        <Stat label="REST" value={`${current.rest_seconds}S`} />
-      </div>
+      {/* Set/rep target chips — hidden in compact mode. */}
+      {!isCompact && (
+        <div style={{ flexShrink: 0, padding: "16px 22px 6px", display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+          <Stat label="SETS" value={`${setIdx}/${current.sets}`} />
+          <Stat label={current.reps ? "REPS" : "HOLD"} value={current.reps ? String(current.reps) : `${current.hold_seconds ?? 0}S`} />
+          <Stat label="REST" value={`${current.rest_seconds}S`} />
+        </div>
+      )}
 
       {/* Transport */}
       <div style={{ flexShrink: 0, padding: "8px 22px 22px" }}>
@@ -448,7 +471,9 @@ export function RoutinePlayer({
 
         {/* Routine playlist — every move in the queue. The current move
             highlights, completed moves dim, and tapping a future move jumps
-            you to it (handy if you want to preview or skip). */}
+            you to it (handy if you want to preview or skip). Hidden in
+            compact mode. */}
+        {!isCompact && (
         <div style={{ marginTop: 14 }}>
           <div className="e-mono" style={{ color: "rgba(242,238,232,0.55)", fontSize: 9, letterSpacing: "0.25em", marginBottom: 8, padding: "0 4px", display: "flex", justifyContent: "space-between" }}>
             <span>PLAYLIST · {routine.exercises.length} MOVES</span>
@@ -522,6 +547,7 @@ export function RoutinePlayer({
             })}
           </div>
         </div>
+        )}
       </div>
     </div>
   );

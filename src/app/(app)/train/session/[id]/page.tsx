@@ -4,6 +4,7 @@ import { Navbar } from "@/components/site/Navbar";
 import { Icon } from "@/components/ui/Icon";
 import { RoutinePlayer } from "@/components/site/RoutinePlayer";
 import { SessionVideoFrame, SessionLocked, SessionInPersonPanel } from "@/components/site/SessionVideoFrame";
+import { LiveSessionStage } from "@/components/site/LiveSessionStage";
 import { getUser } from "@/lib/auth";
 import { getTrainerBooking } from "@/lib/data/queries";
 import { getTrainerForCurrentUser } from "@/lib/trainer-auth";
@@ -12,7 +13,7 @@ import { getRoutine } from "@/lib/data/routines";
 import { completeTrainerBookingAction, cancelTrainerBookingAction } from "@/lib/trainer-booking-actions";
 import { createClient } from "@/lib/supabase/server";
 
-export default async function TrainerSessionRoom({ params }: { params: { id: string } }) {
+export default async function TrainerSessionRoom({ params, searchParams }: { params: { id: string }; searchParams: { manage?: string } }) {
   const user = await getUser();
   if (!user) redirect(`/login?next=${encodeURIComponent(`/train/session/${params.id}`)}`);
 
@@ -56,6 +57,34 @@ export default async function TrainerSessionRoom({ params }: { params: { id: str
   const routine = booking.routine_slug ? getRoutine(booking.routine_slug) : undefined;
 
   const startStr = new Date(booking.starts_at).toLocaleString("en-US", { weekday: "short", month: "short", day: "2-digit", hour: "numeric", minute: "2-digit" });
+
+  // While the session is live (joinable + video mode + still confirmed), the
+  // page becomes a full-bleed LiveSessionStage: Daily call + synced routine
+  // demo as swappable PIP layers, no surrounding chrome. ?manage=1 lets the
+  // coach pop out to the meta view (mark complete, cancel) without bouncing
+  // back into the stage.
+  const liveStageMode =
+    booking.mode === "video"
+    && joinable
+    && booking.status === "confirmed"
+    && !!booking.session_id
+    && searchParams.manage !== "1";
+
+  if (liveStageMode) {
+    return (
+      <LiveSessionStage
+        dailyUrl={booking.video_room_url}
+        videoProvider={booking.video_provider}
+        routine={routine ?? null}
+        live={booking.session_id ? (isTrainer
+          ? { mode: "coach",  sessionId: booking.session_id }
+          : { mode: "follow", sessionId: booking.session_id }) : undefined}
+        backHref={isTrainer ? `/train/session/${booking.id}?manage=1` : "/account/sessions"}
+        trainerName={trainerName}
+        isCoach={!!isTrainer}
+      />
+    );
+  }
 
   return (
     <Shell>
