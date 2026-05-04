@@ -88,43 +88,80 @@ export default async function TrainersPage() {
         </div>
       </section>
 
-      {/* BECOME A COACH — apply to join the network. Lives in the same
-          slot the AI avatars used to occupy so the page rhythm holds. */}
+      {/*
+        BECOME A COACH — apply to join the network. Lives in the same slot
+        the AI avatars used to occupy so the page rhythm holds.
+
+        Layout: single column (text on top, perks underneath) on phones, two
+        columns side-by-side at ≥720px. Inline styles can't host media
+        queries, so the orientation rules live in a scoped <style>.
+      */}
       <section style={{ padding: "60px 22px 80px", maxWidth: 1180, margin: "0 auto" }}>
-        <div
-          style={{
-            position: "relative",
-            borderRadius: 24,
-            overflow: "hidden",
-            border: "1px solid rgba(143,184,214,0.32)",
-            background: "linear-gradient(135deg, rgba(46,127,176,0.22), rgba(10,14,20,0.95))",
-            padding: "44px 32px",
-            display: "grid",
-            gridTemplateColumns: "minmax(0, 1fr) auto",
-            gap: 28,
-            alignItems: "center",
-          }}
-        >
-          <div>
+        <style>{`
+          .e78-coach-cta {
+            position: relative;
+            border-radius: 24px;
+            overflow: hidden;
+            border: 1px solid rgba(143,184,214,0.32);
+            background: linear-gradient(135deg, rgba(46,127,176,0.22), rgba(10,14,20,0.95));
+            padding: 36px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 28px;
+          }
+          .e78-coach-cta-perks {
+            display: grid;
+            gap: 14px;
+            color: rgba(242,238,232,0.85);
+            font-family: var(--font-mono);
+            font-size: 12px;
+            letter-spacing: 0.16em;
+            padding-top: 24px;
+            border-top: 1px solid rgba(143,184,214,0.22);
+          }
+          @media (min-width: 720px) {
+            .e78-coach-cta {
+              padding: 44px 32px;
+              flex-direction: row;
+              align-items: stretch;
+              gap: 36px;
+            }
+            .e78-coach-cta > .e78-coach-cta-text {
+              flex: 1 1 auto;
+              min-width: 0;
+            }
+            .e78-coach-cta-perks {
+              padding-top: 0;
+              padding-left: 28px;
+              border-top: none;
+              border-left: 1px solid rgba(143,184,214,0.22);
+              flex: 0 0 auto;
+              align-self: center;
+              gap: 14px;
+            }
+          }
+        `}</style>
+        <div className="e78-coach-cta">
+          <div className="e78-coach-cta-text">
             <div className="e-mono" style={{ color: "var(--sky)", letterSpacing: "0.28em", fontSize: 11 }}>
               ◉ COACHES WANTED
             </div>
-            <h2 className="e-display" style={{ fontSize: "clamp(32px, 5.5vw, 48px)", lineHeight: 0.95, marginTop: 12 }}>
-              TRAIN PEOPLE.<br/>GET PAID FOR IT.
+            <h2 className="e-display" style={{ fontSize: "clamp(36px, 6vw, 52px)", lineHeight: 0.95, marginTop: 12 }}>
+              TRAIN PEOPLE. GET PAID FOR IT.
             </h2>
-            <p style={{ marginTop: 14, fontSize: 15, color: "rgba(242,238,232,0.78)", lineHeight: 1.6, maxWidth: 540, fontWeight: 300 }}>
+            <p style={{ marginTop: 14, fontSize: 15, color: "rgba(242,238,232,0.78)", lineHeight: 1.6, maxWidth: 560, fontWeight: 300 }}>
               Apply to join the Element 78 coaching network. Set your own price, your own hours, your own programs. We handle the booking flow, payments, and the tech — Daily for the call, Stripe for the payout. You bring the work.
             </p>
-            <div style={{ marginTop: 20, display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <div style={{ marginTop: 20, display: "flex", gap: 14, flexWrap: "wrap", alignItems: "center" }}>
               <Link href="/coach/apply" className="btn btn-sky" style={{ padding: "13px 24px" }}>
                 APPLY TO COACH →
               </Link>
-              <Link href="/faq#real-coaches" className="e-mono" style={{ alignSelf: "center", color: "rgba(242,238,232,0.7)", fontSize: 11, letterSpacing: "0.2em", textDecoration: "none", borderBottom: "1px solid rgba(242,238,232,0.25)", paddingBottom: 4 }}>
+              <Link href="/faq#real-coaches" className="e-mono" style={{ color: "rgba(242,238,232,0.7)", fontSize: 11, letterSpacing: "0.2em", textDecoration: "none", borderBottom: "1px solid rgba(242,238,232,0.25)", paddingBottom: 4 }}>
                 HOW IT WORKS
               </Link>
             </div>
           </div>
-          <div className="e-mono" style={{ display: "grid", gap: 10, color: "rgba(242,238,232,0.85)", fontSize: 12, letterSpacing: "0.16em", alignSelf: "stretch", borderLeft: "1px solid rgba(143,184,214,0.25)", paddingLeft: 22 }}>
+          <div className="e78-coach-cta-perks">
             <PerkLine label="SET YOUR RATE" sub="$30 – $300+ / session" />
             <PerkLine label="OWN YOUR SCHEDULE" sub="Hour blocks · 30-min slots" />
             <PerkLine label="KEEP MOST OF IT" sub="Stripe payout to you direct" />
