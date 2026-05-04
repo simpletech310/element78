@@ -1,95 +1,55 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Element 78">
   <!--
-    Element 78 — member app icon.
-    Brand palette: ink #0A0E14 ground, sky #8FB8D6 accent, bone #F2EEE8 mark.
-    Mark: a hand-drawn condensed "78" — paths only so it renders identically
-    on every browser and PNG-converter regardless of installed fonts.
+    Element 78 — member icon. Mirrors the brand wordmark stacked:
+    "ELEMENT" (Impact, condensed bold) over the signature bordered "78" tag.
+    Sized for an 8% safe inset on each side so the wordmark never clips.
   -->
   <defs>
-    <radialGradient id="ground" cx="50%" cy="38%" r="72%">
-      <stop offset="0%" stop-color="#1F2738"/>
-      <stop offset="55%" stop-color="#10151E"/>
+    <radialGradient id="ground" cx="50%" cy="38%" r="78%">
+      <stop offset="0%" stop-color="#1B2230"/>
+      <stop offset="55%" stop-color="#0E131C"/>
       <stop offset="100%" stop-color="#06090E"/>
     </radialGradient>
-    <linearGradient id="seven" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#F4F0EA"/>
-      <stop offset="100%" stop-color="#D9D2C5"/>
-    </linearGradient>
-    <linearGradient id="eight" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#F4F0EA"/>
-      <stop offset="100%" stop-color="#D9D2C5"/>
-    </linearGradient>
   </defs>
 
-  <!-- ground -->
   <rect width="1024" height="1024" fill="url(#ground)"/>
 
-  <!-- thin frame echoing the bordered "78" tag in the wordmark -->
-  <rect x="56" y="56" width="912" height="912" rx="16" ry="16"
-        fill="none" stroke="#8FB8D6" stroke-opacity="0.22" stroke-width="3"/>
+  <!-- "ELEMENT" — Impact at 220px lands at ~870px wide with 6px tracking,
+       leaving ~80px margin each side. -->
+  <text
+    x="512" y="500"
+    text-anchor="middle"
+    font-family="Impact, Haettenschweiler, 'Arial Narrow', 'Helvetica Neue', sans-serif"
+    font-size="220"
+    font-weight="900"
+    letter-spacing="6"
+    fill="#F2EEE8"
+  >ELEMENT</text>
 
-  <!-- corner ticks -->
-  <g stroke="#8FB8D6" stroke-opacity="0.55" stroke-width="3" fill="none">
-    <path d="M86 142 L86 86 L142 86"/>
-    <path d="M938 142 L938 86 L882 86"/>
-    <path d="M86 882 L86 938 L142 938"/>
-    <path d="M938 882 L938 938 L882 938"/>
+  <!-- bordered "78" tag, centered below the wordmark -->
+  <g transform="translate(512 700)">
+    <rect x="-150" y="-78" width="300" height="156" rx="8" ry="8"
+          fill="none" stroke="#F2EEE8" stroke-width="5"/>
+    <text
+      x="0" y="50"
+      text-anchor="middle"
+      font-family="ui-monospace, 'JetBrains Mono', Menlo, Consolas, monospace"
+      font-size="124"
+      font-weight="500"
+      letter-spacing="-2"
+      fill="#F2EEE8"
+    >78</text>
   </g>
 
-  <!--
-    "78" — geometric, condensed, drawn as paths.
-    Center of the canvas is x=512. The two glyphs sit side-by-side, each ~340 wide.
-    Stroke-thickness ≈ 96 for poster-weight presence.
-  -->
-  <g transform="translate(512 540)">
-    <!-- 7 — top horizontal slab + diagonal stem, sliced -->
-    <g transform="translate(-296 0)" fill="url(#seven)">
-      <!-- top bar -->
-      <path d="M -150 -210 L 150 -210 L 150 -114 L -54 -114 Z"/>
-      <!-- diagonal stem -->
-      <path d="M 150 -114 L 150 -22 L -32 210 L -150 210 L 60 -78 L 0 -78 L 0 -114 L 32 -114 Z" opacity="0"/>
-      <path d="M 150 -114 L 150 -22 L -32 210 L -150 210 Z"/>
-      <!-- crossbar accent (mid stem) -->
-      <rect x="-92" y="-30" width="184" height="22"/>
-    </g>
-
-    <!-- 8 — two stacked rounded loops -->
-    <g transform="translate(296 0)" fill="url(#eight)">
-      <!-- top loop -->
-      <path d="M 0 -228
-               C 86 -228 154 -176 154 -108
-               C 154 -56 116 -16 70 -2
-               C 122 14 168 56 168 116
-               C 168 188 92 228 0 228
-               C -92 228 -168 188 -168 116
-               C -168 56 -122 14 -70 -2
-               C -116 -16 -154 -56 -154 -108
-               C -154 -176 -86 -228 0 -228 Z
-               M 0 -134
-               C -32 -134 -58 -118 -58 -90
-               C -58 -62 -32 -46 0 -46
-               C 32 -46 58 -62 58 -90
-               C 58 -118 32 -134 0 -134 Z
-               M 0 50
-               C -42 50 -76 76 -76 118
-               C -76 158 -42 184 0 184
-               C 42 184 76 158 76 118
-               C 76 76 42 50 0 50 Z"
-            fill-rule="evenodd"/>
-    </g>
-  </g>
-
-  <!-- ELEMENT mono-spaced label, in sky -->
-  <g fill="#8FB8D6" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="56" letter-spacing="36" text-anchor="middle" font-weight="500">
-    <text x="512" y="858">ELEMENT</text>
-  </g>
-
-  <!-- the bordered version of the wordmark — small "ATL" tag -->
-  <g transform="translate(512 920)">
-    <rect x="-58" y="-26" width="116" height="42" rx="3" ry="3"
-          fill="none" stroke="#8FB8D6" stroke-opacity="0.6" stroke-width="2"/>
-    <text x="0" y="6" text-anchor="middle"
-          fill="#8FB8D6" font-family="ui-monospace, Menlo, Consolas, monospace"
-          font-size="22" letter-spacing="6" font-weight="500">ATL · 78</text>
-  </g>
+  <!-- ATLANTA tag, sky color, mirrors the "in Atlanta" cue -->
+  <text
+    x="512" y="880"
+    text-anchor="middle"
+    font-family="ui-monospace, 'JetBrains Mono', Menlo, Consolas, monospace"
+    font-size="34"
+    font-weight="500"
+    letter-spacing="22"
+    fill="#8FB8D6"
+    fill-opacity="0.85"
+  >ATLANTA</text>
 </svg>

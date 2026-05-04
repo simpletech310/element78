@@ -10,7 +10,13 @@ import { TabBar } from "@/components/chrome/TabBar";
 export function FloatingTabBar() {
   return (
     <>
-      <div style={{ height: 86 }} aria-hidden />
+      {/* Spacer mirrors the bar's intrinsic height + iOS home-indicator inset
+          so the last rows of page content never end up underneath the bar in
+          standalone PWA mode (where env(safe-area-inset-bottom) > 0). */}
+      <div
+        aria-hidden
+        style={{ height: "calc(86px + env(safe-area-inset-bottom, 0px))" }}
+      />
       <div
         style={{
           position: "fixed",
