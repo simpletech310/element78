@@ -5,13 +5,15 @@ import { TabBar } from "@/components/chrome/TabBar";
 import { Wordmark } from "@/components/brand/Wordmark";
 import { Photo } from "@/components/ui/Photo";
 import { Icon, IconName } from "@/components/ui/Icon";
-import { listClasses, listTrainers, listUserBookings } from "@/lib/data/queries";
+import { listClasses, listEventsForGym, listLocations, listTrainers, listUserBookings } from "@/lib/data/queries";
 import { getUser } from "@/lib/auth";
 import { tierLabel, type MembershipTier } from "@/lib/membership";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function GymScreen({ searchParams }: { searchParams: { date?: string } }) {
-  const [all, trainers, user] = await Promise.all([listClasses(), listTrainers(), getUser()]);
+  const [all, trainers, user, locations] = await Promise.all([listClasses(), listTrainers(), getUser(), listLocations()]);
+  // V1 single active gym — Atlanta HQ. When more locations open, this becomes a picker.
+  const activeLocation = locations.find(l => l.status === "active") ?? locations[0];
   const memberName = ((user?.user_metadata?.display_name as string | undefined)
     ?? user?.email?.split("@")[0]
     ?? "Member").toUpperCase();
@@ -64,6 +66,25 @@ export default async function GymScreen({ searchParams }: { searchParams: { date
       return t >= selectedDate && t < selectedDayEnd;
     })
     .sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime());
+
+  // Events tied to this gym, both in the dedicated strip (next 14 days) and
+  // interleaved into the selected day's timeline alongside classes.
+  const inTwoWeeks = new Date(today.getTime() + 14 * 86_400_000);
+  const eventsStrip = activeLocation
+    ? await listEventsForGym(activeLocation.id, today.toISOString(), inTwoWeeks.toISOString(), user?.id ?? null)
+    : [];
+  const eventsForDay = eventsStrip.filter(e => {
+    const t = new Date(e.starts_at);
+    return t >= selectedDate && t < selectedDayEnd;
+  });
+  // Unified timeline: classes + events sorted by starts_at, with a discriminant.
+  type TimelineRow =
+    | { kind: "class"; starts_at: string; data: typeof dayClasses[number] }
+    | { kind: "event"; starts_at: string; data: typeof eventsStrip[number] };
+  const timeline: TimelineRow[] = [
+    ...dayClasses.map(c => ({ kind: "class" as const, starts_at: c.starts_at, data: c })),
+    ...eventsForDay.map(e => ({ kind: "event" as const, starts_at: e.starts_at, data: e })),
+  ].sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime());
 
   // Trainers teaching the selected day. Dedup by trainer_id so the same human
   // teaching multiple slots only shows once. Skip AI avatars — they don't
@@ -275,15 +296,88 @@ export default async function GymScreen({ searchParams }: { searchParams: { date
           </div>
         )}
 
-        {/* Class list for the selected day */}
+        {/* Gym events strip — next 14 days, scoped to this gym */}
+        {eventsStrip.length > 0 && (
+          <div style={{ padding: "16px 22px 4px" }}>
+            <div className="e-mono" style={{ color: "rgba(10,14,20,0.5)", fontSize: 11, letterSpacing: "0.18em", marginBottom: 10 }}>
+              GYM EVENTS · {eventsStrip.length}
+            </div>
+            <div className="no-scrollbar" style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 4 }}>
+              {eventsStrip.map(e => {
+                const dt = new Date(e.starts_at);
+                const when = dt.toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+                return (
+                  <Link key={e.id} href={`/events/${e.slug}`} style={{
+                    flexShrink: 0, width: 220, borderRadius: 14, overflow: "hidden",
+                    background: "var(--ink)", color: "var(--bone)", textDecoration: "none",
+                    position: "relative", height: 130,
+                    border: "1px solid rgba(143,184,214,0.25)",
+                  }}>
+                    {e.hero_image && <Photo src={e.hero_image} alt="" style={{ position: "absolute", inset: 0, opacity: 0.55 }} />}
+                    <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, rgba(46,127,176,0.6), rgba(10,14,20,0.85))" }} />
+                    <div style={{ position: "absolute", inset: 0, padding: 12, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                      <span className="e-tag" style={{ background: "var(--sky)", color: "var(--ink)", padding: "2px 6px", borderRadius: 3, alignSelf: "flex-start", fontSize: 9 }}>
+                        {e.price_cents > 0 ? `$${(e.price_cents / 100).toFixed(0)}` : "FREE"}
+                      </span>
+                      <div>
+                        <div style={{ fontFamily: "var(--font-display)", fontSize: 16, lineHeight: 1.05 }}>{e.title}</div>
+                        <div className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.14em", marginTop: 6 }}>
+                          {when.toUpperCase()}
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Class list for the selected day (events interleaved by start time) */}
         <div style={{ padding: "16px 22px 6px", display: "flex", flexDirection: "column", gap: 10 }}>
-          {dayClasses.length === 0 ? (
+          {timeline.length === 0 ? (
             <div style={{ padding: "32px 16px", textAlign: "center", borderRadius: 16, background: "var(--paper)", border: "1px solid rgba(10,14,20,0.06)" }}>
               <div className="e-mono" style={{ color: "rgba(10,14,20,0.5)", letterSpacing: "0.22em", fontSize: 10 }}>— REST DAY —</div>
               <div style={{ fontSize: 13, color: "rgba(10,14,20,0.55)", marginTop: 8 }}>Nothing on the floor for this day. Pick another date or run a flow.</div>
               <Link href="/train" className="btn btn-ink" style={{ marginTop: 14, padding: "10px 16px", fontSize: 10 }}>OPEN STUDIO</Link>
             </div>
-          ) : dayClasses.map((c) => {
+          ) : timeline.map((row) => {
+            if (row.kind === "event") {
+              const e = row.data;
+              const dt = new Date(e.starts_at);
+              const time = dt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }).replace(" ", "").toUpperCase();
+              const full = e.capacity !== null && e.rsvp_count >= e.capacity;
+              return (
+                <Link key={`event-${e.id}`} href={`/events/${e.slug}`} style={{
+                  display: "flex", gap: 14, padding: 14, borderRadius: 16,
+                  background: "linear-gradient(135deg, rgba(46,127,176,0.10), rgba(10,14,20,0.04))",
+                  border: "1px solid rgba(143,184,214,0.4)", color: "var(--ink)",
+                }}>
+                  <div style={{ width: 60, paddingRight: 12, borderRight: "1px solid rgba(10,14,20,0.1)" }}>
+                    <div style={{ fontFamily: "var(--font-display)", fontSize: 18, lineHeight: 1 }}>{time}</div>
+                    <div className="e-mono" style={{ fontSize: 9, color: "var(--electric-deep)", marginTop: 4 }}>EVENT</div>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: "var(--font-display)", fontSize: 18, lineHeight: 1, letterSpacing: "0.02em" }}>{e.title}</div>
+                    {e.subtitle && <div style={{ fontSize: 12, color: "rgba(10,14,20,0.6)", marginTop: 4 }}>{e.subtitle}</div>}
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
+                      <span className="e-mono" style={{ fontSize: 9, color: full ? "#A14040" : "var(--electric-deep)" }}>
+                        {full ? "· FULL" : e.capacity ? `· ${e.capacity - e.rsvp_count} SPOTS` : `· ${e.rsvp_count} JOINED`}
+                      </span>
+                      <span className="e-mono" style={{
+                        fontSize: 9, padding: "2px 7px", borderRadius: 999, marginLeft: "auto",
+                        background: e.price_cents > 0 ? "rgba(46,127,176,0.12)" : "rgba(10,14,20,0.06)",
+                        color: e.price_cents > 0 ? "var(--electric-deep)" : "rgba(10,14,20,0.55)",
+                        letterSpacing: "0.18em",
+                      }}>
+                        {e.price_cents > 0 ? `$${(e.price_cents / 100).toFixed(0)}` : "FREE RSVP"}
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+              );
+            }
+            const c = row.data;
             const dt = new Date(c.starts_at);
             const time = dt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }).replace(" ", "").toUpperCase();
             const full = c.booked >= c.capacity;

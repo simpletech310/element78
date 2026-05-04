@@ -93,6 +93,8 @@ export default async function CoachDashboardPage({ searchParams }: { searchParam
       <section style={{ marginTop: 26, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
         <ActionTile href="/trainer/classes/new" label="+ NEW CLASS" hint="Schedule a class slot" />
         <ActionTile href="/trainer/sessions/new" label="+ NEW GROUP SESSION" hint="Run a small-group call" />
+        <ActionTile href="/trainer/challenges/new" label="+ NEW CHALLENGE" hint="Rally the family" />
+        <ActionTile href="/trainer/events/new" label="+ NEW EVENT" hint="Free RSVP or paid ticket" />
         <ActionTile href="/messages" label="MESSAGES →" hint="Reply to clients" />
         <ActionTile href="/trainer/earnings" label="EARNINGS →" hint="Payout breakdown + log" />
       </section>

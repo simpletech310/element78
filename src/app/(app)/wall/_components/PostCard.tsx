@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Photo } from "@/components/ui/Photo";
 import { Icon } from "@/components/ui/Icon";
 import type { HydratedPost } from "@/lib/data/types";
@@ -18,6 +19,11 @@ export function PostCard({ post }: { post: HydratedPost }) {
   const meta = (post.meta ?? {}) as Record<string, unknown>;
   const eventTag = typeof meta.event_tag === "string" ? meta.event_tag : (post.kind === "event" || post.kind === "announcement") && typeof meta.date === "string" ? meta.date : null;
   const eventCta = typeof meta.event_cta === "string" ? meta.event_cta : null;
+  // When the post links to a real challenge or event the auto-post action set
+  // these slugs in meta — wrap the CTA in a Link so it actually goes somewhere.
+  const challengeSlug = typeof meta.challenge_slug === "string" ? meta.challenge_slug : null;
+  const eventSlug = typeof meta.event_slug === "string" ? meta.event_slug : null;
+  const ctaHref = challengeSlug ? `/challenges/${challengeSlug}` : eventSlug ? `/events/${eventSlug}` : null;
   const progress = (meta.progress && typeof meta.progress === "object")
     ? meta.progress as { day?: number; total?: number; label?: string }
     : null;
@@ -45,13 +51,25 @@ export function PostCard({ post }: { post: HydratedPost }) {
         <div style={{ padding: "0 14px 12px", fontSize: 14, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{post.body}</div>
       )}
 
+      {/* Inline CTA when there's no media but the post links to a real challenge/event. */}
+      {!post.media_url && ctaHref && (
+        <div style={{ margin: "0 14px 12px", padding: 10, borderRadius: 10, background: "var(--ink)", color: "var(--bone)", display: "flex", alignItems: "center", gap: 10 }}>
+          {eventTag && <span className="e-tag" style={{ color: "var(--sky)" }}>{eventTag}</span>}
+          <Link href={ctaHref} className="btn btn-sky" style={{ marginLeft: "auto", padding: "6px 12px", fontSize: 10, textDecoration: "none" }}>{eventCta ?? "OPEN"}</Link>
+        </div>
+      )}
+
       {post.media_url && post.media_type === "image" && (
         <div style={{ height: 220, position: "relative" }}>
           <Photo src={post.media_url} alt="" style={{ position: "absolute", inset: 0 }} />
           {eventTag && (
             <div style={{ position: "absolute", left: 12, right: 12, bottom: 12, padding: 10, borderRadius: 10, background: "rgba(10,14,20,0.7)", backdropFilter: "blur(12px)", display: "flex", alignItems: "center", gap: 10 }}>
               <span className="e-tag" style={{ color: "var(--sky)" }}>{eventTag}</span>
-              {eventCta && <button className="btn btn-sky" style={{ marginLeft: "auto", padding: "6px 12px", fontSize: 10 }}>{eventCta}</button>}
+              {eventCta && (
+                ctaHref
+                  ? <Link href={ctaHref} className="btn btn-sky" style={{ marginLeft: "auto", padding: "6px 12px", fontSize: 10, textDecoration: "none" }}>{eventCta}</Link>
+                  : <button className="btn btn-sky" style={{ marginLeft: "auto", padding: "6px 12px", fontSize: 10 }}>{eventCta}</button>
+              )}
             </div>
           )}
         </div>

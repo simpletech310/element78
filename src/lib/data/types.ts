@@ -371,6 +371,109 @@ export type Highlight = {
 export type HydratedHighlight = Highlight & { author: ProfileLite | null };
 
 /* -------------------------------------------------------------------------- */
+/*  Challenges + Events (migration 0031)                                      */
+/* -------------------------------------------------------------------------- */
+
+export type ChallengeStatus = "draft" | "published" | "archived";
+
+export type Challenge = {
+  id: string;
+  slug: string;
+  title: string;
+  subtitle: string | null;
+  description: string | null;
+  hero_image: string | null;
+  author_trainer_id: string | null;
+  location_id: string | null;
+  starts_at: string;
+  ends_at: string;
+  status: ChallengeStatus;
+  enrollment_count: number;
+  completion_count: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ChallengeTask = {
+  id: string;
+  challenge_id: string;
+  sort_order: number;
+  label: string;
+  created_at: string;
+};
+
+export type ChallengeEnrollment = {
+  id: string;
+  challenge_id: string;
+  user_id: string;
+  joined_at: string;
+  completed_at: string | null;
+};
+
+export type ChallengeTaskCompletion = {
+  task_id: string;
+  user_id: string;
+  challenge_id: string;
+  completed_at: string;
+};
+
+/** Computed leaderboard row for /challenges/[slug]. */
+export type LeaderboardRow = {
+  user: ProfileLite;
+  joined_at: string;
+  completed_at: string | null;
+  tasks_done: number;
+  tasks_total: number;
+  rank: number | null;
+};
+
+export type EventStatus = "draft" | "published" | "cancelled" | "completed";
+
+export type EventRow = {
+  id: string;
+  slug: string;
+  title: string;
+  subtitle: string | null;
+  description: string | null;
+  hero_image: string | null;
+  author_trainer_id: string | null;
+  location_id: string;
+  starts_at: string;
+  ends_at: string | null;
+  capacity: number | null;
+  price_cents: number;
+  status: EventStatus;
+  rsvp_count: number;
+  paid_count: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type EventRsvpStatus =
+  | "rsvp"
+  | "pending_payment"
+  | "paid"
+  | "cancelled"
+  | "attended"
+  | "refunded";
+
+export type EventRsvp = {
+  id: string;
+  event_id: string;
+  user_id: string;
+  status: EventRsvpStatus;
+  purchase_id: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type HydratedEvent = EventRow & {
+  author: ProfileLite | null;
+  location: { id: string; slug: string; name: string; city: string; state: string } | null;
+  rsvped_by_me: EventRsvp | null;
+};
+
+/* -------------------------------------------------------------------------- */
 /*  V1 foundation (migration 0018)                                            */
 /* -------------------------------------------------------------------------- */
 

@@ -16,6 +16,7 @@ const KIND_LABEL: Record<Purchase["kind"], string> = {
   shop_order: "SHOP ORDER",
   guest_pass: "GUEST PASS",
   subscription: "MEMBERSHIP",
+  event_ticket: "EVENT TICKET",
 };
 
 const STATUS_COLOR: Record<Purchase["status"], string> = {

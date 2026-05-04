@@ -81,7 +81,7 @@ create table if not exists public.highlights (
   created_at timestamptz not null default now(),
   expires_at timestamptz not null default (now() + interval '24 hours')
 );
-create index if not exists idx_highlights_active on public.highlights(expires_at desc) where expires_at > now();
+create index if not exists idx_highlights_active on public.highlights(expires_at desc);
 
 alter table public.highlights enable row level security;
 

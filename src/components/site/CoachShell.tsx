@@ -11,6 +11,8 @@ const TABS: Array<{ label: string; href: string; match?: (path: string) => boole
   { label: "EARNINGS", href: "/trainer/earnings", match: (p) => p === "/trainer/earnings" },
   { label: "CLASSES", href: "/trainer/classes", match: (p) => p.startsWith("/trainer/classes") },
   { label: "PROGRAMS", href: "/trainer/programs", match: (p) => p.startsWith("/trainer/programs") },
+  { label: "CHALLENGES", href: "/trainer/challenges", match: (p) => p.startsWith("/trainer/challenges") },
+  { label: "EVENTS", href: "/trainer/events", match: (p) => p.startsWith("/trainer/events") },
   { label: "GROUPS", href: "/trainer/sessions/new", match: (p) => p.startsWith("/trainer/sessions") },
   { label: "AVAILABILITY", href: "/trainer/availability", match: (p) => p === "/trainer/availability" },
   { label: "PROFILE", href: "/trainer/profile", match: (p) => p === "/trainer/profile" },

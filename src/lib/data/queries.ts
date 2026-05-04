@@ -1,10 +1,18 @@
 import { createClient } from "@/lib/supabase/server";
 import type {
+  Challenge,
+  ChallengeEnrollment,
+  ChallengeTask,
+  ChallengeTaskCompletion,
   ClassRow,
+  EventRow,
+  EventRsvp,
   Flow,
   HydratedComment,
+  HydratedEvent,
   HydratedHighlight,
   HydratedPost,
+  LeaderboardRow,
   Location,
   Post,
   Product,
@@ -1074,4 +1082,237 @@ export async function listGroupSessionRoster(sessionId: string): Promise<Array<{
   if (rows.length === 0) return [];
   const profiles = await listProfilesByIds(Array.from(new Set(rows.map(r => r.user_id))));
   return rows.map(b => ({ booking: b, profile: profiles[b.user_id] ?? { display_name: null, avatar_url: null, handle: null } }));
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Challenges (migration 0031)                                               */
+/* -------------------------------------------------------------------------- */
+
+/** Active = published and ends_at > now(). Used by /challenges and the wall pinned card. */
+export async function listActiveChallenges(): Promise<Challenge[]> {
+  if (!isConfigured()) return [];
+  const sb = createClient();
+  const { data } = await sb
+    .from("challenges")
+    .select("*")
+    .eq("status", "published")
+    .gt("ends_at", new Date().toISOString())
+    .order("starts_at", { ascending: true });
+  return (data as Challenge[]) ?? [];
+}
+
+/** The single most-recent published+active challenge — drives the wall pinned card. */
+export async function getCurrentWallChallenge(): Promise<Challenge | null> {
+  const list = await listActiveChallenges();
+  return list[0] ?? null;
+}
+
+export type ChallengeDetail = {
+  challenge: Challenge;
+  tasks: ChallengeTask[];
+  myEnrollment: ChallengeEnrollment | null;
+  myCompletions: ChallengeTaskCompletion[];
+};
+
+export async function getChallenge(slug: string, currentUserId?: string | null): Promise<ChallengeDetail | null> {
+  if (!isConfigured()) return null;
+  const sb = createClient();
+  const { data: ch } = await sb.from("challenges").select("*").eq("slug", slug).maybeSingle();
+  if (!ch) return null;
+  const challenge = ch as Challenge;
+  const [{ data: tasks }, enrollmentRes, completionsRes] = await Promise.all([
+    sb.from("challenge_tasks").select("*").eq("challenge_id", challenge.id).order("sort_order"),
+    currentUserId
+      ? sb.from("challenge_enrollments").select("*").eq("challenge_id", challenge.id).eq("user_id", currentUserId).maybeSingle()
+      : Promise.resolve({ data: null }),
+    currentUserId
+      ? sb.from("challenge_task_completions").select("*").eq("challenge_id", challenge.id).eq("user_id", currentUserId)
+      : Promise.resolve({ data: [] as ChallengeTaskCompletion[] }),
+  ]);
+  return {
+    challenge,
+    tasks: (tasks as ChallengeTask[]) ?? [],
+    myEnrollment: (enrollmentRes.data as ChallengeEnrollment | null) ?? null,
+    myCompletions: (completionsRes.data as ChallengeTaskCompletion[]) ?? [],
+  };
+}
+
+/** Leaderboard: finishers ranked by completed_at asc; in-progress sorted by tasks_done desc. */
+export async function listChallengeLeaderboard(challengeId: string): Promise<LeaderboardRow[]> {
+  if (!isConfigured()) return [];
+  const sb = createClient();
+  const [{ data: enrollments }, { data: tasks }, { data: completions }] = await Promise.all([
+    sb.from("challenge_enrollments").select("*").eq("challenge_id", challengeId),
+    sb.from("challenge_tasks").select("id").eq("challenge_id", challengeId),
+    sb.from("challenge_task_completions").select("user_id, task_id").eq("challenge_id", challengeId),
+  ]);
+  const enrollRows = (enrollments as ChallengeEnrollment[]) ?? [];
+  const totalTasks = ((tasks as Array<{ id: string }>) ?? []).length;
+  if (enrollRows.length === 0) return [];
+
+  const tasksDoneByUser = new Map<string, number>();
+  for (const c of (completions as Array<{ user_id: string }>) ?? []) {
+    tasksDoneByUser.set(c.user_id, (tasksDoneByUser.get(c.user_id) ?? 0) + 1);
+  }
+
+  const profiles = await listProfilesByIds(enrollRows.map(e => e.user_id));
+
+  const rows: LeaderboardRow[] = enrollRows.map(e => ({
+    user: { id: e.user_id, ...(profiles[e.user_id] ?? { display_name: null, handle: null, avatar_url: null }) },
+    joined_at: e.joined_at,
+    completed_at: e.completed_at,
+    tasks_done: tasksDoneByUser.get(e.user_id) ?? 0,
+    tasks_total: totalTasks,
+    rank: null,
+  }));
+
+  // Finishers first (by completed_at asc), then by tasks_done desc, then joined_at asc.
+  rows.sort((a, b) => {
+    if (a.completed_at && b.completed_at) return a.completed_at.localeCompare(b.completed_at);
+    if (a.completed_at) return -1;
+    if (b.completed_at) return 1;
+    if (a.tasks_done !== b.tasks_done) return b.tasks_done - a.tasks_done;
+    return a.joined_at.localeCompare(b.joined_at);
+  });
+
+  let r = 0;
+  for (const row of rows) {
+    if (row.completed_at) {
+      r += 1;
+      row.rank = r;
+    }
+  }
+  return rows;
+}
+
+export async function listChallengesByTrainer(trainerId: string): Promise<Challenge[]> {
+  if (!isConfigured()) return [];
+  const sb = createClient();
+  const { data } = await sb
+    .from("challenges")
+    .select("*")
+    .eq("author_trainer_id", trainerId)
+    .order("created_at", { ascending: false });
+  return (data as Challenge[]) ?? [];
+}
+
+export async function getChallengeForCoach(challengeId: string): Promise<{ challenge: Challenge; tasks: ChallengeTask[] } | null> {
+  if (!isConfigured()) return null;
+  const sb = createClient();
+  const [{ data: ch }, { data: tasks }] = await Promise.all([
+    sb.from("challenges").select("*").eq("id", challengeId).maybeSingle(),
+    sb.from("challenge_tasks").select("*").eq("challenge_id", challengeId).order("sort_order"),
+  ]);
+  if (!ch) return null;
+  return { challenge: ch as Challenge, tasks: (tasks as ChallengeTask[]) ?? [] };
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Events (migration 0031)                                                   */
+/* -------------------------------------------------------------------------- */
+
+async function hydrateEvents(rows: EventRow[], currentUserId?: string | null): Promise<HydratedEvent[]> {
+  if (rows.length === 0) return [];
+  const sb = createClient();
+  const trainerIds = Array.from(new Set(rows.map(r => r.author_trainer_id).filter((x): x is string => !!x)));
+  const locationIds = Array.from(new Set(rows.map(r => r.location_id)));
+
+  const [{ data: trainers }, { data: locations }, myRsvpsRes] = await Promise.all([
+    trainerIds.length
+      ? sb.from("trainers").select("id, slug, name, avatar_url, auth_user_id").in("id", trainerIds)
+      : Promise.resolve({ data: [] as Array<{ id: string; slug: string; name: string; avatar_url: string | null; auth_user_id: string | null }> }),
+    sb.from("locations").select("id, slug, name, city, state").in("id", locationIds),
+    currentUserId
+      ? sb.from("event_rsvps").select("*").eq("user_id", currentUserId).in("event_id", rows.map(r => r.id))
+      : Promise.resolve({ data: [] as EventRsvp[] }),
+  ]);
+
+  const trainerMap = new Map<string, { id: string; slug: string; name: string; avatar_url: string | null; auth_user_id: string | null }>();
+  for (const t of (trainers ?? []) as Array<{ id: string; slug: string; name: string; avatar_url: string | null; auth_user_id: string | null }>) {
+    trainerMap.set(t.id, t);
+  }
+  const locMap = new Map<string, { id: string; slug: string; name: string; city: string; state: string }>();
+  for (const l of (locations ?? []) as Array<{ id: string; slug: string; name: string; city: string; state: string }>) {
+    locMap.set(l.id, l);
+  }
+  const rsvpMap = new Map<string, EventRsvp>();
+  for (const r of (myRsvpsRes.data ?? []) as EventRsvp[]) rsvpMap.set(r.event_id, r);
+
+  return rows.map(e => {
+    const t = e.author_trainer_id ? trainerMap.get(e.author_trainer_id) : null;
+    return {
+      ...e,
+      author: t
+        ? { id: t.auth_user_id ?? t.id, display_name: t.name, handle: t.slug, avatar_url: t.avatar_url }
+        : null,
+      location: locMap.get(e.location_id) ?? null,
+      rsvped_by_me: rsvpMap.get(e.id) ?? null,
+    };
+  });
+}
+
+export async function listEventsForGym(locationId: string, fromIso: string, toIso: string, currentUserId?: string | null): Promise<HydratedEvent[]> {
+  if (!isConfigured()) return [];
+  const sb = createClient();
+  const { data } = await sb
+    .from("events")
+    .select("*")
+    .eq("location_id", locationId)
+    .eq("status", "published")
+    .gte("starts_at", fromIso)
+    .lt("starts_at", toIso)
+    .order("starts_at", { ascending: true });
+  return hydrateEvents((data as EventRow[]) ?? [], currentUserId);
+}
+
+export async function listEventsForDay(locationId: string, dayStartIso: string, dayEndIso: string, currentUserId?: string | null): Promise<HydratedEvent[]> {
+  return listEventsForGym(locationId, dayStartIso, dayEndIso, currentUserId);
+}
+
+export async function getEvent(slug: string, currentUserId?: string | null): Promise<HydratedEvent | null> {
+  if (!isConfigured()) return null;
+  const sb = createClient();
+  const { data } = await sb.from("events").select("*").eq("slug", slug).maybeSingle();
+  if (!data) return null;
+  const [hydrated] = await hydrateEvents([data as EventRow], currentUserId);
+  return hydrated ?? null;
+}
+
+export async function listEventsByTrainer(trainerId: string): Promise<HydratedEvent[]> {
+  if (!isConfigured()) return [];
+  const sb = createClient();
+  const { data } = await sb
+    .from("events")
+    .select("*")
+    .eq("author_trainer_id", trainerId)
+    .order("starts_at", { ascending: false });
+  return hydrateEvents((data as EventRow[]) ?? []);
+}
+
+export type EventRsvpRow = EventRsvp & { user: ProfileLite | null; amount_paid_cents: number | null };
+
+export async function listEventRsvps(eventId: string): Promise<EventRsvpRow[]> {
+  if (!isConfigured()) return [];
+  const sb = createClient();
+  const { data } = await sb
+    .from("event_rsvps")
+    .select("*")
+    .eq("event_id", eventId)
+    .order("created_at", { ascending: true });
+  const rsvps = (data as EventRsvp[]) ?? [];
+  if (rsvps.length === 0) return [];
+  const profiles = await listProfilesByIds(rsvps.map(r => r.user_id));
+  const purchaseIds = rsvps.map(r => r.purchase_id).filter((x): x is string => !!x);
+  let purchaseMap = new Map<string, number>();
+  if (purchaseIds.length) {
+    const { data: purchases } = await sb.from("purchases").select("id, amount_cents").in("id", purchaseIds);
+    for (const p of (purchases ?? []) as Array<{ id: string; amount_cents: number }>) {
+      purchaseMap.set(p.id, p.amount_cents);
+    }
+  }
+  return rsvps.map(r => ({
+    ...r,
+    user: { id: r.user_id, ...(profiles[r.user_id] ?? { display_name: null, handle: null, avatar_url: null }) },
+    amount_paid_cents: r.purchase_id ? purchaseMap.get(r.purchase_id) ?? null : null,
+  }));
 }

@@ -21,7 +21,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getPaymentProvider } from "@/lib/payments/provider";
 import { platformFeeFor, getTrainerStripeAccountId } from "@/lib/connect";
 
-export type PurchaseKind = "class_booking" | "program_enrollment" | "trainer_booking" | "shop_order" | "guest_pass" | "subscription";
+export type PurchaseKind = "class_booking" | "program_enrollment" | "trainer_booking" | "shop_order" | "guest_pass" | "subscription" | "event_ticket";
 
 export type PurchaseStatus = "pending" | "paid" | "refunded" | "failed" | "cancelled";
 
@@ -226,6 +226,24 @@ export async function fulfillPurchase(
       }
       break;
     }
+
+    case "event_ticket": {
+      // Migration 0031 added event_id + event_rsvp_id to purchases. Flip the
+      // linked event_rsvps row to paid; trigger updates events.paid_count.
+      const { data: row } = await sb
+        .from("purchases")
+        .select("event_rsvp_id")
+        .eq("id", purchaseId)
+        .maybeSingle();
+      const rsvpId = (row as { event_rsvp_id?: string | null } | null)?.event_rsvp_id;
+      if (rsvpId) {
+        await sb
+          .from("event_rsvps")
+          .update({ status: "paid", purchase_id: purchaseId, updated_at: new Date().toISOString() })
+          .eq("id", rsvpId);
+      }
+      break;
+    }
   }
 }
 
@@ -287,6 +305,14 @@ export async function refundPurchase(purchaseId: string, opts?: { amountCents?: 
       const guestId = (row as { guest_id?: string | null } | null)?.guest_id;
       if (guestId) {
         await sb.from("guests").update({ status: "cancelled", updated_at: new Date().toISOString() }).eq("id", guestId);
+      }
+      break;
+    }
+    case "event_ticket": {
+      const { data: row } = await sb.from("purchases").select("event_rsvp_id").eq("id", purchaseId).maybeSingle();
+      const rsvpId = (row as { event_rsvp_id?: string | null } | null)?.event_rsvp_id;
+      if (rsvpId) {
+        await sb.from("event_rsvps").update({ status: "refunded", updated_at: new Date().toISOString() }).eq("id", rsvpId);
       }
       break;
     }

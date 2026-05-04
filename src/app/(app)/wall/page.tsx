@@ -1,10 +1,11 @@
+import Link from "next/link";
 import { TabBar } from "@/components/chrome/TabBar";
 import { Navbar } from "@/components/site/Navbar";
 import { Photo } from "@/components/ui/Photo";
 import { Icon } from "@/components/ui/Icon";
 import { getUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { listHighlights, listPosts } from "@/lib/data/queries";
+import { getCurrentWallChallenge, listHighlights, listPosts } from "@/lib/data/queries";
 import { ComposeBar } from "./_components/ComposeBar";
 import { FilterChips } from "./_components/FilterChips";
 import { StoriesRail } from "./_components/StoriesRail";
@@ -44,10 +45,14 @@ export default async function WallScreen({
   const filterParam = (searchParams?.filter ?? "ALL").toUpperCase();
   const kinds = KIND_MAP[filterParam] ?? [];
 
-  const [posts, highlights] = await Promise.all([
+  const [posts, highlights, pinnedChallenge] = await Promise.all([
     listPosts({ kinds, currentUserId: user?.id ?? null }),
     listHighlights(),
+    getCurrentWallChallenge(),
   ]);
+  const pinnedDaysLeft = pinnedChallenge
+    ? Math.max(0, Math.ceil((new Date(pinnedChallenge.ends_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    : 0;
 
   return (
     <div className="app" style={{ height: "100dvh" }}>
@@ -71,26 +76,33 @@ export default async function WallScreen({
         {/* Filter chips */}
         <FilterChips active={filterParam} />
 
-        {/* Pinned challenge */}
-        <div style={{ padding: "4px 22px 10px" }}>
-          <div style={{ borderRadius: 18, overflow: "hidden", background: "var(--ink)", color: "var(--bone)", position: "relative", height: 200 }}>
-            <Photo src="/assets/IMG_3471.jpg" alt="" style={{ position: "absolute", inset: 0, opacity: 0.55 }} />
-            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, rgba(46,127,176,0.7), rgba(10,14,20,0.85))" }} />
-            <div style={{ position: "absolute", inset: 0, padding: 18, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-              <span className="e-tag" style={{ background: "var(--sky)", color: "var(--ink)", padding: "5px 9px", borderRadius: 3, alignSelf: "flex-start" }}>CHALLENGE · 6 DAYS LEFT</span>
-              <div>
-                <div className="e-display" style={{ fontSize: 28, lineHeight: 0.95 }}>21 DAYS<br/>IN MY ELEMENT</div>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 14 }}>
-                  <div className="e-mono" style={{ color: "var(--sky)", fontSize: 10 }}>412 WOMEN IN</div>
-                  <div style={{ flex: 1, height: 3, background: "rgba(255,255,255,0.18)", borderRadius: 2, overflow: "hidden" }}>
-                    <div style={{ width: "67%", height: "100%", background: "var(--sky)" }} />
+        {/* Pinned challenge — most recent published+active */}
+        {pinnedChallenge && (
+          <div style={{ padding: "4px 22px 10px" }}>
+            <Link
+              href={`/challenges/${pinnedChallenge.slug}`}
+              style={{ display: "block", borderRadius: 18, overflow: "hidden", background: "var(--ink)", color: "var(--bone)", position: "relative", height: 200, textDecoration: "none" }}
+            >
+              <Photo src={pinnedChallenge.hero_image ?? "/assets/IMG_3471.jpg"} alt="" style={{ position: "absolute", inset: 0, opacity: 0.55 }} />
+              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, rgba(46,127,176,0.7), rgba(10,14,20,0.85))" }} />
+              <div style={{ position: "absolute", inset: 0, padding: 18, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                <span className="e-tag" style={{ background: "var(--sky)", color: "var(--ink)", padding: "5px 9px", borderRadius: 3, alignSelf: "flex-start" }}>
+                  CHALLENGE · {pinnedDaysLeft} DAY{pinnedDaysLeft === 1 ? "" : "S"} LEFT
+                </span>
+                <div>
+                  <div className="e-display" style={{ fontSize: 28, lineHeight: 0.95 }}>{pinnedChallenge.title}</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 14 }}>
+                    <div className="e-mono" style={{ color: "var(--sky)", fontSize: 10 }}>
+                      {pinnedChallenge.enrollment_count} IN · {pinnedChallenge.completion_count} DONE
+                    </div>
+                    <div style={{ flex: 1 }} />
+                    <span className="btn btn-sky" style={{ padding: "8px 14px" }}>I&apos;M IN</span>
                   </div>
-                  <button className="btn btn-sky" style={{ padding: "8px 14px" }}>I&apos;M IN</button>
                 </div>
               </div>
-            </div>
+            </Link>
           </div>
-        </div>
+        )}
 
         {/* Compose row */}
         <ComposeBar meAvatarUrl={me.avatar_url} />
