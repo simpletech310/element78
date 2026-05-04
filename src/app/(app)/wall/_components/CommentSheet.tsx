@@ -5,6 +5,7 @@ import { Photo } from "@/components/ui/Photo";
 import type { HydratedComment } from "@/lib/data/types";
 import { createCommentAction } from "@/lib/wall-actions";
 import { relativeTime } from "./relative-time";
+import { SheetPortal } from "./SheetPortal";
 
 export function CommentSheet({
   postId,
@@ -54,13 +55,14 @@ export function CommentSheet({
   }
 
   return (
+    <SheetPortal>
     <div
       role="dialog"
       aria-modal="true"
       style={{
         position: "fixed",
         inset: 0,
-        zIndex: 60,
+        zIndex: 1000,
         background: "rgba(10,14,20,0.55)",
         backdropFilter: "blur(6px)",
         display: "flex",
@@ -74,13 +76,13 @@ export function CommentSheet({
           background: "var(--paper)",
           borderTopLeftRadius: 22,
           borderTopRightRadius: 22,
-          maxHeight: "82dvh",
+          height: "min(82dvh, 720px)",
           display: "flex",
           flexDirection: "column",
           boxShadow: "0 -12px 40px rgba(0,0,0,0.25)",
         }}
       >
-        <div style={{ padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(10,14,20,0.06)" }}>
+        <div style={{ padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(10,14,20,0.06)", flexShrink: 0 }}>
           <div className="e-display" style={{ fontSize: 18 }}>COMMENTS</div>
           <button
             onClick={onClose}
@@ -90,7 +92,7 @@ export function CommentSheet({
             ×
           </button>
         </div>
-        <div style={{ flex: 1, overflowY: "auto", padding: "10px 14px 6px", display: "flex", flexDirection: "column", gap: 12 }}>
+        <div style={{ flex: 1, minHeight: 0, overflowY: "auto", WebkitOverflowScrolling: "touch", padding: "10px 14px 6px", display: "flex", flexDirection: "column", gap: 12 }}>
           {error && <div className="e-mono" style={{ color: "var(--rose)", fontSize: 11 }}>{error}</div>}
           {!comments && !error && (
             <div className="e-mono" style={{ fontSize: 11, color: "rgba(10,14,20,0.5)" }}>LOADING…</div>
@@ -117,7 +119,7 @@ export function CommentSheet({
         </div>
         <form
           onSubmit={submit}
-          style={{ padding: "10px 12px 14px", display: "flex", gap: 8, alignItems: "center", borderTop: "1px solid rgba(10,14,20,0.06)" }}
+          style={{ padding: "10px 12px calc(12px + env(safe-area-inset-bottom))", display: "flex", gap: 8, alignItems: "center", borderTop: "1px solid rgba(10,14,20,0.06)", flexShrink: 0, background: "var(--paper)" }}
         >
           <input
             ref={inputRef}
@@ -138,5 +140,6 @@ export function CommentSheet({
         </form>
       </div>
     </div>
+    </SheetPortal>
   );
 }

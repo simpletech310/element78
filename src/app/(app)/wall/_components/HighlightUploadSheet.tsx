@@ -2,6 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { createHighlightAction } from "@/lib/wall-actions";
+import { SheetPortal } from "./SheetPortal";
 
 const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
 const MAX_VIDEO_DURATION_S = 60;
@@ -57,13 +58,14 @@ export function HighlightUploadSheet({ onClose }: { onClose: () => void }) {
   }
 
   return (
+    <SheetPortal>
     <div
       role="dialog"
       aria-modal="true"
       style={{
         position: "fixed",
         inset: 0,
-        zIndex: 60,
+        zIndex: 1000,
         background: "rgba(10,14,20,0.55)",
         backdropFilter: "blur(6px)",
         display: "flex",
@@ -78,13 +80,13 @@ export function HighlightUploadSheet({ onClose }: { onClose: () => void }) {
           background: "var(--paper)",
           borderTopLeftRadius: 22,
           borderTopRightRadius: 22,
-          maxHeight: "90dvh",
+          height: "min(90dvh, 720px)",
           display: "flex",
           flexDirection: "column",
           boxShadow: "0 -12px 40px rgba(0,0,0,0.25)",
         }}
       >
-        <div style={{ padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(10,14,20,0.06)" }}>
+        <div style={{ padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(10,14,20,0.06)", flexShrink: 0 }}>
           <div className="e-display" style={{ fontSize: 18 }}>NEW HIGHLIGHT · 24H</div>
           <button
             type="button"
@@ -97,7 +99,7 @@ export function HighlightUploadSheet({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
-        <div style={{ padding: 14, display: "flex", flexDirection: "column", gap: 12 }}>
+        <div style={{ flex: 1, minHeight: 0, padding: 14, display: "flex", flexDirection: "column", gap: 12, overflowY: "auto", WebkitOverflowScrolling: "touch" }}>
           <div className="e-mono" style={{ fontSize: 10, color: "rgba(10,14,20,0.6)" }}>
             VIDEO ONLY · MAX 60S · MAX 50MB · DISAPPEARS IN 24H
           </div>
@@ -125,7 +127,7 @@ export function HighlightUploadSheet({ onClose }: { onClose: () => void }) {
           {error && <div className="e-mono" style={{ fontSize: 11, color: "var(--rose)" }}>{error}</div>}
         </div>
 
-        <div style={{ padding: 14, borderTop: "1px solid rgba(10,14,20,0.06)", display: "flex", gap: 8, justifyContent: "flex-end" }}>
+        <div style={{ padding: "12px 14px calc(12px + env(safe-area-inset-bottom))", borderTop: "1px solid rgba(10,14,20,0.06)", display: "flex", gap: 8, justifyContent: "flex-end", flexShrink: 0, background: "var(--paper)" }}>
           <button
             type="button"
             onClick={onClose}
@@ -146,5 +148,6 @@ export function HighlightUploadSheet({ onClose }: { onClose: () => void }) {
         </div>
       </form>
     </div>
+    </SheetPortal>
   );
 }

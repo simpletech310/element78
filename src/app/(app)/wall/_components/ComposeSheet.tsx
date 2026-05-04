@@ -2,6 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { createPostAction } from "@/lib/wall-actions";
+import { SheetPortal } from "./SheetPortal";
 
 const KIND_OPTIONS: Array<{ value: string; label: string }> = [
   { value: "progress", label: "Progress" },
@@ -91,13 +92,14 @@ export function ComposeSheet({ onClose }: { onClose: () => void }) {
   }
 
   return (
+    <SheetPortal>
     <div
       role="dialog"
       aria-modal="true"
       style={{
         position: "fixed",
         inset: 0,
-        zIndex: 60,
+        zIndex: 1000,
         background: "rgba(10,14,20,0.55)",
         backdropFilter: "blur(6px)",
         display: "flex",
@@ -112,13 +114,13 @@ export function ComposeSheet({ onClose }: { onClose: () => void }) {
           background: "var(--paper)",
           borderTopLeftRadius: 22,
           borderTopRightRadius: 22,
-          maxHeight: "90dvh",
+          height: "min(90dvh, 720px)",
           display: "flex",
           flexDirection: "column",
           boxShadow: "0 -12px 40px rgba(0,0,0,0.25)",
         }}
       >
-        <div style={{ padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(10,14,20,0.06)" }}>
+        <div style={{ padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(10,14,20,0.06)", flexShrink: 0 }}>
           <div className="e-display" style={{ fontSize: 18 }}>NEW POST</div>
           <button
             type="button"
@@ -131,7 +133,7 @@ export function ComposeSheet({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
-        <div style={{ padding: 14, display: "flex", flexDirection: "column", gap: 12, overflowY: "auto" }}>
+        <div style={{ flex: 1, minHeight: 0, padding: 14, display: "flex", flexDirection: "column", gap: 12, overflowY: "auto", WebkitOverflowScrolling: "touch" }}>
           <textarea
             value={body}
             onChange={(e) => setBody(e.target.value.slice(0, MAX_BODY))}
@@ -211,7 +213,7 @@ export function ComposeSheet({ onClose }: { onClose: () => void }) {
           )}
         </div>
 
-        <div style={{ padding: 14, borderTop: "1px solid rgba(10,14,20,0.06)", display: "flex", gap: 8, justifyContent: "flex-end" }}>
+        <div style={{ padding: "12px 14px calc(12px + env(safe-area-inset-bottom))", borderTop: "1px solid rgba(10,14,20,0.06)", display: "flex", gap: 8, justifyContent: "flex-end", flexShrink: 0, background: "var(--paper)" }}>
           <button
             type="button"
             onClick={onClose}
@@ -232,5 +234,6 @@ export function ComposeSheet({ onClose }: { onClose: () => void }) {
         </div>
       </form>
     </div>
+    </SheetPortal>
   );
 }
