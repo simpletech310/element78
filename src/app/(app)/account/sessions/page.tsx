@@ -64,10 +64,10 @@ export default async function ClientSessionsPage({ searchParams }: { searchParam
         </div>
 
         <section style={{ padding: "20px 22px 0" }}>
-          <div className="e-mono" style={{ color: "var(--sky)", letterSpacing: "0.2em" }}>YOUR · 1-ON-1</div>
+          <div className="e-mono" style={{ color: "var(--sky)", letterSpacing: "0.2em" }}>YOUR · TRAINER</div>
           <h1 className="e-display" style={{ fontSize: "clamp(40px, 9vw, 64px)", lineHeight: 0.92, marginTop: 12 }}>SESSIONS.</h1>
           <p style={{ marginTop: 14, fontSize: 14, color: "rgba(242,238,232,0.65)", maxWidth: 480, lineHeight: 1.6 }}>
-            Private sessions you've booked with Element trainers — video or at the gym.
+            Private 1-on-1 and group sessions you've booked with Element trainers — video or at the gym.
           </p>
         </section>
 

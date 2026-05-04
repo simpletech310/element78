@@ -78,6 +78,138 @@ export async function createGroupSessionAction(formData: FormData) {
 }
 
 /**
+ * Trainer edits an existing group session.
+ *
+ * Editable at any time:        title, description, routine_slug.
+ * Editable only with 0 attendees: starts_at, ends_at, mode, price_cents.
+ * capacity:                    can change anytime, but cannot drop below the
+ *                              current attendee count.
+ *
+ * Anything else / rule violation → error redirect back to the detail page.
+ */
+export async function editGroupSessionAction(formData: FormData) {
+  const trainer = await getTrainerForCurrentUser();
+  if (!trainer) redirect("/login?next=/trainer/dashboard");
+
+  const sessionId = String(formData.get("session_id") ?? "");
+  if (!sessionId) redirect("/trainer/dashboard?error=missing_id");
+
+  const session = await getTrainerSessionRow(sessionId);
+  if (!session || session.trainer_id !== trainer.id) {
+    redirect("/trainer/dashboard?error=unauthorized");
+  }
+  if (!session.is_group) {
+    redirect(`/trainer/sessions/${sessionId}?error=${encodeURIComponent("Only group sessions are editable here")}`);
+  }
+  if (session.status === "cancelled" || session.status === "completed") {
+    redirect(`/trainer/sessions/${sessionId}?error=${encodeURIComponent("Session is closed")}`);
+  }
+
+  const sb = createClient();
+
+  // Active attendee count drives which fields are legal to change right now.
+  const { data: existing } = await sb
+    .from("trainer_bookings")
+    .select("id")
+    .eq("session_id", sessionId)
+    .in("status", ["pending_trainer", "confirmed"]);
+  const attendeeCount = ((existing as Array<{ id: string }>) ?? []).length;
+  const hasAttendees = attendeeCount > 0;
+
+  // Always-editable fields.
+  const title = String(formData.get("title") ?? "").trim() || null;
+  const description = String(formData.get("description") ?? "").trim() || null;
+  const routineSlugRaw = String(formData.get("routine_slug") ?? "").trim();
+  const routineSlug = routineSlugRaw === "" ? null : routineSlugRaw;
+
+  const update: Record<string, unknown> = {
+    title,
+    description,
+    routine_slug: routineSlug,
+    updated_at: new Date().toISOString(),
+  };
+
+  // Capacity — allowed any time, but cannot drop below current attendee count.
+  const capacityRaw = formData.get("capacity");
+  if (capacityRaw != null && String(capacityRaw).trim() !== "") {
+    const capacity = Math.max(2, Number(capacityRaw));
+    if (Number.isNaN(capacity)) {
+      redirect(`/trainer/sessions/${sessionId}?error=${encodeURIComponent("Invalid capacity")}`);
+    }
+    if (capacity < attendeeCount) {
+      redirect(`/trainer/sessions/${sessionId}?error=${encodeURIComponent(`Capacity can't drop below current attendee count (${attendeeCount})`)}`);
+    }
+    update.capacity = capacity;
+    // If we just opened up seats above the active count, flip 'full' → 'open'
+    // so the booking page surfaces it again. Conversely, if the new capacity
+    // exactly matches the count, mirror the same logic joinGroup uses.
+    if (session.status === "full" && capacity > attendeeCount) {
+      update.status = "open";
+    } else if (session.status === "open" && capacity <= attendeeCount) {
+      update.status = "full";
+    }
+  }
+
+  // Price — only legal when 0 attendees (no refund math + new joiner mismatch).
+  const priceDollarsRaw = formData.get("price_dollars");
+  if (priceDollarsRaw != null && String(priceDollarsRaw).trim() !== "") {
+    if (hasAttendees) {
+      redirect(`/trainer/sessions/${sessionId}?error=${encodeURIComponent("Price can't change once attendees have booked")}`);
+    }
+    const priceCents = Math.max(0, Math.round(Number(priceDollarsRaw) * 100));
+    update.price_cents = priceCents;
+  }
+
+  // Mode — only legal when 0 attendees (existing attendees booked one mode).
+  const modeRaw = formData.get("mode");
+  if (modeRaw != null && String(modeRaw).trim() !== "" && String(modeRaw) !== session.mode) {
+    if (hasAttendees) {
+      redirect(`/trainer/sessions/${sessionId}?error=${encodeURIComponent("Mode can't change once attendees have booked")}`);
+    }
+    update.mode = String(modeRaw) as TrainerSessionMode;
+  }
+
+  // starts_at / ends_at — only with 0 attendees.
+  const startsAtRaw = String(formData.get("starts_at") ?? "").trim();
+  const endsAtRaw = String(formData.get("ends_at") ?? "").trim();
+  if (startsAtRaw || endsAtRaw) {
+    if (hasAttendees) {
+      redirect(`/trainer/sessions/${sessionId}?error=${encodeURIComponent("Time can't change once attendees have booked")}`);
+    }
+    if (!startsAtRaw || !endsAtRaw) {
+      redirect(`/trainer/sessions/${sessionId}?error=${encodeURIComponent("Start and end time both required")}`);
+    }
+    const startsAt = new Date(startsAtRaw).toISOString();
+    const endsAt = new Date(endsAtRaw).toISOString();
+    if (new Date(endsAt).getTime() <= new Date(startsAt).getTime()) {
+      redirect(`/trainer/sessions/${sessionId}?error=${encodeURIComponent("End must be after start")}`);
+    }
+    update.starts_at = startsAt;
+    update.ends_at = endsAt;
+  }
+
+  const { error } = await sb
+    .from("trainer_sessions")
+    .update(update)
+    .eq("id", sessionId)
+    .eq("trainer_id", trainer.id);
+
+  if (error) {
+    const msg = error.message?.includes("duplicate") || error.code === "23505"
+      ? "You already have a session at that start time."
+      : "Could not save changes. Please try again.";
+    redirect(`/trainer/sessions/${sessionId}?error=${encodeURIComponent(msg)}`);
+  }
+
+  revalidatePath("/trainer/dashboard");
+  revalidatePath(`/trainer/sessions/${sessionId}`);
+  revalidatePath(`/trainers/${trainer.slug}`);
+  revalidatePath(`/trainers/${trainer.slug}/book`);
+  revalidatePath("/account/sessions");
+  redirect(`/trainer/sessions/${sessionId}?edited=1`);
+}
+
+/**
  * Trainer cancels a group session. All confirmed/pending bookings get
  * refunded and flipped to cancelled; the Daily room (if provisioned) is
  * destroyed. Idempotent on the room teardown.
