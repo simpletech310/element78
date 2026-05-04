@@ -2,10 +2,14 @@ import { createClient } from "@/lib/supabase/server";
 import type {
   ClassRow,
   Flow,
+  HydratedComment,
+  HydratedHighlight,
+  HydratedPost,
   Location,
   Post,
   Product,
   ProductVariant,
+  ProfileLite,
   Trainer,
   Program,
   ProgramSession,
@@ -18,7 +22,7 @@ import type {
   TrainerBooking,
   TrainerSessionRow,
 } from "./types";
-import { fallbackProducts, fallbackClasses, fallbackTrainers, fallbackLocations, fallbackPosts, fallbackPrograms, fallbackProgramSessions, fallbackFlows } from "./fallback";
+import { fallbackProducts, fallbackClasses, fallbackTrainers, fallbackLocations, fallbackPosts, fallbackHighlights, fallbackPrograms, fallbackProgramSessions, fallbackFlows } from "./fallback";
 
 function isConfigured() {
   return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
@@ -651,11 +655,78 @@ export async function listTrainerOwnedSessions(trainerId: string): Promise<Array
   return rows.map(s => ({ session: s, attendees: counts.get(s.id) ?? 0 }));
 }
 
-export async function listPosts(): Promise<Post[]> {
-  if (!isConfigured()) return fallbackPosts;
+/**
+ * Fetch wall posts hydrated with author profile, STAFF flag (has trainers row),
+ * and the current user's like state. One server query for the rows + at most
+ * two follow-ups for the small joined sets (trainers + reactions). Keeps the
+ * page-level call to a small constant number of round trips.
+ */
+export async function listPosts(opts?: {
+  kinds?: string[];
+  currentUserId?: string | null;
+  limit?: number;
+}): Promise<HydratedPost[]> {
+  const limit = opts?.limit ?? 20;
+  if (!isConfigured()) {
+    const kinds = opts?.kinds ?? [];
+    return kinds.length === 0 ? fallbackPosts : fallbackPosts.filter(p => kinds.includes(p.kind));
+  }
   const sb = createClient();
-  const { data } = await sb.from("posts").select("*").order("created_at", { ascending: false }).limit(20);
-  return (data as Post[]) ?? fallbackPosts;
+  let q = sb
+    .from("posts")
+    .select("*, author:profiles!posts_author_id_fkey(id, display_name, handle, avatar_url)")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (opts?.kinds?.length) q = q.in("kind", opts.kinds);
+  const { data } = await q;
+  const rows = (data as Array<Post & { author: ProfileLite | null }>) ?? [];
+  if (rows.length === 0) return [];
+
+  const authorIds = Array.from(new Set(rows.map(r => r.author_id).filter((x): x is string => !!x)));
+  const postIds = rows.map(r => r.id);
+
+  const [staffRes, likedRes] = await Promise.all([
+    authorIds.length
+      ? sb.from("trainers").select("auth_user_id").in("auth_user_id", authorIds)
+      : Promise.resolve({ data: [] as Array<{ auth_user_id: string }> }),
+    opts?.currentUserId
+      ? sb.from("post_reactions").select("post_id").eq("user_id", opts.currentUserId).in("post_id", postIds)
+      : Promise.resolve({ data: [] as Array<{ post_id: string }> }),
+  ]);
+
+  const staff = new Set(((staffRes.data ?? []) as Array<{ auth_user_id: string | null }>)
+    .map(r => r.auth_user_id)
+    .filter((x): x is string => !!x));
+  const liked = new Set(((likedRes.data ?? []) as Array<{ post_id: string }>).map(r => r.post_id));
+
+  return rows.map(r => ({
+    ...r,
+    is_staff: !!r.author_id && staff.has(r.author_id),
+    liked_by_me: liked.has(r.id),
+  }));
+}
+
+export async function listHighlights(): Promise<HydratedHighlight[]> {
+  if (!isConfigured()) return fallbackHighlights;
+  const sb = createClient();
+  const { data } = await sb
+    .from("highlights")
+    .select("*, author:profiles!highlights_author_id_fkey(id, display_name, handle, avatar_url)")
+    .gt("expires_at", new Date().toISOString())
+    .order("created_at", { ascending: false })
+    .limit(50);
+  return (data as HydratedHighlight[]) ?? [];
+}
+
+export async function listComments(postId: string): Promise<HydratedComment[]> {
+  if (!isConfigured()) return [];
+  const sb = createClient();
+  const { data } = await sb
+    .from("post_comments")
+    .select("*, author:profiles!post_comments_author_id_fkey(id, display_name, handle, avatar_url)")
+    .eq("post_id", postId)
+    .order("created_at", { ascending: true });
+  return (data as HydratedComment[]) ?? [];
 }
 
 /* -------------------------------------------------------------------------- */

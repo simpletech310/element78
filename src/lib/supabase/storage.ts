@@ -56,3 +56,32 @@ export async function uploadImageToBucket(
 
   return { url: publicUrl(bucket, key), key };
 }
+
+/**
+ * Upload either an image OR a video to a public bucket. Same key convention
+ * and admin-client setup as uploadImageToBucket; the difference is the wider
+ * acceptable content-type. Used by the Wall composer and highlights uploader.
+ */
+export async function uploadMediaToBucket(
+  bucket: "wall-media",
+  file: File,
+  userId: string,
+): Promise<{ url: string; key: string }> {
+  const admin = createAdminClient();
+  if (!admin) {
+    throw new Error("Supabase admin client unavailable — missing SUPABASE_SERVICE_ROLE_KEY?");
+  }
+
+  const key = `${userId}/${crypto.randomUUID()}-${slugify(file.name)}`;
+
+  const { error } = await admin.storage.from(bucket).upload(key, file, {
+    contentType: file.type || "application/octet-stream",
+    upsert: false,
+  });
+
+  if (error) {
+    throw new Error(`Upload to ${bucket} failed: ${error.message}`);
+  }
+
+  return { url: publicUrl(bucket, key), key };
+}

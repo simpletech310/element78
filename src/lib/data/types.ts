@@ -328,7 +328,47 @@ export type Post = {
   media_url: string | null;
   meta: Record<string, unknown>;
   created_at: string;
+  /** Wall v1 — added in migration 0030. */
+  media_type: "image" | "video" | null;
+  like_count: number;
+  comment_count: number;
+  location: string | null;
 };
+
+export type ProfileLite = {
+  id: string;
+  display_name: string | null;
+  handle: string | null;
+  avatar_url: string | null;
+};
+
+/** Post + author profile + STAFF flag + per-user reaction state. Built by
+ *  listPosts(); the wall page renders this directly. */
+export type HydratedPost = Post & {
+  author: ProfileLite | null;
+  is_staff: boolean;
+  liked_by_me: boolean;
+};
+
+export type PostComment = {
+  id: string;
+  post_id: string;
+  author_id: string;
+  body: string;
+  created_at: string;
+};
+
+export type HydratedComment = PostComment & { author: ProfileLite | null };
+
+export type Highlight = {
+  id: string;
+  author_id: string;
+  media_url: string;
+  created_at: string;
+  expires_at: string;
+};
+
+export type HydratedHighlight = Highlight & { author: ProfileLite | null };
 
 /* -------------------------------------------------------------------------- */
 /*  V1 foundation (migration 0018)                                            */

@@ -1,7 +1,7 @@
 // Static fallback so the app renders before Supabase is wired up.
 // Mirrors supabase/seed.sql + the imagery-refresh migration.
 
-import type { ClassRow, Flow, Location, Post, Product, Trainer, Program, ProgramSession } from "./types";
+import type { ClassRow, Flow, HydratedHighlight, HydratedPost, Location, Product, Trainer, Program, ProgramSession } from "./types";
 
 export const fallbackLocations: Location[] = [
   { id: "loc-atl", slug: "atlanta-hq", name: "Atlanta HQ", city: "Atlanta", state: "GA", status: "active", hero_image: "/assets/atlgym.jpg", lat: 33.7935, lng: -84.4150, sort_order: 1, address: "1198 Howell Mill Rd NW, Atlanta, GA 30318" },
@@ -182,10 +182,20 @@ export const fallbackProgramSessions: ProgramSession[] = (() => {
   return out;
 })();
 
-export const fallbackPosts: Post[] = [
-  { id: "ps1", author_id: null, kind: "trainer_drop", body: "NEW · West Coast Flow Series 04 just dropped. Light reformer + breath. 7 sessions.", media_url: "/assets/blue-set-rooftop.jpg", meta: { author: "KAI · TRAINER", tag: "STAFF" }, created_at: new Date().toISOString() },
-  { id: "ps2", author_id: null, kind: "progress", body: "Hit 14 days straight. The streak is real. Pulled up at 5:45a.", media_url: "/assets/IMG_3461.jpg", meta: { author: "AALIYAH M.", streak: 14 }, created_at: new Date(Date.now() - 1000*60*60).toISOString() },
-  { id: "ps3", author_id: null, kind: "milestone", body: "PR · Reformer footwork to plank. Held it.", media_url: "/assets/IMG_3467.jpg", meta: { author: "AALIYAH M.", pr: "Plank · 2:30" }, created_at: new Date(Date.now() - 1000*60*60*4).toISOString() },
-  { id: "ps4", author_id: null, kind: "event", body: "Sunset rooftop class · Sat 7p · Atlanta HQ. 12 spots.", media_url: "/assets/IMG_3465.jpg", meta: { date: "SAT 5/3 · 7:00P", spots: 12 }, created_at: new Date(Date.now() - 1000*60*60*24).toISOString() },
-  { id: "ps5", author_id: null, kind: "announcement", body: "ATL West End is officially open. Come see us.", media_url: "/assets/IMG_3471.jpg", meta: { location: "ATL · WEST END" }, created_at: new Date(Date.now() - 1000*60*60*48).toISOString() },
+// Hydrated posts so the wall renders something even when Supabase isn't
+// configured. Mirrors the shape returned by listPosts() (HydratedPost).
+export const fallbackPosts: HydratedPost[] = [
+  { id: "ps1", author_id: "ph-kai", kind: "trainer_drop", body: "NEW · West Coast Flow Series 04 just dropped. Light reformer + breath. 7 sessions.", media_url: "/assets/blue-set-rooftop.jpg", meta: { tag: "STAFF" }, created_at: new Date().toISOString(), media_type: "image", like_count: 124, comment_count: 18, location: "ATL HQ", author: { id: "ph-kai", display_name: "KAI", handle: "kai", avatar_url: "/assets/blue-hair-gym.jpg" }, is_staff: true, liked_by_me: false },
+  { id: "ps2", author_id: "ph-aaliyah", kind: "progress", body: "Hit 14 days straight. The streak is real. Pulled up at 5:45a.", media_url: "/assets/IMG_3461.jpg", meta: { streak: 14 }, created_at: new Date(Date.now() - 1000*60*60).toISOString(), media_type: "image", like_count: 86, comment_count: 12, location: "ATL HQ", author: { id: "ph-aaliyah", display_name: "AALIYAH M.", handle: "aaliyahm", avatar_url: "/assets/IMG_3461.jpg" }, is_staff: false, liked_by_me: false },
+  { id: "ps3", author_id: "ph-tasha", kind: "trainer_drop", body: "Sunrise Pilates is officially the move. Mats out at 6:25A sharp. Don't be late, don't be loud.", media_url: "/assets/floor-mockup.png", meta: { tag: "STAFF" }, created_at: new Date(Date.now() - 1000*60*60*3).toISOString(), media_type: "image", like_count: 211, comment_count: 24, location: "ATL HQ", author: { id: "ph-tasha", display_name: "TASHA", handle: "tasha", avatar_url: "/assets/editorial-1.jpg" }, is_staff: true, liked_by_me: false },
+  { id: "ps4", author_id: "ph-shay", kind: "milestone", body: "First time hitting the 95lb squat. The whole back row hyped me up. THAT is what membership is.", media_url: null, meta: { pr: "NEW PR · 95 LB SQUAT" }, created_at: new Date(Date.now() - 1000*60*60*5).toISOString(), media_type: null, like_count: 342, comment_count: 41, location: "ATL HQ", author: { id: "ph-shay", display_name: "SHAY D.", handle: "shayd", avatar_url: "/assets/IMG_3469.jpg" }, is_staff: false, liked_by_me: false },
+  { id: "ps5", author_id: "ph-event", kind: "announcement", body: "May 03 · Sunrise Run + Coffee Meet. 7AM at the lot. Recovery smoothies after.", media_url: "/assets/IMG_3461.jpg", meta: { date: "EVENT · MAY 03 · 7A" }, created_at: new Date(Date.now() - 1000*60*60*8).toISOString(), media_type: "image", like_count: 88, comment_count: 9, location: "ATL HQ", author: { id: "ph-event", display_name: "EVENT · ELEMENT78", handle: "element78", avatar_url: "/assets/IMG_3471.jpg" }, is_staff: true, liked_by_me: false },
+];
+
+export const fallbackHighlights: HydratedHighlight[] = [
+  { id: "hl1", author_id: "ph-kai", media_url: "/assets/blue-hair-gym.jpg", created_at: new Date(Date.now() - 1000*60*30).toISOString(), expires_at: new Date(Date.now() + 1000*60*60*23).toISOString(), author: { id: "ph-kai", display_name: "KAI", handle: "kai", avatar_url: "/assets/blue-hair-gym.jpg" } },
+  { id: "hl2", author_id: "ph-tasha", media_url: "/assets/editorial-1.jpg", created_at: new Date(Date.now() - 1000*60*45).toISOString(), expires_at: new Date(Date.now() + 1000*60*60*22).toISOString(), author: { id: "ph-tasha", display_name: "TASHA", handle: "tasha", avatar_url: "/assets/editorial-1.jpg" } },
+  { id: "hl3", author_id: "ph-amara", media_url: "/assets/dumbbell-street.jpg", created_at: new Date(Date.now() - 1000*60*60).toISOString(), expires_at: new Date(Date.now() + 1000*60*60*21).toISOString(), author: { id: "ph-amara", display_name: "AMARA", handle: "amara", avatar_url: "/assets/dumbbell-street.jpg" } },
+  { id: "hl4", author_id: "ph-jay", media_url: "/assets/IMG_3461.jpg", created_at: new Date(Date.now() - 1000*60*90).toISOString(), expires_at: new Date(Date.now() + 1000*60*60*20).toISOString(), author: { id: "ph-jay", display_name: "JAY", handle: "jay", avatar_url: "/assets/IMG_3461.jpg" } },
+  { id: "hl5", author_id: "ph-shay", media_url: "/assets/IMG_3469.jpg", created_at: new Date(Date.now() - 1000*60*120).toISOString(), expires_at: new Date(Date.now() + 1000*60*60*19).toISOString(), author: { id: "ph-shay", display_name: "SHAY", handle: "shayd", avatar_url: "/assets/IMG_3469.jpg" } },
 ];
