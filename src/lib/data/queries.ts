@@ -471,6 +471,55 @@ export async function listOpenGroupSessionsForTrainer(
 }
 
 /**
+ * Open group sessions across every coach in a window — powers the /train
+ * discovery rail and full /train/groups list. Same shape as the per-trainer
+ * version but joined with trainer info (name, slug, avatar_url) and with full
+ * sessions filtered out so members never see one they can't join.
+ */
+export async function listAllOpenGroupSessions(
+  fromIso: string,
+  toIso: string,
+): Promise<Array<{ session: TrainerSessionRow; attendees: number; trainer: Pick<Trainer, "id" | "slug" | "name" | "avatar_url"> }>> {
+  if (!isConfigured()) return [];
+  const sb = createClient();
+  const { data: sessions } = await sb
+    .from("trainer_sessions")
+    .select("*")
+    .eq("is_group", true)
+    .eq("status", "open")
+    .gte("starts_at", fromIso)
+    .lte("starts_at", toIso)
+    .order("starts_at");
+  const rows = (sessions as TrainerSessionRow[]) ?? [];
+  if (rows.length === 0) return [];
+
+  const ids = rows.map(r => r.id);
+  const trainerIds = Array.from(new Set(rows.map(r => r.trainer_id)));
+  const [{ data: bookings }, { data: trainers }] = await Promise.all([
+    sb.from("trainer_bookings").select("session_id, status").in("session_id", ids).in("status", ["pending_trainer", "confirmed"]),
+    sb.from("trainers").select("id, slug, name, avatar_url").in("id", trainerIds),
+  ]);
+  const counts = new Map<string, number>();
+  for (const b of (bookings as Array<{ session_id: string | null; status: string }>) ?? []) {
+    if (!b.session_id) continue;
+    counts.set(b.session_id, (counts.get(b.session_id) ?? 0) + 1);
+  }
+  const trainerById = new Map<string, Pick<Trainer, "id" | "slug" | "name" | "avatar_url">>();
+  for (const t of (trainers as Array<Pick<Trainer, "id" | "slug" | "name" | "avatar_url">>) ?? []) {
+    trainerById.set(t.id, t);
+  }
+
+  return rows
+    .map(s => {
+      const trainer = trainerById.get(s.trainer_id);
+      const attendees = counts.get(s.id) ?? 0;
+      if (!trainer || attendees >= s.capacity) return null;
+      return { session: s, attendees, trainer };
+    })
+    .filter((r): r is { session: TrainerSessionRow; attendees: number; trainer: Pick<Trainer, "id" | "slug" | "name" | "avatar_url"> } => r !== null);
+}
+
+/**
  * All trainer_sessions this trainer owns that haven't ended yet — for the
  * trainer dashboard "GROUP SESSIONS · YOUR UPCOMING" rail.
  */

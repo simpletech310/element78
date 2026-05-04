@@ -139,7 +139,7 @@ export default async function TrainerBookingPage({
                 const dateStr = dt.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "2-digit" }).toUpperCase();
                 const timeStr = dt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
                 return (
-                  <div key={session.id} style={{ padding: 14, borderRadius: 14, background: "linear-gradient(135deg, rgba(143,184,214,0.16), rgba(46,127,176,0.04))", border: "1px solid rgba(143,184,214,0.32)", display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
+                  <div key={session.id} id={`group-${session.id}`} style={{ padding: 14, borderRadius: 14, background: "linear-gradient(135deg, rgba(143,184,214,0.16), rgba(46,127,176,0.04))", border: "1px solid rgba(143,184,214,0.32)", display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap", scrollMarginTop: 80 }}>
                     <div style={{ minWidth: 96, paddingRight: 14, borderRight: "1px solid rgba(143,184,214,0.18)" }}>
                       <div className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.2em" }}>{dateStr}</div>
                       <div style={{ fontFamily: "var(--font-display)", fontSize: 22, lineHeight: 1, marginTop: 4 }}>{timeStr}</div>

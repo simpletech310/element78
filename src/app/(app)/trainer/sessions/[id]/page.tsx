@@ -9,6 +9,9 @@ import { getTrainerSessionRow, listGroupSessionRoster } from "@/lib/data/queries
 import { isSessionJoinable } from "@/lib/video/provider";
 import { cancelGroupSessionAction, completeGroupSessionAction } from "@/lib/trainer-session-actions";
 import { fmtDollars, fmtDurationMin } from "@/lib/format";
+import { SessionVideoFrame, SessionLocked, SessionInPersonPanel } from "@/components/site/SessionVideoFrame";
+import { RoutinePlayer } from "@/components/site/RoutinePlayer";
+import { getRoutine } from "@/lib/data/routines";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +28,8 @@ export default async function CoachGroupSessionPage({ params }: { params: { id: 
   const joinable = isSessionJoinable(session.starts_at, session.ends_at);
   const canComplete = ["open", "full", "confirmed"].includes(session.status);
   const canCancel = ["open", "full", "confirmed"].includes(session.status);
+  const routine = session.routine_slug ? getRoutine(session.routine_slug) : undefined;
+  const isLive = session.status !== "completed" && session.status !== "cancelled";
 
   return (
     <CoachShell coach={coach} pathname="/trainer/sessions">
@@ -41,10 +46,35 @@ export default async function CoachGroupSessionPage({ params }: { params: { id: 
         <p style={{ marginTop: 14, fontSize: 14, color: "rgba(242,238,232,0.75)", lineHeight: 1.6, maxWidth: 640 }}>{session.description}</p>
       )}
 
+      {/* Live call surface — embedded Daily room (or in-person info) so the
+          coach can lead the group through the routine without leaving this
+          page. The RoutinePlayer below is shared screen real estate; both the
+          coach and each member see Daily on top and the workout video below. */}
+      {isLive && (
+        <div style={{ marginTop: 22 }}>
+          {session.mode === "video" ? (
+            joinable ? (
+              <SessionVideoFrame videoRoomUrl={session.video_room_url} videoProvider={session.video_provider} />
+            ) : (
+              <SessionLocked startsAt={session.starts_at} />
+            )
+          ) : (
+            <SessionInPersonPanel />
+          )}
+        </div>
+      )}
+
+      {/* Stacked workout video — only when a routine is set on the session. */}
+      {routine && isLive && (
+        <div style={{ marginTop: 24 }}>
+          <div className="e-mono" style={{ color: "var(--sky)", letterSpacing: "0.2em", fontSize: 10 }}>GUIDED ROUTINE</div>
+          <div style={{ marginTop: 12 }}>
+            <RoutinePlayer routine={routine} />
+          </div>
+        </div>
+      )}
+
       <div style={{ marginTop: 22, display: "flex", gap: 10, flexWrap: "wrap" }}>
-        {session.mode === "video" && joinable && session.video_room_url && (
-          <a href={session.video_room_url} target="_blank" rel="noreferrer" className="btn btn-sky" style={{ padding: "12px 22px" }}>JOIN ROOM →</a>
-        )}
         {canComplete && (
           <form action={completeGroupSessionAction}>
             <input type="hidden" name="session_id" value={session.id} />

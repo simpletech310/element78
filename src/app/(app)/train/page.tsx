@@ -4,9 +4,10 @@ import { StatusBar, HomeIndicator } from "@/components/chrome/StatusBar";
 import { TabBar } from "@/components/chrome/TabBar";
 import { Photo } from "@/components/ui/Photo";
 import { Icon } from "@/components/ui/Icon";
-import { listPrograms, listTrainers, listUserEnrollments, listEnrollmentCompletions } from "@/lib/data/queries";
+import { listPrograms, listTrainers, listUserEnrollments, listEnrollmentCompletions, listAllOpenGroupSessions } from "@/lib/data/queries";
 import { routines } from "@/lib/data/routines";
 import { getUser } from "@/lib/auth";
+import { GroupSessionRail } from "@/components/site/GroupSessionRail";
 
 export default async function TrainScreen() {
   const filters = [
@@ -14,7 +15,14 @@ export default async function TrainScreen() {
     { l: "STRENGTH" }, { l: "YOGA" }, { l: "MOBILITY" },
   ];
 
-  const [user, allPrograms, allTrainers] = await Promise.all([getUser(), listPrograms(), listTrainers()]);
+  const now = new Date();
+  const groupWindowEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+  const [user, allPrograms, allTrainers, openGroupSessions] = await Promise.all([
+    getUser(),
+    listPrograms(),
+    listTrainers(),
+    listAllOpenGroupSessions(now.toISOString(), groupWindowEnd.toISOString()),
+  ]);
   const humanTrainers = allTrainers.filter(t => !t.is_ai);
   const enrollments = user ? await listUserEnrollments(user.id) : [];
   const activePrograms = enrollments.filter(e => e.enrollment.status === "active");
@@ -210,6 +218,10 @@ export default async function TrainScreen() {
             </div>
           </div>
         )}
+
+        {/* GROUP SESSIONS · OPEN — discovery rail across all coaches. Hidden
+            when there's nothing scheduled. */}
+        <GroupSessionRail items={openGroupSessions.slice(0, 8)} />
 
         {/* YOUR PROGRAMS — only when enrolled */}
         {activePrograms.length > 0 && (
