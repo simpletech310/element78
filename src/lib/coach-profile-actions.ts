@@ -18,6 +18,16 @@ export async function updateCoachProfileAction(formData: FormData) {
   const cert = String(formData.get("cert") ?? "").trim() || null;
   const yrs = formData.get("years_experience");
   const years_experience = yrs ? Math.max(0, Number(yrs)) : null;
+  const timezoneRaw = String(formData.get("timezone") ?? "").trim();
+  // Allow only a vetted whitelist (plus the existing value as a fallback) so
+  // a typo can't quietly break slot generation. Empty string keeps current.
+  const KNOWN_TZ = new Set([
+    "America/New_York", "America/Chicago", "America/Denver", "America/Phoenix",
+    "America/Los_Angeles", "America/Anchorage", "Pacific/Honolulu",
+    "Europe/London", "Europe/Paris", "Europe/Berlin", "Europe/Madrid",
+    "Asia/Tokyo", "Asia/Singapore", "Asia/Dubai", "Australia/Sydney",
+  ]);
+  const timezone = timezoneRaw && KNOWN_TZ.has(timezoneRaw) ? timezoneRaw : null;
   if (!name) redirect("/trainer/profile?error=name_required");
 
   // Optional avatar upload — replaces existing avatar_url.
@@ -48,6 +58,7 @@ export async function updateCoachProfileAction(formData: FormData) {
   const updates: Record<string, unknown> = { name, headline, bio, specialties, cert, years_experience };
   if (avatarUrl) updates.avatar_url = avatarUrl;
   if (heroUrl) updates.hero_image = heroUrl;
+  if (timezone) updates.timezone = timezone;
 
   // Use .select() so RLS rejections surface as 0 returned rows instead of
   // the misleading silent error: null. We then re-check that the new name

@@ -66,6 +66,39 @@ export default async function CoachProfileEditPage({ searchParams }: { searchPar
           <Field label="YEARS EXPERIENCE">
             <input name="years_experience" type="number" min={0} max={60} defaultValue={coach.years_experience ?? undefined} className="ta-input" />
           </Field>
+          <Field label="TIMEZONE · YOUR LOCAL HOURS ARE INTERPRETED IN THIS ZONE">
+            <select
+              name="timezone"
+              defaultValue={coach.timezone ?? "America/New_York"}
+              className="ta-input"
+              style={{ appearance: "none", backgroundImage: "linear-gradient(45deg, transparent 50%, rgba(143,184,214,0.6) 50%), linear-gradient(135deg, rgba(143,184,214,0.6) 50%, transparent 50%)", backgroundPosition: "calc(100% - 18px) 50%, calc(100% - 13px) 50%", backgroundSize: "5px 5px, 5px 5px", backgroundRepeat: "no-repeat", paddingRight: 30 }}
+            >
+              <optgroup label="North America">
+                <option value="America/New_York">Eastern · New York / Atlanta</option>
+                <option value="America/Chicago">Central · Chicago</option>
+                <option value="America/Denver">Mountain · Denver</option>
+                <option value="America/Phoenix">Mountain · Phoenix (no DST)</option>
+                <option value="America/Los_Angeles">Pacific · Los Angeles</option>
+                <option value="America/Anchorage">Alaska · Anchorage</option>
+                <option value="Pacific/Honolulu">Hawaii · Honolulu</option>
+              </optgroup>
+              <optgroup label="Europe">
+                <option value="Europe/London">London</option>
+                <option value="Europe/Paris">Paris</option>
+                <option value="Europe/Berlin">Berlin</option>
+                <option value="Europe/Madrid">Madrid</option>
+              </optgroup>
+              <optgroup label="Asia / Pacific">
+                <option value="Asia/Tokyo">Tokyo</option>
+                <option value="Asia/Singapore">Singapore</option>
+                <option value="Asia/Dubai">Dubai</option>
+                <option value="Australia/Sydney">Sydney</option>
+              </optgroup>
+            </select>
+          </Field>
+          <p className="e-mono" style={{ margin: "-6px 0 0", fontSize: 9, color: "rgba(242,238,232,0.5)", letterSpacing: "0.16em", lineHeight: 1.6 }}>
+            Members always see times in their own timezone. Yours just controls when "MON 10:00" actually lands as a real instant. Default is Atlanta — change it if you coach from another city.
+          </p>
           <Field label="NEW AVATAR · UPLOAD (LEAVE BLANK TO KEEP CURRENT)">
             <input type="file" name="avatar_file" accept="image/*" className="ta-input" />
           </Field>
