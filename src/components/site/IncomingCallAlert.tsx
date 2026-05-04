@@ -87,6 +87,36 @@ export function IncomingCallAlert({
     };
   }, [viewerId, bookings, dismissed]);
 
+  // Short beep on modal open — Web Audio API so we don't ship an audio file.
+  // 660Hz sine for ~200ms with a tiny attack/release to avoid clicks.
+  // Wrapped in try/catch in case the browser blocks autoplay (no user gesture
+  // yet). The visual pulsing border stays the primary attention cue.
+  useEffect(() => {
+    if (!active) return;
+    try {
+      type WebkitWindow = Window & { webkitAudioContext?: typeof AudioContext };
+      const Ctor = window.AudioContext || (window as WebkitWindow).webkitAudioContext;
+      if (!Ctor) return;
+      const ctx = new Ctor();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = 660;
+      const now = ctx.currentTime;
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.18, now + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.22);
+      osc.onended = () => {
+        try { ctx.close(); } catch { /* noop */ }
+      };
+    } catch {
+      // Autoplay blocked or no audio context — silent fall-through.
+    }
+  }, [active?.id]);
+
   if (!active) return null;
 
   const startStr = new Date(active.starts_at).toLocaleTimeString("en-US", {

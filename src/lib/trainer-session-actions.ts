@@ -9,6 +9,7 @@ import { getTrainerForCurrentUser } from "@/lib/trainer-auth";
 import { getVideoProvider } from "@/lib/video/provider";
 import { getTrainerSessionRow } from "@/lib/data/queries";
 import { createPurchaseAndCheckout, refundPurchase } from "@/lib/purchases";
+import { notifyLiveCallStarted } from "@/lib/notifications";
 import type { TrainerSessionMode } from "@/lib/data/types";
 
 /**
@@ -455,6 +456,23 @@ export async function startGroupSessionAction(formData: FormData) {
     .update({ live_started_at: liveStartedAt, updated_at: liveStartedAt })
     .eq("session_id", sessionId)
     .in("status", ["confirmed", "pending_trainer"]);
+
+  // Persist a notification row per attendee so members without an open tab
+  // still see the live call when they next open the app. The realtime
+  // IncomingCallAlert handles the in-tab modal; this is the durable surface.
+  const { data: attendees } = await sb
+    .from("trainer_bookings")
+    .select("id, user_id")
+    .eq("session_id", sessionId)
+    .in("status", ["confirmed", "pending_trainer"]);
+  for (const a of (attendees as Array<{ id: string; user_id: string }> | null) ?? []) {
+    await notifyLiveCallStarted({
+      userId: a.user_id,
+      bookingId: a.id,
+      trainerName: trainer.name,
+      sessionTitle: session.title ?? null,
+    });
+  }
 
   revalidatePath("/trainer/dashboard");
   revalidatePath(`/trainer/sessions/${sessionId}`);
