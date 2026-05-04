@@ -30,6 +30,11 @@ export function DailyEmbed({ url, label }: { url: string; label?: string }) {
     // "client-side exception" overlay. We report the failure inline instead
     // so the rest of the session room (routine player, complete form,
     // roster) keeps rendering.
+    //
+    // Theme note: Daily's theme.colors only accepts CSS hex strings — rgba()
+    // values get rejected with "property 'theme': unsupported theme
+    // configuration". Brand alpha tints are pre-blended against the ink
+    // ground here so the look is identical without breaking the SDK.
     let call: DailyCall;
     try {
       call = DailyIframe.createFrame(containerRef.current, {
@@ -47,13 +52,13 @@ export function DailyEmbed({ url, label }: { url: string; label?: string }) {
             accent: sky,
             accentText: ink,
             background: ink,
-            backgroundAccent: ink,
+            backgroundAccent: "#11161f", // haze — used to be ink+rgba
             baseText: bone,
-            border: "rgba(143,184,214,0.3)",
+            border: "#2c3848",            // sky alpha-30 over ink, pre-blended
             mainAreaBg: ink,
-            mainAreaBgAccent: "rgba(143,184,214,0.05)",
+            mainAreaBgAccent: "#11161f",  // haze
             mainAreaText: bone,
-            supportiveText: "rgba(242,238,232,0.7)",
+            supportiveText: "#b5b0a8",    // bone alpha-70 over ink, pre-blended
           },
         },
       });

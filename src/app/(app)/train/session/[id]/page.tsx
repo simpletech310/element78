@@ -105,12 +105,19 @@ export default async function TrainerSessionRoom({ params }: { params: { id: str
         </section>
       )}
 
-      {/* RoutinePlayer embedded so trainer + client can run through together */}
-      {routine && booking.status !== "completed" && (
+      {/* RoutinePlayer embedded so trainer + client run through it together,
+          synced. The coach drives the timeline; the member's player mirrors
+          via Supabase realtime on the parent trainer_sessions row. */}
+      {routine && booking.status !== "completed" && booking.session_id && (
         <section style={{ padding: "28px 22px 0" }}>
           <div className="e-mono" style={{ color: "var(--sky)", letterSpacing: "0.2em", fontSize: 10 }}>GUIDED ROUTINE</div>
           <div style={{ marginTop: 12 }}>
-            <RoutinePlayer routine={routine} />
+            <RoutinePlayer
+              routine={routine}
+              live={isTrainer
+                ? { mode: "coach",  sessionId: booking.session_id }
+                : { mode: "follow", sessionId: booking.session_id }}
+            />
           </div>
         </section>
       )}

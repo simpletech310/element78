@@ -79,12 +79,15 @@ export default async function CoachGroupSessionPage({ params, searchParams }: { 
         </div>
       )}
 
-      {/* Stacked workout video — only when a routine is set on the session. */}
+      {/* Stacked workout video — coach drives the timeline; every confirmed
+          attendee mirrors it via realtime on trainer_sessions.routine_state. */}
       {routine && isLive && (
         <div style={{ marginTop: 24 }}>
-          <div className="e-mono" style={{ color: "var(--sky)", letterSpacing: "0.2em", fontSize: 10 }}>GUIDED ROUTINE</div>
+          <div className="e-mono" style={{ color: "var(--sky)", letterSpacing: "0.2em", fontSize: 10 }}>
+            GUIDED ROUTINE · YOU DRIVE · ATTENDEES MIRROR
+          </div>
           <div style={{ marginTop: 12 }}>
-            <RoutinePlayer routine={routine} />
+            <RoutinePlayer routine={routine} live={{ mode: "coach", sessionId: session.id }} />
           </div>
         </div>
       )}

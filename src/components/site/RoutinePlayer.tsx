@@ -5,9 +5,26 @@ import Link from "next/link";
 import { Icon } from "@/components/ui/Icon";
 import type { Routine } from "@/lib/data/routines";
 import { markRoutineSessionCompleteAction } from "@/lib/program-actions";
+import { updateRoutineStateAction } from "@/lib/routine-state-actions";
+import { createClient } from "@/lib/supabase/client";
 
 type Phase = "ready" | "working" | "rest" | "done";
 type LoadState = "idle" | "loading" | "ready" | "error";
+
+/**
+ * Live-control mode for the player.
+ *  - "solo":   default — no sync, the viewer drives the timeline themselves
+ *              (used in /train/routine/[slug], /train/player, etc).
+ *  - "coach":  the viewer is the trainer running a live session — every
+ *              meaningful state change pushes to trainer_sessions.routine_state
+ *              so attendees mirror the timeline in realtime.
+ *  - "follow": the viewer is an attendee — controls hide, state arrives via
+ *              Supabase realtime updates on trainer_sessions.routine_state.
+ */
+export type RoutineLiveControl =
+  | { mode: "solo" }
+  | { mode: "coach"; sessionId: string }
+  | { mode: "follow"; sessionId: string };
 
 function fmtTime(s: number) {
   if (!isFinite(s) || s < 0) s = 0;
@@ -21,7 +38,15 @@ export type RoutinePlayerProgramContext = {
   programSlug: string;
 };
 
-export function RoutinePlayer({ routine, programContext }: { routine: Routine; programContext?: RoutinePlayerProgramContext }) {
+export function RoutinePlayer({
+  routine,
+  programContext,
+  live = { mode: "solo" } as RoutineLiveControl,
+}: {
+  routine: Routine;
+  programContext?: RoutinePlayerProgramContext;
+  live?: RoutineLiveControl;
+}) {
   const totalSets = useMemo(() => routine.exercises.reduce((n, e) => n + e.sets, 0), [routine]);
   const [exerciseIdx, setExerciseIdx] = useState(0);
   const [setIdx, setSetIdx] = useState(0); // 0-based; setIdx === sets means done with this exercise
@@ -32,6 +57,80 @@ export function RoutinePlayer({ routine, programContext }: { routine: Routine; p
   const [completionFired, setCompletionFired] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const isFollower = live.mode === "follow";
+  const isCoachDriving = live.mode === "coach";
+
+  // Push the coach's current frame to trainer_sessions.routine_state on
+  // every meaningful change. Members on the follow side mirror this.
+  // Skipped in solo mode and skipped when we're following someone else.
+  // Tracks last-pushed-key so we don't redundantly POST identical frames.
+  const lastPushedRef = useRef<string>("");
+  useEffect(() => {
+    if (live.mode !== "coach") return;
+    const key = `${exerciseIdx}|${setIdx}|${phase}`;
+    if (lastPushedRef.current === key) return;
+    lastPushedRef.current = key;
+    const fd = new FormData();
+    fd.set("session_id", live.sessionId);
+    fd.set("exercise_idx", String(exerciseIdx));
+    fd.set("set_idx", String(setIdx));
+    fd.set("phase", phase);
+    fd.set("phase_started_at", new Date().toISOString());
+    updateRoutineStateAction(fd).catch((err: Error) => {
+      // eslint-disable-next-line no-console
+      console.warn("[routine] push failed:", err.message);
+    });
+  }, [live, exerciseIdx, setIdx, phase]);
+
+  // Subscribe (members only) to the parent session's routine_state and mirror
+  // the coach's timeline when updates arrive. We compute rest countdowns
+  // locally from phase_started_at + the current exercise's rest_seconds so
+  // the coach doesn't have to push a tick every second.
+  useEffect(() => {
+    if (live.mode !== "follow") return;
+    const sb = createClient();
+    const channel = sb
+      .channel(`routine-${live.sessionId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "trainer_sessions",
+          filter: `id=eq.${live.sessionId}`,
+        },
+        (payload) => {
+          const row = payload.new as { routine_state: { exerciseIdx: number; setIdx: number; phase: Phase; phaseStartedAt: string } | null };
+          const s = row.routine_state;
+          if (!s) return;
+          setExerciseIdx(s.exerciseIdx);
+          setSetIdx(s.setIdx);
+          setPhase(s.phase);
+          if (s.phase === "rest") {
+            const ex = routine.exercises[s.exerciseIdx];
+            const elapsed = (Date.now() - new Date(s.phaseStartedAt).getTime()) / 1000;
+            setRestRemaining(Math.max(0, (ex?.rest_seconds ?? 0) - elapsed));
+          } else {
+            setRestRemaining(0);
+          }
+          // Drive the local <video> to match the new phase.
+          const v = videoRef.current;
+          if (v) {
+            if (s.phase === "working") {
+              v.currentTime = 0;
+              v.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
+            } else {
+              v.pause();
+              setPlaying(false);
+            }
+          }
+        },
+      )
+      .subscribe();
+    return () => {
+      sb.removeChannel(channel);
+    };
+  }, [live, routine]);
 
   // When the routine reaches "done" while running inside a program, fire the
   // server action exactly once to write a program_completions row.
@@ -275,7 +374,21 @@ export function RoutinePlayer({ routine, programContext }: { routine: Routine; p
 
       {/* Transport */}
       <div style={{ flexShrink: 0, padding: "8px 22px 22px" }}>
-        {/* Primary action — phase-driven */}
+        {isFollower ? (
+          // Member view — read-only; the coach drives the timeline. Keep a
+          // status pill so the member knows where in the sequence they are
+          // and that they don't need to do anything to advance.
+          <div className="e-mono" style={{
+            padding: "12px 16px", borderRadius: 12,
+            background: "rgba(143,184,214,0.08)", border: "1px solid rgba(143,184,214,0.25)",
+            color: "var(--sky)", letterSpacing: "0.22em", fontSize: 11, textAlign: "center",
+          }}>
+            {phase === "ready" && "WAITING FOR COACH TO START · MOVE WITH THEM"}
+            {phase === "working" && `WORK · SET ${setIdx + 1} OF ${current.sets} · FOLLOW THE COACH`}
+            {phase === "rest" && `REST · ${fmtTime(restRemaining)}`}
+            {phase === "done" && "✓ ROUTINE COMPLETE"}
+          </div>
+        ) : (
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <button onClick={previousExercise} disabled={exerciseIdx === 0} style={ctrlChrome(exerciseIdx === 0)} aria-label="Previous exercise">
             <Icon name="chevron" size={16} />
@@ -283,7 +396,7 @@ export function RoutinePlayer({ routine, programContext }: { routine: Routine; p
 
           {phase === "ready" && (
             <button onClick={startSet} className="btn btn-sky" style={{ flex: 1, padding: "16px 22px", fontSize: 12 }}>
-              ▶ START SET {setIdx + 1}
+              ▶ START SET {setIdx + 1}{isCoachDriving ? " · BROADCAST" : ""}
             </button>
           )}
           {phase === "working" && (
@@ -310,16 +423,28 @@ export function RoutinePlayer({ routine, programContext }: { routine: Routine; p
             <span style={{ transform: "rotate(180deg)", display: "inline-flex" }}><Icon name="chevron" size={16} /></span>
           </button>
         </div>
+        )}
 
-        {/* Secondary controls */}
-        <div style={{ marginTop: 10, display: "flex", gap: 8, justifyContent: "center" }}>
-          <button onClick={togglePlay} style={miniCtrl} aria-label={playing ? "Pause" : "Play"}>
-            <Icon name={playing ? "pause" : "play"} size={14} />
-          </button>
-          <button onClick={toggleMute} style={miniCtrl} aria-label="Mute / unmute">
-            <Icon name="bell" size={14} />
-          </button>
-        </div>
+        {/* Secondary controls — followers can still mute the demo audio
+            since that's a personal preference, but they can't scrub or
+            otherwise drift away from the coach's timeline. */}
+        {!isFollower && (
+          <div style={{ marginTop: 10, display: "flex", gap: 8, justifyContent: "center" }}>
+            <button onClick={togglePlay} style={miniCtrl} aria-label={playing ? "Pause" : "Play"}>
+              <Icon name={playing ? "pause" : "play"} size={14} />
+            </button>
+            <button onClick={toggleMute} style={miniCtrl} aria-label="Mute / unmute">
+              <Icon name="bell" size={14} />
+            </button>
+          </div>
+        )}
+        {isFollower && (
+          <div style={{ marginTop: 10, display: "flex", gap: 8, justifyContent: "center" }}>
+            <button onClick={toggleMute} style={miniCtrl} aria-label="Mute / unmute">
+              <Icon name="bell" size={14} />
+            </button>
+          </div>
+        )}
 
         {/* Routine playlist — every move in the queue. The current move
             highlights, completed moves dim, and tapping a future move jumps
@@ -338,7 +463,9 @@ export function RoutinePlayer({ routine, programContext }: { routine: Routine; p
                 <button
                   key={ex.slug}
                   type="button"
+                  disabled={isFollower || isCurrent}
                   onClick={() => {
+                    if (isFollower) return; // coach drives — followers can't jump
                     if (i === exerciseIdx) return;
                     setExerciseIdx(i);
                     setSetIdx(0);
@@ -352,7 +479,7 @@ export function RoutinePlayer({ routine, programContext }: { routine: Routine; p
                     padding: "10px 12px",
                     borderRadius: 12,
                     textAlign: "left",
-                    cursor: isCurrent ? "default" : "pointer",
+                    cursor: isFollower ? "default" : (isCurrent ? "default" : "pointer"),
                     background: isCurrent
                       ? "linear-gradient(135deg, rgba(143,184,214,0.22), rgba(46,127,176,0.06))"
                       : "rgba(143,184,214,0.04)",
