@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { createHighlightAction } from "@/lib/wall-actions";
 import { SheetPortal } from "./SheetPortal";
 
@@ -8,6 +9,7 @@ const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
 const MAX_VIDEO_DURATION_S = 60;
 
 export function HighlightUploadSheet({ onClose }: { onClose: () => void }) {
+  const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -50,9 +52,11 @@ export function HighlightUploadSheet({ onClose }: { onClose: () => void }) {
     startTransition(async () => {
       try {
         await createHighlightAction(fd);
+        // Force the wall server component to refetch so the new ring shows up.
+        router.refresh();
         onClose();
-      } catch {
-        setError("Couldn't upload. Try again.");
+      } catch (err) {
+        setError((err as Error)?.message || "Couldn't upload. Try again.");
       }
     });
   }

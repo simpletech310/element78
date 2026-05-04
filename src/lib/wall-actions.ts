@@ -141,16 +141,31 @@ export async function deleteCommentAction(commentId: string): Promise<void> {
 export async function createHighlightAction(formData: FormData): Promise<void> {
   const { user, sb } = await gate();
   const file = formData.get("media");
-  if (!(file instanceof File) || file.size === 0) redirect("/wall?error=highlight_missing");
+  if (!(file instanceof File) || file.size === 0) {
+    throw new Error("No video selected.");
+  }
   const f = file as File;
-  if (!VIDEO_MIME.test(f.type)) redirect("/wall?error=highlight_not_video");
-  if (f.size > MAX_VIDEO_BYTES) redirect("/wall?error=highlight_too_large");
+  // Permissive: trust the <input accept="video/*"> filter on the client. iOS
+  // Safari hands us assorted MIME strings (video/quicktime, video/mov, even
+  // an empty string for some HEVC clips) — so we accept any video/* and any
+  // empty type, only blocking obviously-wrong content like images or audio.
+  const t = f.type.toLowerCase();
+  const looksWrong = t.startsWith("image/") || t.startsWith("audio/") || t.startsWith("text/");
+  if (looksWrong) throw new Error("Highlights are video only.");
+  if (f.size > MAX_VIDEO_BYTES) throw new Error("Video is over 50MB.");
 
-  const { url } = await uploadMediaToBucket("wall-media", f, user.id);
+  let url: string;
+  try {
+    const r = await uploadMediaToBucket("wall-media", f, user.id);
+    url = r.url;
+  } catch (err) {
+    throw new Error(`Upload failed: ${(err as Error).message}`);
+  }
+
   const { error } = await sb.from("highlights").insert({ author_id: user.id, media_url: url });
-  if (error) redirect("/wall?error=highlight_failed");
+  if (error) throw new Error(`Save failed: ${error.message}`);
+
   revalidatePath("/wall");
-  redirect("/wall");
 }
 
 export async function deleteHighlightAction(highlightId: string): Promise<void> {

@@ -73,9 +73,11 @@ export function StoriesRail({
                 <div style={{ width: "100%", height: "100%", background: "rgba(10,14,20,0.08)" }} />
               )}
             </div>
-            <div style={{ position: "absolute", bottom: 0, right: 0, width: 22, height: 22, background: "var(--ink)", color: "var(--bone)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid var(--bone)" }}>
-              <Icon name="plus" size={12} />
-            </div>
+            {!myStack && (
+              <div style={{ position: "absolute", bottom: 0, right: 0, width: 22, height: 22, background: "var(--ink)", color: "var(--bone)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid var(--bone)" }}>
+                <Icon name="plus" size={12} />
+              </div>
+            )}
           </button>
           <div className="e-mono" style={{ fontSize: 9, marginTop: 6 }}>YOU</div>
         </div>
