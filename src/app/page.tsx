@@ -17,18 +17,18 @@ export default async function HomePage() {
 
   const pillars = [
     {
-      num: "I", t: "THE GYM", sub: "24-hour access · classes · 1:1",
-      desc: "Heavy weights, reformer studios, treadmills, mat rooms, recovery lounge. However you need to move — we got you. Doors open all night.",
+      num: "I", t: "THE GYM", sub: "24/7 floor · AI on the mat · real coaches",
+      desc: "Reformers, free weights, treadmills, mat rooms, recovery. AI coaches cue your form right on the floor. Real trainers in the booths when you want a person. Walk in at 4am — the work meets you whenever you show up.",
       img: "/assets/blue-hair-gym.jpg", cta: "TOUR THE FLOOR", href: "/locations",
     },
     {
-      num: "II", t: "THE STUDIO", sub: "Coaches, anywhere you train",
-      desc: "Pilates, HIIT, strength, mobility, yoga, conditioning. Studio sessions in your living room, live coaches in our booths — top of the game either way.",
+      num: "II", t: "THE STUDIO", sub: "Guided sessions, anywhere you train",
+      desc: "Pilates, HIIT, strength, mobility, yoga, conditioning. Studio sessions in your living room, live coaches on the gym booths — same playbook, same standard, pick your tempo.",
       img: "/assets/editorial-2.png", cta: "TRY A SESSION", href: "/train",
     },
     {
       num: "III", t: "THE STORE", sub: "Wear, gear, fuel",
-      desc: "The “in my element” line. The tripod water bottle. Built so you can train, then leave the house in it.",
+      desc: "The “in my element” line. The tripod water bottle. Built so you can train, then leave the house in it — shine on, no outfit change.",
       img: "/assets/IMG_3458.jpg", cta: "SHOP THE DROP", href: "/shop",
     },
   ];
@@ -83,8 +83,8 @@ export default async function HomePage() {
             However you need to move — we got you.
           </p>
 
-          <p className="reveal reveal-d3" style={{ marginTop: 14, fontSize: 15, color: "rgba(242,238,232,0.7)", maxWidth: 460, lineHeight: 1.6, fontWeight: 300 }}>
-            Lift, flow, run, recover. A full-floor gym, a Studio of guided sessions, and elite coaches who actually answer the phone. Tech-forward training built for the women the wellness industry forgot.
+          <p className="reveal reveal-d3" style={{ marginTop: 14, fontSize: 15, color: "rgba(242,238,232,0.7)", maxWidth: 480, lineHeight: 1.6, fontWeight: 300 }}>
+            A 24/7 floor — reformers, weights, recovery — with AI coaches on the mat next to you and real trainers when you want a person. Walk in solo at 4am or book ahead. Show up, grind, shine. Built for the women the wellness industry forgot.
           </p>
 
           <div className="reveal reveal-d4" style={{ marginTop: "auto", paddingTop: 36, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
@@ -117,8 +117,9 @@ export default async function HomePage() {
           {[0, 1].map(k => (
             <div key={k} style={{ display: "flex", gap: 32, paddingRight: 32, alignItems: "center", fontFamily: "var(--font-display)", fontSize: 22, color: "var(--sky)", letterSpacing: "0.04em", whiteSpace: "nowrap" }}>
               <span>IN MY ELEMENT</span><span style={{ opacity: 0.4 }}>✦</span>
-              <span>TRANSFORM EFFORT INTO POWER</span><span style={{ opacity: 0.4 }}>✦</span>
+              <span>SHINE THROUGH THE GRIND</span><span style={{ opacity: 0.4 }}>✦</span>
               <span>78 WAYS TO MOVE</span><span style={{ opacity: 0.4 }}>✦</span>
+              <span>LOOK GOOD · FEEL BETTER</span><span style={{ opacity: 0.4 }}>✦</span>
               <span>SOFT &amp; UNMISTAKABLE</span><span style={{ opacity: 0.4 }}>✦</span>
             </div>
           ))}
@@ -131,8 +132,8 @@ export default async function HomePage() {
         <h2 className="e-display" style={{ fontSize: "clamp(40px, 8vw, 72px)", marginTop: 14, lineHeight: 0.95, marginBottom: 0 }}>
           THREE WAYS<br/>TO BE IN.
         </h2>
-        <p style={{ marginTop: 18, color: "rgba(242,238,232,0.65)", fontSize: 15, lineHeight: 1.6, maxWidth: 460 }}>
-          Pick the door that fits. The gym for the floor. The studio for the living room. The store for the rest of the day.
+        <p style={{ marginTop: 18, color: "rgba(242,238,232,0.65)", fontSize: 15, lineHeight: 1.6, maxWidth: 500 }}>
+          Walk into the floor. Stream the studio. Wear the line that ties it all together. Pick a door — or take all three and let the work follow you.
         </p>
       </section>
 
@@ -232,7 +233,7 @@ export default async function HomePage() {
             Fitness didn&rsquo;t look like us. So we built a place that does.
           </p>
           <p style={{ fontSize: 15, lineHeight: 1.7, color: "rgba(10,14,20,0.75)", maxWidth: 580 }}>
-            Lifters, runners, dancers, beginners — the whole spectrum, on one floor. 78 is the atomic number of platinum: soft enough to bend, dense enough not to break. That&rsquo;s the body we&rsquo;re building. That&rsquo;s the woman we&rsquo;re building it for.
+            Lifters, runners, dancers, beginners — the whole spectrum, on one floor. 78 is the atomic number of platinum: soft enough to bend, dense enough not to break. That&rsquo;s the body we&rsquo;re building. The shimmer comes from the work — show up, grind, claim everything that&rsquo;s owed to you. That&rsquo;s the woman we&rsquo;re building it for.
           </p>
         </div>
       </section>
