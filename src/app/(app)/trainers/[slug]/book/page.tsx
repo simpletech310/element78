@@ -98,7 +98,17 @@ export default async function TrainerBookingPage({
   const selectedDayKey = searchParams.day && byDay.has(searchParams.day) ? searchParams.day : (dayKeys[0] ?? "");
   const selectedSlots = selectedDayKey ? (byDay.get(selectedDayKey) ?? []) : [];
 
-  const error = searchParams.error;
+  const rawError = searchParams.error;
+  // Decode known error codes into member-readable copy. Unknown strings pass
+  // through verbatim (they're already human-readable from the action layer).
+  const error = rawError === "coach_not_ready_for_payments"
+    ? `${trainer.name.split(" ")[0]} hasn't finished payout setup yet — paid sessions are paused until they do.`
+    : rawError;
+
+  // Stripe Connect gate (mirrors the server action). For paid sessions where
+  // the coach's payout account isn't 'active', we hide the booking surface
+  // and show a single explanatory banner. Free sessions still book normally.
+  const payoutBlocked = settings.price_cents > 0 && trainer.payout_status !== "active";
 
   return (
     <Shell trainerName={trainer.name} backHref={`/trainers/${trainer.slug}`}>
@@ -116,7 +126,20 @@ export default async function TrainerBookingPage({
         )}
       </section>
 
-      {error && (
+      {payoutBlocked && (
+        <section style={{ padding: "20px 22px 0" }}>
+          <div style={{ padding: "16px 18px", borderRadius: 14, background: "rgba(232,181,168,0.1)", border: "1px solid rgba(232,181,168,0.35)" }}>
+            <div className="e-mono" style={{ color: "var(--rose)", fontSize: 10, letterSpacing: "0.22em" }}>
+              PAYOUT SETUP IN PROGRESS
+            </div>
+            <p style={{ marginTop: 10, fontSize: 14, color: "rgba(242,238,232,0.85)", lineHeight: 1.6 }}>
+              Coach hasn't finished payout setup yet. Sessions priced at {fmtDollars(settings.price_cents)} are paused until they do.
+            </p>
+          </div>
+        </section>
+      )}
+
+      {error && !payoutBlocked && (
         <section style={{ padding: "14px 22px 0" }}>
           <div className="e-mono" style={{ padding: "12px 14px", borderRadius: 12, background: "rgba(232,181,168,0.12)", border: "1px solid rgba(232,181,168,0.4)", color: "var(--rose)", fontSize: 12, letterSpacing: "0.12em" }}>
             {error}
@@ -127,7 +150,7 @@ export default async function TrainerBookingPage({
       {/* GROUP SESSIONS — trainer-led group sessions with shared room. Listed
           ahead of the slot picker because they're the marquee offering when
           the trainer has any scheduled. */}
-      {groupSessions.filter(g => g.attendees < g.session.capacity).length > 0 && (
+      {!payoutBlocked && groupSessions.filter(g => g.attendees < g.session.capacity).length > 0 && (
         <section style={{ padding: "32px 22px 0" }}>
           <div className="e-mono" style={{ color: "var(--sky)", letterSpacing: "0.2em", fontSize: 10 }}>
             GROUP SESSIONS · OPEN
@@ -169,7 +192,7 @@ export default async function TrainerBookingPage({
       )}
 
       {/* Mode picker */}
-      {settings.modes.length > 1 && (
+      {!payoutBlocked && settings.modes.length > 1 && (
         <section style={{ padding: "32px 22px 0" }}>
           <div className="e-mono" style={{ color: "var(--sky)", letterSpacing: "0.2em", fontSize: 10 }}>01 · MODE</div>
           <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
@@ -200,6 +223,7 @@ export default async function TrainerBookingPage({
       )}
 
       {/* Day picker */}
+      {!payoutBlocked && (
       <section style={{ padding: "28px 22px 0" }}>
         <div className="e-mono" style={{ color: "var(--sky)", letterSpacing: "0.2em", fontSize: 10 }}>02 · DAY</div>
         {dayKeys.length === 0 ? (
@@ -236,8 +260,10 @@ export default async function TrainerBookingPage({
         )}
       </section>
 
+      )}
+
       {/* Form: time slot + routine + goals */}
-      {selectedSlots.length > 0 && (
+      {!payoutBlocked && selectedSlots.length > 0 && (
         <form action={requestTrainerBookingAction} style={{ padding: "28px 22px 80px" }}>
           <input type="hidden" name="trainer_id" value={trainer.id} />
           <input type="hidden" name="trainer_slug" value={trainer.slug} />

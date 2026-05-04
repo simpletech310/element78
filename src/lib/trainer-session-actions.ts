@@ -184,6 +184,20 @@ export async function joinGroupSessionAction(formData: FormData) {
   const requiresPayment = session!.price_cents > 0;
   const paid_status = requiresPayment ? "pending" : "free";
 
+  // Stripe Connect gate: paid group sessions require the coach's payout
+  // account to be 'active'. Free sessions still go through.
+  if (requiresPayment) {
+    const { data: payoutRow } = await sb
+      .from("trainers")
+      .select("payout_status")
+      .eq("id", session!.trainer_id)
+      .maybeSingle();
+    const payoutStatus = (payoutRow as { payout_status: string | null } | null)?.payout_status ?? null;
+    if (payoutStatus !== "active") {
+      redirect(`/trainers/${trainerSlug}/book?error=coach_not_ready_for_payments`);
+    }
+  }
+
   const insert = await sb
     .from("trainer_bookings")
     .insert({
