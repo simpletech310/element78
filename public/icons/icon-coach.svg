@@ -1,5 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Element 78 Coach">
   <defs>
+    <style>
+      @font-face {
+        font-family: "Anton";
+        font-style: normal;
+        font-weight: 400;
+        src: url("/fonts/Anton-Regular.ttf") format("truetype");
+      }
+    </style>
     <radialGradient id="ground" cx="50%" cy="38%" r="78%">
       <stop offset="0%" stop-color="#1B2230"/>
       <stop offset="55%" stop-color="#0E131C"/>
@@ -9,7 +17,6 @@
 
   <rect width="1024" height="1024" fill="url(#ground)"/>
 
-  <!-- COACH eyebrow -->
   <text
     x="512" y="270"
     text-anchor="middle"
@@ -20,18 +27,16 @@
     fill="#7BD2F4"
   >COACH</text>
 
-  <!-- ELEMENT in electric -->
   <text
     x="512" y="540"
     text-anchor="middle"
-    font-family="Impact, Haettenschweiler, 'Arial Narrow', 'Helvetica Neue', sans-serif"
-    font-size="220"
-    font-weight="900"
+    font-family="Anton, Impact, Haettenschweiler, 'Arial Narrow', sans-serif"
+    font-size="260"
+    font-weight="400"
     letter-spacing="6"
     fill="#7BD2F4"
   >ELEMENT</text>
 
-  <!-- bordered "78" -->
   <g transform="translate(512 740)">
     <rect x="-150" y="-78" width="300" height="156" rx="8" ry="8"
           fill="none" stroke="#7BD2F4" stroke-width="5"/>
@@ -46,7 +51,6 @@
     >78</text>
   </g>
 
-  <!-- ATLANTA -->
   <text
     x="512" y="912"
     text-anchor="middle"

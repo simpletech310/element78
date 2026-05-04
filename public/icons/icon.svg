@@ -1,10 +1,21 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Element 78">
   <!--
-    Element 78 — member icon. Mirrors the brand wordmark stacked:
-    "ELEMENT" (Impact, condensed bold) over the signature bordered "78" tag.
-    Sized for an 8% safe inset on each side so the wordmark never clips.
+    Element 78 — member icon. The brand wordmark, faithful: Anton ELEMENT
+    stacked over the bordered "78" tag, ATLANTA tag below. Anton is loaded
+    via @font-face so browsers fetch /fonts/Anton-Regular.ttf at render
+    time; the gen-icons.mjs build script inlines the same font as a base64
+    data URI before sharp rasterizes the PNGs, so the typography is
+    pixel-identical in both rendering paths.
   -->
   <defs>
+    <style>
+      @font-face {
+        font-family: "Anton";
+        font-style: normal;
+        font-weight: 400;
+        src: url("/fonts/Anton-Regular.ttf") format("truetype");
+      }
+    </style>
     <radialGradient id="ground" cx="50%" cy="38%" r="78%">
       <stop offset="0%" stop-color="#1B2230"/>
       <stop offset="55%" stop-color="#0E131C"/>
@@ -14,19 +25,16 @@
 
   <rect width="1024" height="1024" fill="url(#ground)"/>
 
-  <!-- "ELEMENT" — Impact at 220px lands at ~870px wide with 6px tracking,
-       leaving ~80px margin each side. -->
   <text
     x="512" y="500"
     text-anchor="middle"
-    font-family="Impact, Haettenschweiler, 'Arial Narrow', 'Helvetica Neue', sans-serif"
-    font-size="220"
-    font-weight="900"
+    font-family="Anton, Impact, Haettenschweiler, 'Arial Narrow', sans-serif"
+    font-size="260"
+    font-weight="400"
     letter-spacing="6"
     fill="#F2EEE8"
   >ELEMENT</text>
 
-  <!-- bordered "78" tag, centered below the wordmark -->
   <g transform="translate(512 700)">
     <rect x="-150" y="-78" width="300" height="156" rx="8" ry="8"
           fill="none" stroke="#F2EEE8" stroke-width="5"/>
@@ -41,7 +49,6 @@
     >78</text>
   </g>
 
-  <!-- ATLANTA tag, sky color, mirrors the "in Atlanta" cue -->
   <text
     x="512" y="880"
     text-anchor="middle"

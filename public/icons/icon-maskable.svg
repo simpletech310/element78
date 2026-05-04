@@ -1,5 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Element 78">
   <defs>
+    <style>
+      @font-face {
+        font-family: "Anton";
+        font-style: normal;
+        font-weight: 400;
+        src: url("/fonts/Anton-Regular.ttf") format("truetype");
+      }
+    </style>
     <radialGradient id="ground" cx="50%" cy="42%" r="72%">
       <stop offset="0%" stop-color="#1B2230"/>
       <stop offset="55%" stop-color="#0E131C"/>
@@ -9,17 +17,13 @@
 
   <rect width="1024" height="1024" fill="url(#ground)"/>
 
-  <!--
-    Maskable: same wordmark but scaled 0.7 so the safe inner zone (80%)
-    contains all type. Adaptive masks (circle/squircle) crop the bg.
-  -->
   <g transform="translate(512 512) scale(0.7) translate(-512 -512)">
     <text
       x="512" y="500"
       text-anchor="middle"
-      font-family="Impact, Haettenschweiler, 'Arial Narrow', 'Helvetica Neue', sans-serif"
-      font-size="220"
-      font-weight="900"
+      font-family="Anton, Impact, Haettenschweiler, 'Arial Narrow', sans-serif"
+      font-size="260"
+      font-weight="400"
       letter-spacing="6"
       fill="#F2EEE8"
     >ELEMENT</text>

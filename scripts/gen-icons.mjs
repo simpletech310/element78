@@ -27,11 +27,27 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..", "public", "icons");
+const FONTS_DIR = join(__dirname, "..", "public", "fonts");
+
+// Read Anton once and base64-embed it in every SVG before sharp rasterizes —
+// browsers resolve the @font-face URL on their own, but librsvg (the engine
+// sharp uses for SVG → PNG) won't fetch external fonts. Inlining as a
+// data: URI gives us pixel-identical "ELEMENT" wordmarks across both
+// rendering paths without needing Anton installed system-wide.
+const antonTtf = await readFile(join(FONTS_DIR, "Anton-Regular.ttf"));
+const ANTON_DATA_URI = `data:font/ttf;base64,${antonTtf.toString("base64")}`;
 
 async function ensureDir(p) { await mkdir(dirname(p), { recursive: true }); }
 
+function inlineAnton(svgString) {
+  // Replace any reference to /fonts/Anton-Regular.ttf with the data URI.
+  // Cheap string swap is fine here — the SVGs are author-controlled.
+  return svgString.replace(/url\(['"]?\/?fonts\/Anton-Regular\.ttf['"]?\)/g, `url(${ANTON_DATA_URI})`);
+}
+
 async function render(svgPath, outPath, size, { background = null, flatten = false } = {}) {
-  const svg = await readFile(svgPath);
+  const svgRaw = (await readFile(svgPath)).toString("utf8");
+  const svg = Buffer.from(inlineAnton(svgRaw), "utf8");
   let pipeline = sharp(svg, { density: 320 }).resize(size, size, { fit: "contain" });
   if (flatten || background) {
     pipeline = pipeline.flatten({ background: background ?? "#0A0E14" });
