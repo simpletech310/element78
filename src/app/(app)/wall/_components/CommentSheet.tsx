@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { Photo } from "@/components/ui/Photo";
+import { AvatarCircle } from "@/components/ui/AvatarCircle";
 import type { HydratedComment } from "@/lib/data/types";
 import { createCommentAction } from "@/lib/wall-actions";
 import { relativeTime } from "./relative-time";
@@ -102,11 +102,7 @@ export function CommentSheet({
           )}
           {comments?.map((c) => (
             <div key={c.id} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-              <div style={{ width: 32, height: 32, borderRadius: "50%", overflow: "hidden", flexShrink: 0, background: "rgba(10,14,20,0.08)" }}>
-                {c.author?.avatar_url && (
-                  <Photo src={c.author.avatar_url} alt="" style={{ width: "100%", height: "100%" }} />
-                )}
-              </div>
+              <AvatarCircle src={c.author?.avatar_url} name={c.author?.display_name} size={32} />
               <div style={{ flex: 1 }}>
                 <div style={{ display: "flex", gap: 6, alignItems: "baseline" }}>
                   <span style={{ fontFamily: "var(--font-display)", fontSize: 13 }}>{(c.author?.display_name ?? "MEMBER").toUpperCase()}</span>

@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { Photo } from "@/components/ui/Photo";
 import { Icon } from "@/components/ui/Icon";
+import { AvatarCircle } from "@/components/ui/AvatarCircle";
 import type { HydratedPost } from "@/lib/data/types";
 import { LikeButton } from "./LikeButton";
 import { CommentButton } from "./CommentButton";
@@ -32,11 +32,7 @@ export function PostCard({ post }: { post: HydratedPost }) {
   return (
     <div style={{ borderRadius: 16, background: "var(--paper)", border: "1px solid rgba(10,14,20,0.06)", overflow: "hidden" }}>
       <div style={{ padding: "12px 14px", display: "flex", alignItems: "center", gap: 10 }}>
-        <div style={{ width: 36, height: 36, borderRadius: "50%", overflow: "hidden", background: "rgba(10,14,20,0.08)" }}>
-          {post.author?.avatar_url && (
-            <Photo src={post.author.avatar_url} alt="" style={{ width: "100%", height: "100%" }} />
-          )}
-        </div>
+        <AvatarCircle src={post.author?.avatar_url} name={post.author?.display_name} size={36} />
         <div style={{ flex: 1 }}>
           <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
             <span style={{ fontFamily: "var(--font-display)", fontSize: 14 }}>{displayName}{post.is_staff && post.kind !== "announcement" ? " · TRAINER" : ""}</span>
