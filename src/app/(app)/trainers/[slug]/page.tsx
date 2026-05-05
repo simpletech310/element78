@@ -10,6 +10,7 @@ import {
   listFlowsByTrainer,
   listProgramsByTrainer,
   listClassesByTrainer,
+  listEventsByTrainer,
 } from "@/lib/data/queries";
 import { getSavedKindRefs } from "@/lib/data/saved-queries";
 import { SaveButton } from "@/components/site/SaveButton";
@@ -33,12 +34,18 @@ export default async function TrainerProfile({ params }: { params: { slug: strin
 
   // Flows + programs are gated; classes are always public-viewable so we
   // never block the click — anonymous visitors can browse the schedule.
-  const [flows, programs, classes, savedTrainerIds] = await Promise.all([
+  const [flows, programs, classes, allEvents, savedTrainerIds] = await Promise.all([
     listFlowsByTrainer(t.id),
     listProgramsByTrainer(t.id),
     listClassesByTrainer(t.id, 6),
+    listEventsByTrainer(t.id),
     user ? getSavedKindRefs(user.id, "trainer") : Promise.resolve(new Set<string>()),
   ]);
+  // Public profile: only show currently-published, upcoming events.
+  const nowMs = Date.now();
+  const events = allEvents
+    .filter(e => e.status === "published" && new Date(e.starts_at).getTime() >= nowMs - 60 * 60 * 1000)
+    .slice(0, 8);
   const isSaved = savedTrainerIds.has(t.id);
 
   // Auth-aware href: gated routes redirect through /login with `next`.
@@ -285,6 +292,73 @@ export default async function TrainerProfile({ params }: { params: { slug: strin
                       {full ? "WAITLIST" : `${open} OF ${c.capacity} OPEN`}
                     </span>
                     <span className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.18em" }}>BOOK →</span>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* EVENTS — public, no gate */}
+      {events.length > 0 && (
+        <section style={{ padding: "60px 22px 4px", maxWidth: 1180, margin: "0 auto" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 8 }}>
+            <div>
+              <div className="e-mono" style={{ color: "var(--sky)", letterSpacing: "0.25em", fontSize: 10 }}>UPCOMING EVENTS</div>
+              <h2 className="e-display" style={{ fontSize: "clamp(28px, 5vw, 44px)", marginTop: 10, lineHeight: 0.95 }}>
+                COME THROUGH.
+              </h2>
+            </div>
+            <Link href="/gym" className="e-mono" style={{ color: "var(--sky)" }}>ALL GYM EVENTS →</Link>
+          </div>
+
+          <div className="no-scrollbar" style={{ marginTop: 18, display: "flex", gap: 12, overflowX: "auto", paddingBottom: 4 }}>
+            {events.map(e => {
+              const dt = new Date(e.starts_at);
+              const day = dt.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "2-digit" }).toUpperCase();
+              const time = dt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+              const full = e.capacity !== null && e.rsvp_count >= e.capacity;
+              return (
+                <Link
+                  key={e.id}
+                  href={`/events/${e.slug}`}
+                  className="lift"
+                  style={{
+                    flexShrink: 0,
+                    width: 280,
+                    display: "flex", flexDirection: "column",
+                    borderRadius: 16, overflow: "hidden",
+                    background: "rgba(143,184,214,0.05)",
+                    border: "1px solid rgba(143,184,214,0.18)",
+                    color: "var(--bone)", textDecoration: "none",
+                  }}
+                >
+                  <div style={{ position: "relative", height: 140 }}>
+                    {e.hero_image && <Photo src={e.hero_image} alt="" style={{ position: "absolute", inset: 0, opacity: 0.6 }} />}
+                    <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, rgba(46,127,176,0.55), rgba(10,14,20,0.85))" }} />
+                    <div style={{ position: "absolute", inset: 0, padding: 14, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                      <span className="e-tag" style={{ alignSelf: "flex-start", background: "var(--sky)", color: "var(--ink)", padding: "3px 7px", borderRadius: 3, fontSize: 9 }}>
+                        {e.price_cents > 0 ? `$${(e.price_cents / 100).toFixed(0)}` : "FREE"}
+                      </span>
+                      <div className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.2em" }}>{day} · {time}</div>
+                    </div>
+                  </div>
+                  <div style={{ padding: 14, display: "flex", flexDirection: "column", gap: 8, flex: 1 }}>
+                    <div style={{ fontFamily: "var(--font-display)", fontSize: 18, lineHeight: 1.05 }}>{e.title}</div>
+                    {e.subtitle && (
+                      <div className="e-mono" style={{ fontSize: 10, color: "rgba(242,238,232,0.6)", letterSpacing: "0.14em" }}>
+                        {e.subtitle}
+                      </div>
+                    )}
+                    <div style={{ marginTop: "auto", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                      <span className="e-mono" style={{ fontSize: 9, color: full ? "var(--rose)" : "rgba(242,238,232,0.6)", letterSpacing: "0.18em" }}>
+                        {full ? "SOLD OUT" : e.capacity ? `${e.capacity - e.rsvp_count} OF ${e.capacity} OPEN` : `${e.rsvp_count} JOINED`}
+                      </span>
+                      <span className="e-mono" style={{ color: "var(--sky)", fontSize: 9, letterSpacing: "0.18em" }}>
+                        {e.price_cents > 0 ? "BUY →" : "RSVP →"}
+                      </span>
+                    </div>
                   </div>
                 </Link>
               );
