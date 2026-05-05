@@ -13,6 +13,7 @@ import { enrollAction, completeSessionAction, leaveAction } from "@/lib/program-
 import { materializeAutoCompletions } from "@/lib/program-completion";
 import { getRoutine } from "@/lib/data/routines";
 import { SaveButton } from "@/components/site/SaveButton";
+import { createClient } from "@/lib/supabase/server";
 import type { ProgramSession } from "@/lib/data/types";
 
 export default async function ProgramDetail({
@@ -32,6 +33,17 @@ export default async function ProgramDetail({
   if (user) await materializeAutoCompletions(user.id);
 
   const enrollment = user ? await getEnrollment(user.id, program.id) : null;
+
+  // Stamp last_opened_at so /home can sort the hero + progress rail by
+  // genuine recency-of-attention. Fire-and-forget — failures don't block the
+  // page render and the user-scoped RLS policy already permits the update.
+  if (user && enrollment) {
+    void createClient()
+      .from("program_enrollments")
+      .update({ last_opened_at: new Date().toISOString() })
+      .eq("id", enrollment.id);
+  }
+
   const completions = enrollment ? await listEnrollmentCompletions(enrollment.id) : [];
   const announcements = enrollment ? await listProgramAnnouncements(program.id) : [];
   const journalEntries = enrollment ? await listJournalEntriesForEnrollment(enrollment.id) : {};

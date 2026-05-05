@@ -144,14 +144,24 @@ export async function getEnrollment(userId: string, programId: string): Promise<
 export async function listUserEnrollments(userId: string): Promise<{ enrollment: ProgramEnrollment; program: Program }[]> {
   if (!isConfigured()) return [];
   const sb = createClient();
+  // Order by last_opened_at first (most recently visited program), falling
+  // back to started_at for older rows that pre-date the column. The home page
+  // hero + YOUR PROGRAMS rail rely on this ordering for "pick up where you
+  // left off" semantics.
   const { data } = await sb
     .from("program_enrollments")
     .select("*, program:programs(*)")
     .eq("user_id", userId)
+    .order("last_opened_at", { ascending: false, nullsFirst: false })
     .order("started_at", { ascending: false });
   if (!data) return [];
   return (data as Array<ProgramEnrollment & { program: Program }>).map(row => ({
-    enrollment: { id: row.id, user_id: row.user_id, program_id: row.program_id, status: row.status, started_at: row.started_at, completed_at: row.completed_at, current_day: row.current_day },
+    enrollment: {
+      id: row.id, user_id: row.user_id, program_id: row.program_id,
+      status: row.status, started_at: row.started_at,
+      completed_at: row.completed_at, current_day: row.current_day,
+      last_opened_at: row.last_opened_at ?? null,
+    },
     program: row.program,
   }));
 }

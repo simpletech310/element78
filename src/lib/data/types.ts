@@ -182,6 +182,9 @@ export type ProgramEnrollment = {
   started_at: string;
   completed_at: string | null;
   current_day: number;
+  /** Bumped each time the user opens /programs/[slug]. Drives the home hero
+   *  + YOUR PROGRAMS rail sort so "where you left off" is literal. (0035) */
+  last_opened_at: string | null;
 };
 
 export type ProgramCompletion = {

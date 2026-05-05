@@ -94,14 +94,11 @@ export default async function HomeScreen() {
     .filter(b => b.booking.status === "reserved" && new Date(b.class.starts_at).getTime() >= now)
     .sort((a, b) => new Date(a.class.starts_at).getTime() - new Date(b.class.starts_at).getTime());
 
-  // Personalized hero — surface the user's most recently started program so
-  // the "TODAY'S RITUAL" card picks up exactly where they left off. Falls
-  // back to the studio session featured below if there's nothing active.
-  const heroProgram = activePrograms.length > 0
-    ? [...activePrograms].sort((a, b) =>
-        new Date(b.enrollment.started_at).getTime() - new Date(a.enrollment.started_at).getTime(),
-      )[0]
-    : null;
+  // Personalized hero — surface the user's most recently OPENED program so
+  // "PICK UP WHERE YOU LEFT OFF" is literal. listUserEnrollments already
+  // orders by last_opened_at desc (with started_at as tiebreaker), so we
+  // just take the first active row.
+  const heroProgram = activePrograms[0] ?? null;
   const heroProgramPct = heroProgram
     ? Math.round((completedCounts[heroProgram.enrollment.id] ?? 0) / Math.max(1, heroProgram.program.total_sessions) * 100)
     : 0;
