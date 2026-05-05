@@ -34,18 +34,21 @@ export default async function TrainerProfile({ params }: { params: { slug: strin
 
   // Flows + programs are gated; classes are always public-viewable so we
   // never block the click — anonymous visitors can browse the schedule.
-  const [flows, programs, classes, allEvents, savedTrainerIds] = await Promise.all([
+  const PROFILE_CAP = 3;
+  const [flows, allPrograms, allClasses, allEvents, savedTrainerIds] = await Promise.all([
     listFlowsByTrainer(t.id),
     listProgramsByTrainer(t.id),
-    listClassesByTrainer(t.id, 6),
+    listClassesByTrainer(t.id, PROFILE_CAP),
     listEventsByTrainer(t.id),
     user ? getSavedKindRefs(user.id, "trainer") : Promise.resolve(new Set<string>()),
   ]);
-  // Public profile: only show currently-published, upcoming events.
+  // Public profile keeps each rail tight — top 3 of each, see-all links cover the rest.
+  const programs = allPrograms.slice(0, PROFILE_CAP);
+  const classes = allClasses.slice(0, PROFILE_CAP);
   const nowMs = Date.now();
   const events = allEvents
     .filter(e => e.status === "published" && new Date(e.starts_at).getTime() >= nowMs - 60 * 60 * 1000)
-    .slice(0, 8);
+    .slice(0, PROFILE_CAP);
   const isSaved = savedTrainerIds.has(t.id);
 
   // Auth-aware href: gated routes redirect through /login with `next`.
