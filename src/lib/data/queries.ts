@@ -698,23 +698,41 @@ export async function listPosts(opts?: {
 
   const [staffRes, likedRes] = await Promise.all([
     authorIds.length
-      ? sb.from("trainers").select("auth_user_id").in("auth_user_id", authorIds)
-      : Promise.resolve({ data: [] as Array<{ auth_user_id: string }> }),
+      ? sb.from("trainers").select("auth_user_id, name, avatar_url").in("auth_user_id", authorIds)
+      : Promise.resolve({ data: [] as Array<{ auth_user_id: string | null; name: string; avatar_url: string | null }> }),
     opts?.currentUserId
       ? sb.from("post_reactions").select("post_id").eq("user_id", opts.currentUserId).in("post_id", postIds)
       : Promise.resolve({ data: [] as Array<{ post_id: string }> }),
   ]);
 
-  const staff = new Set(((staffRes.data ?? []) as Array<{ auth_user_id: string | null }>)
-    .map(r => r.auth_user_id)
-    .filter((x): x is string => !!x));
+  // Trainer rows let us mark is_staff AND fall back to trainers.avatar_url when
+  // the profile row doesn't have one set — coaches' headshots live on trainers,
+  // not profiles, so the wall would otherwise render empty avatar circles.
+  const trainerByAuthId = new Map<string, { name: string; avatar_url: string | null }>();
+  for (const t of (staffRes.data ?? []) as Array<{ auth_user_id: string | null; name: string; avatar_url: string | null }>) {
+    if (t.auth_user_id) trainerByAuthId.set(t.auth_user_id, { name: t.name, avatar_url: t.avatar_url });
+  }
   const liked = new Set(((likedRes.data ?? []) as Array<{ post_id: string }>).map(r => r.post_id));
 
-  return rows.map(r => ({
-    ...r,
-    is_staff: !!r.author_id && staff.has(r.author_id),
-    liked_by_me: liked.has(r.id),
-  }));
+  return rows.map(r => {
+    const trainer = r.author_id ? trainerByAuthId.get(r.author_id) : undefined;
+    const author: ProfileLite | null = r.author
+      ? {
+          ...r.author,
+          // Prefer the trainer headshot when the profile avatar is missing.
+          avatar_url: r.author.avatar_url ?? trainer?.avatar_url ?? null,
+          // Use the trainer's display name when the profile didn't set one
+          // (some legacy profiles have null display_name).
+          display_name: r.author.display_name ?? trainer?.name ?? null,
+        }
+      : null;
+    return {
+      ...r,
+      author,
+      is_staff: !!trainer,
+      liked_by_me: liked.has(r.id),
+    };
+  });
 }
 
 export async function listHighlights(): Promise<HydratedHighlight[]> {
