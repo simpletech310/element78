@@ -87,17 +87,19 @@ export async function buyEventTicketAction(formData: FormData): Promise<void> {
   if (rsvpError || !rsvp) redirect(`/events/${slug}?error=reserve_failed`);
   const rsvpId = (rsvp as { id: string }).id;
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://element78.vercel.app";
   let checkoutUrl: string;
   try {
+    // Pass RELATIVE paths — the Stripe provider prefixes them with NEXT_PUBLIC_SITE_URL
+    // itself. Passing absolute URLs here doubles up the origin and breaks the
+    // post-payment redirect.
     const { purchase, checkoutUrl: url } = await createPurchaseAndCheckout({
       userId: user.id,
       kind: "event_ticket",
       amountCents: event.price_cents,
       description: event.title,
       refIds: {},
-      successPath: `${siteUrl}/events/${event.slug}?paid=1`,
-      cancelPath: `${siteUrl}/events/${event.slug}?cancelled=1`,
+      successPath: `/events/${event.slug}?paid=1`,
+      cancelPath: `/events/${event.slug}?cancelled=1`,
       trainerId: event.author_trainer_id,
     });
     // Link the rsvp ↔ purchase so fulfillPurchase can flip the rsvp.
